@@ -22,7 +22,6 @@ export function usePot(potId: string): { status: PotStatusRow | null; loading: b
     let disposed = false;
     let dirty = false;
     let inFlight: Promise<void> | null = null;
-    setResult({ potId, status: null, loading: true });
     const refresh = (): Promise<void> => {
       if (disposed) return Promise.resolve();
       dirty = true;

@@ -10,10 +10,14 @@ export function createStreamsHandler(options: { abi: Abi; potAddress: string; se
     let raw: string;
     try {
       const bytes = Buffer.from(await request.arrayBuffer());
+      if (bytes.length > 5 * 1024 * 1024) return Response.json({ error: 'Request body too large' }, { status: 413 });
       const encoding = request.headers.get('Content-Encoding')?.toLowerCase();
       if (encoding && encoding !== 'identity' && encoding !== 'gzip') return Response.json({ error: 'Unsupported encoding' }, { status: 415 });
-      raw = (encoding === 'gzip' ? gunzipSync(bytes) : bytes).toString('utf8');
-    } catch { return Response.json({ error: 'Invalid request body' }, { status: 400 }); }
+      raw = (encoding === 'gzip' ? gunzipSync(bytes, { maxOutputLength: 5 * 1024 * 1024 }) : bytes).toString('utf8');
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ERR_BUFFER_TOO_LARGE') return Response.json({ error: 'Request body too large' }, { status: 413 });
+      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     if (!verifyQuickNode(raw, request.headers, options.secret)) return Response.json({ error: 'Invalid signature' }, { status: 401 });
     let events;
     try { events = decodePotLogs(JSON.parse(raw), options.abi, options.potAddress); }

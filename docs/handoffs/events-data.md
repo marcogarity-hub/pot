@@ -219,3 +219,47 @@ deploy. **Task 3.4 Steps 5–7 were intentionally not performed.** No QuickNode
 Stream was created, no live Paid-to-browser check was attempted, and the fixture
 remains docs-derived. Replace it with a real capture during that later live check.
 The live Lane 3 done-when remains pending with the conductor. No merge or push.
+
+## Conductor review round 1 (2026-11-12)
+
+Done: removed the synchronous effect state reset in `usePot`; its return value
+continues to derive null status/loading for a changed potId. Limited raw webhook
+bodies and gzip output to 5 * 1024 * 1024 bytes. Oversized raw bodies return 413
+before decompression; `ERR_BUFFER_TOO_LARGE` from bounded gunzip returns 413.
+Other malformed bodies retain their existing 400 behavior.
+
+Files changed: `web/lib/realtime/usePot.ts`,
+`web/app/api/streams/handler.ts`, `web/app/api/streams/route.test.ts`, and this handoff.
+One added regression test covers both raw and gzip-expanded oversized bodies and
+checks that neither stores events. TDD: it first failed with `expected 400 to be
+413`, then passed after the size limits were implemented. All usePot tests remain
+green. No other implementation changes, merges, or pushes.
+
+Validation output (combined command exit 0; TypeScript produced no output):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /Users/marcogarity/code/pot-events-data/web
+
+
+ Test Files  3 passed (3)
+      Tests  23 passed (23)
+   Start at  23:21:15
+   Duration  1.58s (environment 67%, setup 13%, import 12%, tests 7%, transform 2%)
+
+
+> web@0.1.0 lint
+> eslint
+```
+
+Commit blocker: `git add` failed before staging with:
+```text
+fatal: Unable to create '/Users/marcogarity/code/pot/.git/worktrees/pot-events-data/index.lock': Operation not permitted
+```
+The session disallows sandbox escalation, so the requested
+`fix(data): review round 1` commit could not be created. The four review files
+remain uncommitted. Earlier ABI/deployment integration gates remain as documented
+above.

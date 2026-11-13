@@ -70,6 +70,14 @@ describe('Streams HTTP', () => {
     expect((await handler(store)(req)).status).toBe(400);
     expect(await (await handler(store)(request({ data: [] }))).json()).toEqual({ events: 0, pots: 0 });
   });
+  it('rejects raw and gzip-expanded bodies over 5 MB with 413 before storing events', async () => {
+    const oversized = ' '.repeat(5 * 1024 * 1024 + 1);
+    for (const gzip of [false, true]) {
+      const store = memoryStore();
+      expect((await handler(store)(request(oversized, gzip))).status).toBe(413);
+      expect(store.events.size).toBe(0);
+    }
+  });
   it('production route fails closed while the ABI placeholder is empty', async () => {
     vi.stubEnv('QUICKNODE_STREAM_TOKEN', secret);
     vi.stubEnv('NEXT_PUBLIC_POT_ADDRESS', address);
