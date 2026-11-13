@@ -36,3 +36,7 @@
 ## 2026-11-13 — lane/wallet (A15 treasury)
 - Landed: relayer signs via Circle treasury wallet (no raw key); native transfers send tokenAddress "" + blockchain ARC-TESTNET; idempotency keys; STUCK = failure; balance check advisory.
 - Gates: round 1 CHANGES (missing blockchain on transfer) → fixed; vitest 162/162, tsc, lint, build OK; reviewer APPROVE.
+
+## 2026-11-13 — lane/wallet (pre-flight simulation)
+- Landed: callPot simulates from the caller's address (treasury for finalize) before Circle; declared custom errors → PotRevertError without submitting; RPC failure warns and submits; Circle tx id in failure messages.
+- Gates: vitest 169/169, tsc, lint, build OK; reviewer (Sonnet) APPROVE. Open: confirm Arc RPC returns revert data on eth_call once Pot is deployed.
