@@ -3,7 +3,7 @@ import { parseEventLogs, parseUnits, type Hex } from 'viem';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { claimUser, ensureUser } from '@/lib/circle/identity';
-import { callPot, PotRevertError } from '@/lib/circle/tx';
+import { callPot, CircleTimeoutError, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { createPotSchema } from './schema';
 import { createPotLimiter } from './limiter';
@@ -31,7 +31,10 @@ export async function POST(request: Request) {
       addresses = members.map(user=>validAddress(user.wallet_address));
       if (new Set(addresses).size !== addresses.length) throw new Error('Duplicate member wallets');
     } catch { return Response.json({message:'Invalid or duplicate wallet address'},{status:400}); }
-  } catch { return Response.json({message:'Wallet provisioning pending. Please retry shortly.'},{status:503}); }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Identity already linked to another account') return Response.json({error:'IdentityConflict',message:'This email is linked to a different sign-in.'},{status:409});
+    return Response.json({message:'Wallet provisioning pending. Please retry shortly.'},{status:503});
+  }
   let potId: string;
   let transactionHash: Hex | undefined;
   try {
@@ -45,7 +48,7 @@ export async function POST(request: Request) {
     if (typeof args?.potId !== 'bigint' || args.organizer?.toLowerCase() !== organizer.wallet_address.toLowerCase()) throw new Error('Missing PotCreated event');
     potId = args.potId.toString();
   } catch (error) {
-    if (error instanceof Error && error.name === 'CircleTimeoutError') return toHttp(error);
+    if (error instanceof CircleTimeoutError) return Response.json({error:'CreatePending',message:'Your pot is still being created. Do not submit again — refresh in a minute.',circleTransactionId:error.circleTransactionId},{status:502});
     if (error instanceof PotRevertError) return toHttp(error);
     return Response.json({message:'Pot creation could not be confirmed. Reconcile the transaction before retrying.',...(transactionHash?{transactionHash}:{})},{status:502}); }
   const inviteToken = randomBytes(32).toString('base64url');
