@@ -15,3 +15,7 @@
 ## 2026-11-12 — lane/events-data (build fix)
 - Landed: removed `export const runtime` from /api/streams (incompatible with cacheComponents; broke Vercel build). Handoff's "build blocked" note is stale: the build passes.
 - Gates: vitest 81/81, tsc, lint, `npm run build` OK (worker sandbox couldn't bind Turbopack port; conductor + reviewer ran it); reviewer APPROVE.
+
+## 2026-11-12 — lane/wallet (Task 2.5)
+- Landed: pay/refund/object/expire/request-release/swap/finalize routes, errors.ts toHttp (409s), create route revert mapping. Live check (Step 5) pending keys + deploy.
+- Gates: vitest, tsc, lint clean; `npm run build` OK on main after merge; reviewer APPROVE (non-blocking: 404 for missing pot, finalize race → alreadyFinalized).
