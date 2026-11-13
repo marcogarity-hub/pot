@@ -600,3 +600,22 @@ in-process five pots/hour/auth user limiter; distribute it before multi-instance
 abuse enforcement is required. `git pull --ff-only origin main` was blocked
 because worktree metadata at `/Users/marcogarity/code/pot/.git/worktrees/pot-wallet`
 is not writable in this sandbox. No merge or push.
+
+## Conductor review — round 1 of 2
+
+Done: concurrent finalize requests each receive a clone of the shared Response,
+so both response bodies remain readable. `claimUser` now links an existing row,
+keeps the linked-to-another-account error, and returns normally when no row exists
+without provisioning. The create-pot route claims the signed-in organizer's row
+after ensuring its wallet and before calling `createPot`.
+
+Files changed: `web/app/api/pots/{actions,actions.test,route,route.test}.ts`,
+`web/lib/circle/{identity,identity.test}.ts`, this handoff.
+
+TDD: regression tests first failed for the consumed concurrent response body,
+first-time callback 503, absent-row claim rejection, and missing organizer link.
+The tests then passed, including existing invited-member claim and preservation
+of the linked-to-another-account conflict. No wallet is created by callback.
+
+Validation (exit 0): `cd web && npx vitest run` (14 files, 243 tests),
+`npx tsc --noEmit`, and `npm run lint`. No live wallet or chain operations ran.

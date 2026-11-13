@@ -96,6 +96,7 @@ it('single-flights concurrent finalize requests for the same pot', async () => {
  confirm(hash);
  const responses = await Promise.all([first, second]);
  expect(responses.map(r => r.status)).toEqual([200, 200]);
+ expect(await Promise.all(responses.map(r => r.json()))).toEqual([{ transactionHash: hash }, { transactionHash: hash }]);
  expect(m.finalize).toHaveBeenCalledTimes(1);
 });
 it.each([{ state: 0 }, { state: 1 }, { state: 4 }, { state: 2, objectionsCount: BigInt(5) }])('refuses ineligible finalize', async patch => {

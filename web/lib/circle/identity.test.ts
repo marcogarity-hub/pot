@@ -55,7 +55,12 @@ it('does not reassign a wallet linked to a different auth user',async()=>{
  rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'someone-else',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});await expect(claimUser('auth-id','a@x.com')).rejects.toThrow('already linked');expect(rows[0].auth_user_id).toBe('someone-else');
 });
 it('claim does not provision an uninvited identity',async()=>{
- await expect(claimUser('auth-id','new@x.com')).rejects.toThrow();
+ await expect(claimUser('auth-id','new@x.com')).resolves.toBeUndefined();
+ expect(m.createWallet).not.toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled(); expect(rows).toHaveLength(0);
+});
+it('callback redirects for a new organizer without provisioning a wallet', async()=>{
+ const response=await callback(new Request('https://pot.test/api/wallet/callback?code=ok'));
+ expect(response.status).toBe(303); expect(response.headers.get('location')).toBe('https://pot.test/');
  expect(m.createWallet).not.toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled(); expect(rows).toHaveLength(0);
 });
 it('takes over an incomplete reservation older than 120 seconds',async()=>{

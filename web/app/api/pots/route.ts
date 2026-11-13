@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { parseEventLogs, parseUnits, type Hex } from 'viem';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import { ensureUser } from '@/lib/circle/identity';
+import { claimUser, ensureUser } from '@/lib/circle/identity';
 import { callPot, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { createPotSchema } from './schema';
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   let organizer: Awaited<ReturnType<typeof ensureUser>>;
   try {
     organizer = await ensureUser(session.data.user.email.trim().toLowerCase());
+    await claimUser(session.data.user.id, session.data.user.email.trim().toLowerCase());
     const members = await Promise.all(body.memberEmails.map(email=>ensureUser(email)));
     // Provisioning is separate from validation: never submit zero or duplicate wallets.
     try {

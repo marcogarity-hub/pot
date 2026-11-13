@@ -57,7 +57,9 @@ export async function claimUser(authUserId: string, input: string): Promise<void
   const email = normalizeEmail(input);
   const db = createAdminSupabase();
   const current = await db.from('users').select('id,auth_user_id').eq('email', email).maybeSingle();
-  if (current.error || !current.data || (current.data.auth_user_id && current.data.auth_user_id !== authUserId)) throw new Error('Identity already linked to another account');
+  if (current.error) throw new Error('Could not read wallet identity');
+  if (!current.data) return;
+  if (current.data.auth_user_id && current.data.auth_user_id !== authUserId) throw new Error('Identity already linked to another account');
   const claimed = await db.from('users').update({ auth_user_id: authUserId, claimed: true }).eq('id',current.data.id).or(`auth_user_id.is.null,auth_user_id.eq.${authUserId}`).select('id').maybeSingle();
   if (claimed.error || !claimed.data) throw new Error('Could not claim wallet identity');
 }

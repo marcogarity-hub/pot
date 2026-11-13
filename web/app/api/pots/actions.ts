@@ -54,7 +54,7 @@ export function actionHandler(action: Action) {
           finalizeFlights.set(id, flight);
           void flight.finally(() => { if (finalizeFlights.get(id) === flight) finalizeFlights.delete(id); }).catch(() => {});
         }
-        return await flight;
+        return (await flight).clone();
       }
 
       const supabase = await createServerSupabase();
