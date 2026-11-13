@@ -341,3 +341,69 @@ permission error (exit 1). The production build cannot run to completion in this
 sandbox; conductor must run it in an environment allowing Turbopack worker port
 binding. Build success is not claimed. git diff --check passed. Pulled origin/main
 before changes (already up to date). No merge, push, or live transactions.
+
+## Amendment A15 — Circle treasury relayer (2026-11-12)
+
+Done: replaced all raw-key relayer signing with the Circle developer-controlled
+treasury wallet. Gas prefund and demo-principal topup share createTransaction;
+finalize uses callPot with finalizeRelease and returns the confirmed receipt hash.
+relayerBalance reads the TREASURY_ADDRESS native balance through viem and warns
+below 5 USDC (also checked before finalize). No route changes or segment exports.
+
+Verified the installed SDK dist/types/developer-controlled-wallets.d.ts:
+CreateTransferTransactionInput/createTransaction use amount: string[], walletId,
+and tokenAddress: '' for native tokens. With walletId, the submission blockchain
+field is excluded by the type; the wallet ID must identify the ARC-TESTNET treasury.
+EstimateTransferFeeInput accepts blockchain: 'ARC-TESTNET' alongside that native
+selector. Both funding paths use decimal USDC amounts, estimate absolute fees,
+and apply max(estimate.maxFee, 20) in gwei, matching callPot. Funding polls for
+COMPLETE, rejects FAILED/DENIED/CANCELLED, and verifies a successful viem receipt;
+CONFIRMED remains pending, with a 120-second Circle polling deadline.
+
+Environment: CIRCLE_TREASURY_WALLET_ID + TREASURY_ADDRESS replace
+RELAYER_PRIVATE_KEY, which is gone from TypeScript. Existing CIRCLE_API_KEY and
+CIRCLE_ENTITY_SECRET remain required for Circle signing. No .env files changed.
+CLI from web (export these env vars first):
+`NODE_OPTIONS=--conditions=react-server npx tsx lib/relayer/topup.ts <address> <usdc>`.
+It uses the same Circle treasury transfer while bypassing only the gas cap.
+PREFUND_DAILY_CAP retains its default 50 USDC, synchronous reservation, UTC-day
+reset, and conservative retention after uncertain failures. The budget remains
+in-memory per process; distributed/durable enforcement remains conductor work.
+PrefundRefusedError covers zero/invalid destination, non-positive amount, cap
+exhaustion, and missing treasury wallet ID before submission. Circle owns nonces.
+
+Files changed: web/lib/relayer/{index,index.test,topup}.ts;
+web/lib/circle/tx.ts; docs/handoffs/wallet.md.
+
+TDD: replaced raw-key/nonce-manager tests first; observed 12 failures against the
+old implementation (including missing relayerBalance and absent Circle submits).
+Implementation then passed. Tests mock Circle and viem: no network or live
+transactions. Covers two concurrent Circle prefunds, cap reservations/default/UTC
+reset, refused and ambiguous failures, CLI principal separation, terminal states,
+timeout, receipt failure, both fee-floor cases, finalize calldata/treasury wallet,
+and balance warning boundary.
+
+Required validation:
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+ Test Files  8 passed (8)
+      Tests  154 passed (154)
+   Duration  2.30s
+(TypeScript: no diagnostics, exit 0)
+> web@0.1.0 lint
+> eslint
+(lint exit 0)
+> web@0.1.0 build
+> next build
+Error [TurbopackInternalError]: [project]/app/globals.css.css [app-client] (css)
+Caused by: creating new process; binding to a port;
+Operation not permitted (os error 1)
+(build exit 1)
+```
+Retried npm run build with sandbox escalation: same port-binding restriction,
+exit 1. Build cannot complete in this sandbox; conductor must run it outside this
+restriction. Existing Vite config compatibility warning remains. git diff --check
+passes; grep -rn RELAYER_PRIVATE_KEY web --include='*.ts' --exclude-dir=node_modules
+returns no matches (exit 1). Pulled origin/main before edits: already up to date.
+No changes outside the five listed files, no merge, no push. Remaining live-spike,
+ABI setup, and provisioning-recovery gates from earlier handoffs are unchanged.

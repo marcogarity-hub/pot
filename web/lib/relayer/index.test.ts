@@ -1,54 +1,125 @@
-import { beforeEach, expect, it, vi } from 'vitest';
-import { nonceManager } from 'viem';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
-const m = vi.hoisted(() => ({ sendTransaction: vi.fn(), writeContract: vi.fn(), getBalance: vi.fn(), receipt: vi.fn(), estimateFeesPerGas: vi.fn(), privateKeyToAccount: vi.fn() }));
-vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createWalletClient: () => m, createPublicClient: () => ({ getBalance: m.getBalance, waitForTransactionReceipt: m.receipt, estimateFeesPerGas: m.estimateFeesPerGas }) }));
-vi.mock('viem/accounts', async (original) => {
- const actual = await original<typeof import('viem/accounts')>();
- m.privateKeyToAccount.mockImplementation(actual.privateKeyToAccount);
- return { ...actual, privateKeyToAccount: m.privateKeyToAccount };
-});
-import { prefund, relayerFinalize, resetPrefundBudget, PrefundRefusedError } from './index';
+const m = vi.hoisted(() => ({ createTransaction: vi.fn(), estimateTransferFee: vi.fn(), createContractExecutionTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), getTransaction: vi.fn(), getBalance: vi.fn(), receipt: vi.fn() }));
+vi.mock('../circle/client', () => ({ circleClient: () => m }));
+vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createPublicClient: () => ({ getBalance: m.getBalance, waitForTransactionReceipt: m.receipt }) }));
+import { prefund, relayerFinalize, relayerBalance, resetPrefundBudget, PrefundRefusedError } from './index';
 import { configurePotInterface } from '../circle/contract';
 import { potAbi, arcTestnet } from '../circle/__mocks__/pot';
+import { encodeFunctionData } from 'viem';
 const to = '0x1111111111111111111111111111111111111111';
-beforeEach(() => { vi.clearAllMocks(); resetPrefundBudget(); configurePotInterface({ abi: potAbi, chain: arcTestnet }); process.env.RELAYER_PRIVATE_KEY = `0x${'11'.repeat(32)}`; process.env.PREFUND_DAILY_CAP = '2'; process.env.NEXT_PUBLIC_POT_ADDRESS = to; m.estimateFeesPerGas.mockResolvedValue({ maxFeePerGas: BigInt(10000000000), maxPriorityFeePerGas: BigInt(1000000000) }); m.sendTransaction.mockResolvedValue('0x1234'); m.receipt.mockResolvedValue({ status: 'success' }); m.getBalance.mockResolvedValue(BigInt(10) ** BigInt(18)); });
-it('prefunds one USDC by default, confirms, and meets fee floor', async () => { await prefund(to); expect(m.sendTransaction).toHaveBeenCalledWith(expect.objectContaining({ to, value: BigInt(10) ** BigInt(18), maxFeePerGas: BigInt(20000000000) })); expect(m.receipt).toHaveBeenCalled(); });
-it('rejects zero address without sending', async () => { await expect(prefund(`0x${'0'.repeat(40)}`)).rejects.toThrow(); expect(m.sendTransaction).not.toHaveBeenCalled(); });
-it('reserves the cap before concurrent sends', async () => { const results = await Promise.allSettled([prefund(to),prefund(to),prefund(to)]); expect(results.filter(x=>x.status==='rejected')).toHaveLength(1); expect(m.sendTransaction).toHaveBeenCalledTimes(2); });
-it('warns below five USDC when finalizing', async () => { const warn = vi.spyOn(console,'warn').mockImplementation(()=>{}); m.writeContract.mockResolvedValue('0x1234'); await relayerFinalize(BigInt(1)); expect(warn).toHaveBeenCalled(); warn.mockRestore(); });
-it('demo principal top-up is separate from the daily gas allowance budget',async()=>{
- const { topup }=await import('./topup');await topup(to,'300');await prefund(to,BigInt(2)*BigInt(10)**BigInt(18));expect(m.sendTransaction).toHaveBeenNthCalledWith(1,expect.objectContaining({value:BigInt(300)*BigInt(10)**BigInt(18)}));
+const treasury = '0x2222222222222222222222222222222222222222';
+const unit = BigInt(10) ** BigInt(18);
+beforeEach(() => {
+ vi.resetAllMocks(); resetPrefundBudget(); configurePotInterface({ abi: potAbi, chain: arcTestnet });
+ vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', 'treasury-wallet'); vi.stubEnv('TREASURY_ADDRESS', treasury);
+ vi.stubEnv('PREFUND_DAILY_CAP', '2'); vi.stubEnv('NEXT_PUBLIC_POT_ADDRESS', to);
+ const estimate = { data: { medium: { gasLimit: '21000', maxFee: '10', priorityFee: '1' } } };
+ m.estimateTransferFee.mockResolvedValue(estimate); m.estimateContractExecutionFee.mockResolvedValue(estimate);
+ m.createTransaction.mockResolvedValue({ data: { id: 'funding' } });
+ m.createContractExecutionTransaction.mockResolvedValue({ data: { id: 'finalize' } });
+ m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'COMPLETE', txHash: '0x1234' } } });
+ m.receipt.mockResolvedValue({ status: 'success', transactionHash: '0x1234' });
+ m.getBalance.mockResolvedValue(unit * BigInt(10));
 });
-
-it('builds both concurrent prefund accounts with viem nonceManager', async () => {
- await Promise.all([prefund(to), prefund(to)]);
- expect(m.privateKeyToAccount).toHaveBeenCalledTimes(2);
- for (const call of m.privateKeyToAccount.mock.calls) {
-  expect(call).toEqual([process.env.RELAYER_PRIVATE_KEY, { nonceManager }]);
- }
- expect(m.sendTransaction).toHaveBeenCalledTimes(2);
+afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.restoreAllMocks(); });
+it('prefunds one native USDC through Circle and confirms the receipt', async () => {
+ await expect(prefund(to)).resolves.toBe('0x1234');
+ expect(m.estimateTransferFee).toHaveBeenCalledWith({ walletId: 'treasury-wallet', tokenAddress: '', blockchain: 'ARC-TESTNET', destinationAddress: to, amount: ['1'] });
+ expect(m.createTransaction).toHaveBeenCalledWith({ walletId: 'treasury-wallet', tokenAddress: '', destinationAddress: to, amount: ['1'], fee: { type: 'absolute', config: { gasLimit: '21000', maxFee: '20', priorityFee: '1' } } });
+ expect(m.receipt).toHaveBeenCalledWith({ hash: '0x1234' });
 });
-it('uses fee estimates above the floor for funding and finalization', async () => {
- m.estimateFeesPerGas.mockResolvedValue({ maxFeePerGas: BigInt(45000000000), maxPriorityFeePerGas: BigInt(2000000000) });
- m.getBalance.mockResolvedValue(BigInt(10) ** BigInt(19));
+it('submits two concurrent prefunds through Circle without nonce errors', async () => {
+ await expect(Promise.all([prefund(to), prefund(to)])).resolves.toEqual(['0x1234', '0x1234']);
+ expect(m.createTransaction).toHaveBeenCalledTimes(2);
+});
+it('reserves the cap before concurrent submissions', async () => {
+ const results = await Promise.allSettled([prefund(to), prefund(to), prefund(to)]);
+ expect(results.filter(x => x.status === 'rejected')).toHaveLength(1);
+ expect(m.createTransaction).toHaveBeenCalledTimes(2);
+});
+it.each(['zero address', 'invalid address', 'zero amount', 'negative amount', 'cap', 'missing wallet'])('classifies %s as a pre-send refusal', async reason => {
+ if (reason === 'cap') vi.stubEnv('PREFUND_DAILY_CAP', '0');
+ if (reason === 'missing wallet') vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', '');
+ const address = reason === 'zero address' ? `0x${'0'.repeat(40)}` as const : reason === 'invalid address' ? '0xbad' : to;
+ const amount = reason === 'zero amount' ? BigInt(0) : reason === 'negative amount' ? -unit : undefined;
+ await expect(prefund(address, amount)).rejects.toBeInstanceOf(PrefundRefusedError);
+ expect(m.createTransaction).not.toHaveBeenCalled(); expect(m.estimateTransferFee).not.toHaveBeenCalled();
+});
+it('retains the reserved cap after an ambiguous submission failure', async () => {
+ const failure = new Error('connection lost after submission'); m.createTransaction.mockRejectedValueOnce(failure);
+ await expect(prefund(to)).rejects.toBe(failure); await prefund(to);
+ await expect(prefund(to)).rejects.toBeInstanceOf(PrefundRefusedError);
+});
+it('keeps demo principal separate from the daily gas allowance', async () => {
+ const { topup } = await import('./topup'); await topup(to, '300'); await prefund(to, unit * BigInt(2));
+ expect(m.createTransaction).toHaveBeenNthCalledWith(1, expect.objectContaining({ walletId: 'treasury-wallet', tokenAddress: '', amount: ['300'] }));
+});
+it('finalizes through callPot with the treasury wallet and fee floor', async () => {
+ await expect(relayerFinalize(BigInt(1))).resolves.toBe('0x1234');
+ expect(m.createContractExecutionTransaction).toHaveBeenCalledWith(expect.objectContaining({ walletId: 'treasury-wallet', callData: encodeFunctionData({ abi: potAbi, functionName: 'finalizeRelease', args: [BigInt(1)] }), fee: { type: 'absolute', config: { gasLimit: '21000', maxFee: '20', priorityFee: '1' } } }));
+});
+it('preserves Circle fee estimates above the floor for transfer and finalize', async () => {
+ const estimate = { data: { medium: { gasLimit: '21000', maxFee: '45', priorityFee: '2' } } };
+ m.estimateTransferFee.mockResolvedValue(estimate); m.estimateContractExecutionFee.mockResolvedValue(estimate);
  await prefund(to); await relayerFinalize(BigInt(1));
- expect(m.sendTransaction).toHaveBeenCalledWith(expect.objectContaining({ maxFeePerGas: BigInt(45000000000) }));
- expect(m.writeContract).toHaveBeenCalledWith(expect.objectContaining({ maxFeePerGas: BigInt(45000000000) }));
+ for (const submit of [m.createTransaction, m.createContractExecutionTransaction]) expect(submit).toHaveBeenCalledWith(expect.objectContaining({ fee: { type: 'absolute', config: { gasLimit: '21000', maxFee: '45', priorityFee: '2' } } }));
 });
-it('never undercuts the fee floor when finalizing', async () => {
- m.getBalance.mockResolvedValue(BigInt(10) ** BigInt(19));
- await relayerFinalize(BigInt(1));
- expect(m.writeContract).toHaveBeenCalledWith(expect.objectContaining({ maxFeePerGas: BigInt(20000000000) }));
+it('reads the treasury native balance without Circle credentials and warns below five USDC', async () => {
+ vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', ''); m.getBalance.mockResolvedValue(unit);
+ const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+ await expect(relayerBalance()).resolves.toBe(unit);
+ expect(m.getBalance).toHaveBeenCalledWith({ address: treasury }); expect(warn).toHaveBeenCalledWith('Relayer balance below 5 USDC');
+ expect(m.createTransaction).not.toHaveBeenCalled();
 });
-it.each(['zero address', 'non-positive amount', 'cap', 'missing key'])('classifies %s as a pre-send refusal', async (reason) => {
- if (reason === 'cap') process.env.PREFUND_DAILY_CAP = '0';
- if (reason === 'missing key') delete process.env.RELAYER_PRIVATE_KEY;
- await expect(prefund(reason === 'zero address' ? `0x${'0'.repeat(40)}` : to, reason === 'non-positive amount' ? BigInt(0) : undefined)).rejects.toBeInstanceOf(PrefundRefusedError);
- expect(m.sendTransaction).not.toHaveBeenCalled();
+it('does not warn at five USDC', async () => {
+ m.getBalance.mockResolvedValue(unit * BigInt(5)); const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+ await relayerBalance(); expect(warn).not.toHaveBeenCalled();
 });
-it('does not classify an ambiguous send failure as a refusal', async () => {
- const failure = new Error('connection lost after submission');
- m.sendTransaction.mockRejectedValueOnce(failure);
- await expect(prefund(to)).rejects.toBe(failure);
+it('warns on low balance when finalizing', async () => {
+ m.getBalance.mockResolvedValue(unit); const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+ await relayerFinalize(BigInt(1)); expect(warn).toHaveBeenCalled();
+});
+it.each(['FAILED', 'DENIED', 'CANCELLED'])('rejects terminal transfer state %s', async state => {
+ m.getTransaction.mockResolvedValue({ data: { transaction: { state } } });
+ await expect(prefund(to)).rejects.toThrow(); expect(m.receipt).not.toHaveBeenCalled();
+});
+it('waits past CONFIRMED until COMPLETE', async () => {
+ vi.useFakeTimers(); m.getTransaction.mockResolvedValueOnce({ data: { transaction: { state: 'CONFIRMED', txHash: '0x1234' } } });
+ const pending = prefund(to); await vi.advanceTimersByTimeAsync(500); await pending;
+ expect(m.getTransaction).toHaveBeenCalledTimes(2); expect(m.receipt).toHaveBeenCalledTimes(1);
+});
+it('times out with a reconciliation transaction id', async () => {
+ vi.useFakeTimers(); m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'SENT' } } });
+ const assertion = expect(prefund(to)).rejects.toThrow('reconcile transaction funding');
+ await vi.advanceTimersByTimeAsync(120000); await assertion;
+});
+it.each(['missing id', 'missing hash', 'failed receipt', 'incomplete fee'])('rejects %s', async reason => {
+ if (reason === 'missing id') m.createTransaction.mockResolvedValue({ data: {} });
+ if (reason === 'missing hash') m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'COMPLETE' } } });
+ if (reason === 'failed receipt') m.receipt.mockResolvedValue({ status: 'reverted' });
+ if (reason === 'incomplete fee') m.estimateTransferFee.mockResolvedValue({ data: { medium: { maxFee: '10' } } });
+ await expect(prefund(to)).rejects.toThrow();
+});
+it('refuses finalize without a wallet or with a negative pot id before submission', async () => {
+ await expect(relayerFinalize(-BigInt(1))).rejects.toThrow('Invalid pot id');
+ vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', ''); await expect(relayerFinalize(BigInt(1))).rejects.toThrow();
+ expect(m.createContractExecutionTransaction).not.toHaveBeenCalled();
+});
+it('defaults to a fifty USDC daily cap', async () => {
+ vi.stubEnv('PREFUND_DAILY_CAP', undefined);
+ await prefund(to, unit * BigInt(50));
+ await expect(prefund(to)).rejects.toBeInstanceOf(PrefundRefusedError);
+ expect(m.createTransaction).toHaveBeenCalledTimes(1);
+});
+it('resets the reserved budget on the next UTC day', async () => {
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-12T23:59:59Z'));
+ await prefund(to, unit * BigInt(2)); await expect(prefund(to)).rejects.toBeInstanceOf(PrefundRefusedError);
+ vi.setSystemTime(new Date('2026-11-13T00:00:00Z')); await prefund(to);
+ expect(m.createTransaction).toHaveBeenCalledTimes(2);
+});
+it('does not consume the cap when the treasury wallet is missing', async () => {
+ vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', ''); await expect(prefund(to)).rejects.toBeInstanceOf(PrefundRefusedError);
+ vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', 'treasury-wallet'); await prefund(to, unit * BigInt(2));
+ expect(m.createTransaction).toHaveBeenCalledTimes(1);
 });

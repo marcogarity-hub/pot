@@ -1,7 +1,7 @@
 import { createPublicClient, decodeErrorResult, encodeFunctionData, formatUnits, http, isHex, parseUnits, type Hex, type TransactionReceipt } from 'viem';
 import { circleClient } from './client';
 import { potAddress, potInterface } from './contract';
-export type PotWriteFn = 'createPot' | 'pay' | 'swapSeat' | 'refund' | 'requestRelease' | 'object' | 'expire';
+export type PotWriteFn = 'createPot' | 'pay' | 'swapSeat' | 'refund' | 'requestRelease' | 'object' | 'expire' | 'finalizeRelease';
 export class PotRevertError extends Error {
   constructor(public code: string, message = code) { super(message); this.name = 'PotRevertError'; }
 }

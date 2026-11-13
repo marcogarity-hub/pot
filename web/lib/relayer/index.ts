@@ -1,48 +1,71 @@
 import "server-only";
-import { createPublicClient, createWalletClient, http, nonceManager, parseUnits, type Hex } from 'viem';
+import { createPublicClient, formatUnits, http, isHex, parseUnits, type Hex } from 'viem';
 import { arcTestnet } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
-import { potAddress, potInterface, validAddress } from '../circle/contract';
-const MIN_MAX_FEE = BigInt(20000000000);
+import { validAddress } from '../circle/contract';
+import { circleClient } from '../circle/client';
+import { callPot } from '../circle/tx';
 export class PrefundRefusedError extends Error {}
 let budget = { day: '', spent: BigInt(0) };
 // In-process budget; conservative reservation includes failures with uncertain delivery.
 export function resetPrefundBudget() { budget = { day: '', spent: BigInt(0) }; }
-function clients() {
-  const chain = arcTestnet;
-  const key = process.env.RELAYER_PRIVATE_KEY;
-  if (!key) throw new PrefundRefusedError('RELAYER_PRIVATE_KEY unavailable');
-  const account = privateKeyToAccount(key as Hex, { nonceManager });
-  return { account, wallet: createWalletClient({ account, chain, transport: http() }), publicClient: createPublicClient({ chain, transport: http() }) };
+function treasuryWalletId() {
+  const id = process.env.CIRCLE_TREASURY_WALLET_ID;
+  if (!id) throw new PrefundRefusedError('CIRCLE_TREASURY_WALLET_ID unavailable');
+  return id;
 }
-export async function prefund(to: Hex, amount = BigInt(10) ** BigInt(18)): Promise<Hex> {
+function publicClient() { return createPublicClient({ chain: arcTestnet, transport: http() }); }
+function validateFunding(to: Hex, amount: bigint) {
   try { validAddress(to); } catch { throw new PrefundRefusedError('Invalid or zero address'); }
   if (amount <= BigInt(0)) throw new PrefundRefusedError('Funding amount must be positive');
+}
+export async function prefund(to: Hex, amount = BigInt(10) ** BigInt(18)): Promise<Hex> {
+  validateFunding(to, amount);
+  const walletId = treasuryWalletId();
   const cap = parseUnits(process.env.PREFUND_DAILY_CAP ?? '50',18);
   const day = new Date().toISOString().slice(0,10);
   if (budget.day !== day) budget = { day, spent: BigInt(0) };
   if (budget.spent + amount > cap) throw new PrefundRefusedError('Daily prefund cap exceeded');
-  const { wallet, publicClient } = clients();
   budget.spent += amount;
-  return sendFunding(to, amount, { wallet, publicClient });
+  return sendFunding(to, amount, walletId);
 }
-async function sendFunding(to: Hex, amount: bigint, {wallet, publicClient}: Pick<ReturnType<typeof clients>, 'wallet' | 'publicClient'>): Promise<Hex> {
-  const { maxFeePerGas } = await publicClient.estimateFeesPerGas();
-  const hash = await wallet.sendTransaction({ to, value: amount, maxFeePerGas: maxFeePerGas > MIN_MAX_FEE ? maxFeePerGas : MIN_MAX_FEE, maxPriorityFeePerGas: BigInt(1000000000) });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== 'success') throw new Error('Funding reverted');
-  return hash;
+async function sendFunding(to: Hex, amount: bigint, walletId: string): Promise<Hex> {
+  const client = circleClient();
+  // SDK native-token selector; the source wallet determines the submission chain.
+  const request = { walletId, tokenAddress: '', destinationAddress: to, amount: [formatUnits(amount,18)] };
+  const estimate = (await client.estimateTransferFee({ ...request, blockchain: 'ARC-TESTNET' })).data?.medium;
+  if (!estimate?.gasLimit || !estimate.maxFee || !estimate.priorityFee) throw new Error('Circle returned incomplete fee estimate');
+  const maxFee = parseUnits(estimate.maxFee,9) < BigInt(20000000000) ? '20' : estimate.maxFee;
+  const submitted = await client.createTransaction({ ...request, fee: { type: 'absolute', config: { gasLimit: estimate.gasLimit, maxFee, priorityFee: estimate.priorityFee } } });
+  const id = submitted.data?.id;
+  if (!id) throw new Error('Circle returned no transaction id');
+  const end = Date.now() + 120000;
+  while (Date.now() < end) {
+    const tx = (await client.getTransaction({ id })).data?.transaction;
+    if (tx && ['FAILED','DENIED','CANCELLED'].includes(tx.state)) throw new Error(`Treasury funding ${tx.state}; reconcile transaction ${id} before retrying`);
+    if (tx?.state === 'COMPLETE') {
+      if (!tx.txHash || !isHex(tx.txHash)) throw new Error('Complete transaction has no hash');
+      const receipt = await publicClient().waitForTransactionReceipt({ hash: tx.txHash });
+      if (receipt.status !== 'success') throw new Error('Funding reverted');
+      return tx.txHash;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  throw new Error(`Circle confirmation timed out; reconcile transaction ${id} before retrying`);
 }
 /** Conductor-only demo principal, never expose through an HTTP route. */
 export async function fundDemoPrincipal(to: Hex, amount: bigint): Promise<Hex> {
-  validAddress(to);
-  if (amount <= BigInt(0)) throw new Error('Funding amount must be positive');
-  return sendFunding(to, amount, clients());
+  validateFunding(to, amount);
+  return sendFunding(to, amount, treasuryWalletId());
+}
+export async function relayerBalance(): Promise<bigint> {
+  const address = validAddress(process.env.TREASURY_ADDRESS ?? '');
+  const balance = await publicClient().getBalance({ address });
+  if (balance < parseUnits('5',18)) console.warn('Relayer balance below 5 USDC');
+  return balance;
 }
 export async function relayerFinalize(potId: bigint): Promise<Hex> {
   if (potId < BigInt(0)) throw new Error('Invalid pot id');
-  const { wallet, publicClient, account } = clients();
-  if (await publicClient.getBalance({ address: account.address }) < parseUnits('5',18)) console.warn('Relayer balance below 5 USDC');
-  const { maxFeePerGas } = await publicClient.estimateFeesPerGas();
-  return wallet.writeContract({ address: potAddress(), abi: potInterface().abi, functionName: 'finalizeRelease', args: [potId], maxFeePerGas: maxFeePerGas > MIN_MAX_FEE ? maxFeePerGas : MIN_MAX_FEE, maxPriorityFeePerGas: BigInt(1000000000) });
+  const walletId = treasuryWalletId();
+  await relayerBalance();
+  return (await callPot(walletId, 'finalizeRelease', [potId])).transactionHash;
 }
