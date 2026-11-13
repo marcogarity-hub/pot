@@ -40,3 +40,13 @@ it('callback preserves a join invite path',async()=>{
 });
 it('me returns normalized identity',async()=>{const response=await me();expect(await response.json()).toEqual({email:'a@x.com',wallet_address:'0x1111111111111111111111111111111111111111'});});
 it('me rejects unauthenticated callers',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await me()).status).toBe(401);});
+it('times out waiting for an already-reserved identity without provisioning again',async()=>{
+ vi.useFakeTimers();
+ try { rows.push({id:'pending',email:'a@x.com',auth_user_id:null});const pending=expect(ensureUser('a@x.com')).rejects.toThrow('provisioning pending');await vi.advanceTimersByTimeAsync(10000);await pending;expect(m.createWallet).not.toHaveBeenCalled();expect(m.prefund).not.toHaveBeenCalled(); } finally {vi.useRealTimers();}
+});
+it('does not return a usable mapping if prefunding fails',async()=>{
+ m.prefund.mockRejectedValue(new Error('cap exceeded'));await expect(ensureUser('a@x.com')).rejects.toThrow('cap exceeded');expect(rows[0].wallet_address).toBeUndefined();
+});
+it('does not reassign a wallet linked to a different auth user',async()=>{
+ rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'someone-else',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});await expect(claimUser('auth-id','a@x.com')).rejects.toThrow('already linked');expect(rows[0].auth_user_id).toBe('someone-else');
+});

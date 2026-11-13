@@ -22,10 +22,19 @@ export async function prefund(to: Hex, amount = BigInt(10) ** BigInt(18)): Promi
   if (budget.spent + amount > cap) throw new Error('Daily prefund cap exceeded');
   const { wallet, publicClient } = clients();
   budget.spent += amount;
+  return sendFunding(to, amount, { wallet, publicClient });
+}
+async function sendFunding(to: Hex, amount: bigint, {wallet, publicClient}: Pick<ReturnType<typeof clients>, 'wallet' | 'publicClient'>): Promise<Hex> {
   const hash = await wallet.sendTransaction({ to, value: amount, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: BigInt(1000000000) });
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== 'success') throw new Error('Prefunding reverted');
+  if (receipt.status !== 'success') throw new Error('Funding reverted');
   return hash;
+}
+/** Conductor-only demo principal, never expose through an HTTP route. */
+export async function fundDemoPrincipal(to: Hex, amount: bigint): Promise<Hex> {
+  validAddress(to);
+  if (amount <= BigInt(0)) throw new Error('Funding amount must be positive');
+  return sendFunding(to, amount, clients());
 }
 export async function relayerFinalize(potId: bigint): Promise<Hex> {
   if (potId < BigInt(0)) throw new Error('Invalid pot id');

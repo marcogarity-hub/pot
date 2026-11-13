@@ -10,3 +10,6 @@ it('prefunds one USDC by default, confirms, and meets fee floor', async () => { 
 it('rejects zero address without sending', async () => { await expect(prefund(`0x${'0'.repeat(40)}`)).rejects.toThrow(); expect(m.sendTransaction).not.toHaveBeenCalled(); });
 it('reserves the cap before concurrent sends', async () => { const results = await Promise.allSettled([prefund(to),prefund(to),prefund(to)]); expect(results.filter(x=>x.status==='rejected')).toHaveLength(1); expect(m.sendTransaction).toHaveBeenCalledTimes(2); });
 it('warns below five USDC when finalizing', async () => { const warn = vi.spyOn(console,'warn').mockImplementation(()=>{}); m.writeContract.mockResolvedValue('0x1234'); await relayerFinalize(BigInt(1)); expect(warn).toHaveBeenCalled(); warn.mockRestore(); });
+it('demo principal top-up is separate from the daily gas allowance budget',async()=>{
+ const { topup }=await import('./topup');await topup(to,'300');await prefund(to,BigInt(2)*BigInt(10)**BigInt(18));expect(m.sendTransaction).toHaveBeenNthCalledWith(1,expect.objectContaining({value:BigInt(300)*BigInt(10)**BigInt(18)}));
+});

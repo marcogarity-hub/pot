@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { claimUser } from '@/lib/circle/identity';
-export function safeNext(input: string | null): string {
+function safeNext(input: string | null): string {
   if (!input || !input.startsWith('/') || input.startsWith('//') || /[\\\u0000-\u0020]/.test(input)) return '/';
   try {
     const decoded = decodeURIComponent(input);
