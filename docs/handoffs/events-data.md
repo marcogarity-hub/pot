@@ -325,3 +325,68 @@ because the Turbopack worker's local port binding is denied even on escalation
 retries. Build success is NOT claimed; rerun `cd web && npm run build` in an
 environment permitting worker port binding and font downloads. `git diff --check`
 passes. Earlier live integration gates remain unchanged.
+
+## Deployed Pot ABI integration (2026-11-13)
+
+Done: Streams route imports potAbi and POT_ADDRESS from @/lib/pot; deleted
+abi-placeholder.ts. The route returns 503 only when POT_ADDRESS or
+QUICKNODE_STREAM_TOKEN is unset/empty. No route segment config exports added.
+Decoder's PotEventName now comes from the generated contract interface; test
+helpers use the real potAbi rather than separately declared event signatures.
+
+Checked every supported event and argument against web/lib/pot/abi.ts and the
+contract handoff: PotCreated.members; Paid.member/amount; Locked.lockedAt;
+SeatSwapped.leaver/replacement/refunded; Refunded.member/amount;
+PayoutRequested.receiptHash/releaseEligibleAt; Objected.member/objectionsCount;
+Released.organizer/amount; Expired; Frozen. Existing fold argument names and
+state transitions already matched, so fold.ts needed no changes. Expired alone
+folds to state 4; refunds preserve has_paid and payments_count; a paid swap
+marks the leaver inactive/refunded and reduces payments_count by one.
+
+Rebuilt arc-logs.json with viem encodeEventTopics/encodeAbiParameters using the
+real potAbi at 0xf842F699128A2e575d20BcC92F0472C7ad59e5C8. This is explicitly
+synthetic data, not captured live logs. It contains 22 logs across three pots:
+paid seat replacement then release; threshold objection/freeze/refund; and expiry
+without Frozen followed by refund. Paid+Locked and Objected+Frozen share their
+respective transaction identities. Blocks follow deployment block 72173814.
+Generator reads event parameter definitions directly from potAbi. Regenerate:
+`cd web && node --import tsx app/api/streams/__fixtures__/generate.ts`.
+
+Tests decode/fold all ten real ABI events, assert member arrays and exact decimal
+values, timestamps, swap flags, objections, expiry state 4 and refund history.
+Full HTTP ingestion covers signature verification, gzip retries, persistence and
+idempotent projections for all three pots. Production POST test verifies real
+ABI/address wiring through mocked Supabase writes, plus missing-config 503s.
+
+Files changed:
+- web/app/api/streams/route.ts
+- web/app/api/streams/abi-placeholder.ts (deleted)
+- web/app/api/streams/decode.ts
+- web/app/api/streams/test-support.ts
+- web/app/api/streams/{fold,route}.test.ts
+- web/app/api/streams/__fixtures__/{arc-logs.json,generate.ts}
+- docs/handoffs/events-data.md
+
+TDD: production-route regression first failed with expected 200 / received 503.
+After integration, required validation passed (combined exit 0):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  8 passed (8)
+      Tests  174 passed (174)
+(TypeScript: no diagnostics; exit 0)
+> web@0.1.0 lint
+> eslint
+(lint: no diagnostics; exit 0)
+```
+Existing Vite CommonJS/ESM config compatibility warning remains. Initial tsc
+caught bigint literals in the fixture generator; replaced them with BigInt()
+for the existing compiler target and reran the entire required command above.
+`git diff --check` passed. Generator executed successfully using node --import
+(tsx CLI's IPC listener is blocked by this sandbox).
+
+Before edits, pulled origin/main with escalation for shared Git metadata:
+fast-forward 561e3c6..f649aa4 (conductor handoff only). Read contract, wallet,
+UI and conductor handoffs. No merge to main, push, live transactions, migrations,
+or edits outside Lane 3. No blockers for this task. Production build remains
+with the conductor as requested; live Streams/Supabase/browser verification is
+still an integration step and is not claimed by these mocked tests.

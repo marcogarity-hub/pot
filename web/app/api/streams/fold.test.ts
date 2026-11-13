@@ -49,3 +49,30 @@ describe('decodePotLogs', () => {
     expect(() => decodePotLogs({}, abi, address)).toThrow();
   });
 });
+
+describe('deployed ABI fixture', () => {
+  it('decodes and folds every contract event, including expiry without Frozen', async () => {
+    const { default: fixture } = await import('./__fixtures__/arc-logs.json');
+    const events = decodePotLogs(fixture, abi, address);
+    expect([...new Set(events.map(e => e.name))].sort()).toEqual(
+      abi.filter(e => e.type === 'event').map(e => e.name).sort(),
+    );
+    expect(events).toHaveLength(22);
+    expect(events[0].args).toEqual({ potId: '1', organizer: alice, members: [alice, bob],
+      total: '600000000000000000000', share: '300000000000000000000', deadline: '1800000000',
+      threshold: '1', objectionWindow: '120', requestWindow: '600' });
+    const project = (id: string) => foldPot(events.filter(e => e.potId === id));
+    const released = project('1');
+    expect(released.pot).toMatchObject({ state: 3, payments_count: 2,
+      locked_at: new Date(1799990000000).toISOString(), receipt_hash: receipt,
+      release_eligible_at: new Date(1799990120000).toISOString() });
+    expect(released.members.find(m => m.address === alice)).toMatchObject({ active: false, has_paid: true, has_refunded: true });
+    expect(released.members.find(m => m.address === '0xcccccccccccccccccccccccccccccccccccccccc')).toMatchObject({ active: true, has_paid: true, has_refunded: false });
+    const frozen = project('2');
+    expect(frozen.pot).toMatchObject({ state: 4, objections_count: 1, payments_count: 2 });
+    expect(frozen.members.find(m => m.address === alice)).toMatchObject({ has_paid: true, has_objected: true, has_refunded: true });
+    expect(events.filter(e => e.potId === '3').map(e => e.name)).not.toContain('Frozen');
+    expect(project('3').pot).toMatchObject({ state: 4, payments_count: 2 });
+    expect(project('3').members.find(m => m.address === bob)).toMatchObject({ has_paid: true, has_refunded: true });
+  });
+});
