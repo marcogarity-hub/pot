@@ -59,3 +59,9 @@
 ## 2026-11-13 — lane/contract (liveness hardening)
 - Landed: invariant handler mustSucceed for Funding refunds after deadline and eligible expire; test_22 pins Expired-only; chain.ts strict assertPotAddress (+ re-export, 7 tests), POT_DEPLOY_BLOCK empty-safe. Pot.sol unchanged (deployed bytecode still matches).
 - Gates: arc-forge 75/75 + invariants 10000 runs; web vitest/tsc/lint/build OK; Codex adversarial approve (no findings); Opus round 1 CHANGES (assertPotAddress accepted invalid values) → fixed → APPROVE.
+
+## 2026-11-13 — lane/ui (Tasks 4.2–4.4, plain shadcn; design pass 4.1 pending Marco's bundle)
+- Landed: /new create form (validateCreate), /pots/[potId] status (availableActions, PotActions, verified receipt, auto-finalize every 10s + button, organizer invite link), home, /sign-in (magic link), /join/[token] (server-side invite resolution). Conductor fixed globals.css --font-sans self-reference.
+- Gates: vitest 223/223 (lane), tsc, lint, build OK; reviewer (Sonnet) APPROVE. Not yet exercised signed-in with real data (needs SMTP + Vercel env).
+
+## STATE — 2026-11-13 ~01:50: all four lanes merged; lane workers stopped. Next: full-codebase multi-agent review, then Marco's morning items.
