@@ -84,3 +84,9 @@
 ## 2026-11-13 — lane/ui (full-review fixes)
 - Landed: non-interactive sign-in fallback; invite outcomes (left only for an inactive pot_members row; no row = still invited); custom window input latches; auto-finalize with deterministic 0–3 s jitter and one shared in-flight finalize per pot (button + auto tick).
 - Gates: vitest/tsc/lint/build OK; conductor (Opus) review round 1 CHANGES (left-state fired before Stream projection) → fixed → APPROVE. Worker: Claude Haiku.
+
+## 2026-11-13 — lane/wallet (full-review fixes)
+- Landed: CircleTimeoutError → 502 TransactionPending with circleTransactionId; finalize single-flight per pot (cloned Response per caller); /api/wallet/me read-only; callback never provisions (claim is a no-op without a row); POST /api/pots provisions + links the organizer before createPot; stale (>120 s) wallet reservations taken over; prefund cap via Supabase reserve_prefund/release_prefund.
+- Gates: vitest 267/267, tsc, lint, build OK on main; conductor (Opus) review round 1 CHANGES (shared Response body; first-time organizer sign-in + RLS link) → fixed → APPROVE. Worker: Codex gpt-6-luna (conductor committed; sandbox git lock).
+
+## STATE — 2026-11-13: all full-review fixes merged. Open: contested seat-swap dilution (Marco), in-memory 5 pots/hour limiter (documented), Marco's account/env items.
