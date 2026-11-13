@@ -40,3 +40,7 @@
 ## 2026-11-13 — lane/wallet (pre-flight simulation)
 - Landed: callPot simulates from the caller's address (treasury for finalize) before Circle; declared custom errors → PotRevertError without submitting; RPC failure warns and submits; Circle tx id in failure messages.
 - Gates: vitest 169/169, tsc, lint, build OK; reviewer (Sonnet) APPROVE. Open: confirm Arc RPC returns revert data on eth_call once Pot is deployed.
+
+## 2026-11-13 — lane/contract (Tasks 1.2–1.5)
+- Landed: IPot/Pot.sol (createPot, pay, swapSeat, refund, requestRelease, object, finalizeRelease, expire; PotCreated…Frozen events; MAX_MEMBERS 20), tests 0–23 + 3 invariants, web/lib/pot (potAbi, arcTestnet, POT_ADDRESS, POT_DEPLOY_BLOCK).
+- Gates: arc-forge test 75/75, invariants 10000 runs 0 reverts (271s); web tsc/vitest/build OK; Opus reviewer APPROVE; Codex adversarial "needs-attention" with one HIGH (not critical) finding = known gap: a contract organizer that rejects payment strands a PayoutRequested pot. Not reachable in-app (organizers are Circle EOAs, A1/A14). Fix needs a spec change → question for Marco.
