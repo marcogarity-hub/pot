@@ -65,3 +65,9 @@
 - Gates: vitest 223/223 (lane), tsc, lint, build OK; reviewer (Sonnet) APPROVE. Not yet exercised signed-in with real data (needs SMTP + Vercel env).
 
 ## STATE — 2026-11-13 ~01:50: all four lanes merged; lane workers stopped. Next: full-codebase multi-agent review, then Marco's morning items.
+
+## STATE — 2026-11-13 (after usage reset): full-codebase review in progress
+- All four lanes merged at 730c35f (+ b6a3d40 font fix). Lane workers stopped.
+- Review workflow wf_4ab1801f-9e4 (6 dimensions, adversarial verify). First pass hit the usage limit; resumed with failed agents on Haiku (wallet-api finder + integration skeptics).
+- Confirmed so far: (1) streams fold throws on huge deadline → whole batch 500s, can stall the Stream [medium]; (2) receipt_text not in Realtime publication / written after PayoutRequested, so members don't see it live [medium]; (3) organizer can swapSeat after members paid to dilute the objection electorate [low, needs Marco: contract]; (4) WindowField custom input vanishes mid-typing [low]; (5) swapped-out member's invite link leads to an unreadable pot [low]; (6) POT_ADDRESS not trimmed in chain.ts [low]; (7) prefund cap / rate limit in-memory per instance on Vercel [low].
+- Next: wait for resume results → send fixes to lanes (Codex workers on gpt-6-luna, Claude reviewers on Haiku per Marco) → morning report.
