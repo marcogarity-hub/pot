@@ -7,7 +7,8 @@ Marco is the primary creator. He makes product decisions; agents propose and bui
 1. Don't state what's current (models, tool versions, packages, chain settings) from memory.
    Check with a command or the docs, or say you don't know. Opus 5.5 exists.
 2. Each lane touches only the files it owns. Only the conductor edits package.json,
-   lockfiles, and shared config (tsconfig, next.config, foundry.toml, tailwind, eslint, .env.example).
+   lockfiles, and shared config (tsconfig, next.config, foundry.toml, tailwind, eslint, vercel.json, .env.example),
+   plus web/lib/supabase/ (shared Supabase clients), README.md, and the initial scaffolding of every lane folder.
 3. Nothing merges to main with failing tests.
 4. Arc sample apps are reference only. Never copy code from them.
 5. One worktree per lane, created by the tool running the lane. No nested worktrees.
@@ -15,7 +16,7 @@ Marco is the primary creator. He makes product decisions; agents propose and bui
 ## Lanes
 | Lane | Owns | Built by | Done when |
 |---|---|---|---|
-| 1. Contract | contracts/, web/lib/pot/ | Claude Code (TDD); Codex reviews every diff | Native-USDC spike done; test 0 + 21 tests pass; deployed and verified on Arc testnet |
+| 1. Contract | contracts/, web/lib/pot/ | Claude Code (TDD); Codex reviews every diff | Native-USDC spike done; tests 0–23 + invariants pass; deployed and verified on Arc testnet |
 | 2. Wallet | web/lib/circle/, web/lib/relayer/, web/app/api/wallet/, web/app/api/pots/ | Codex | Circle+Arc spike passes; a test user signs in by email and sends a tx on Arc testnet |
 | 3. Events + Data | supabase/, web/app/api/streams/, web/lib/realtime/ | Codex | A test Paid event shows up in Supabase and an open browser within seconds |
 | 4. UI | web/app/(screens)/, web/components/ | Claude Design → Claude Code | Create, join, pay and status screens run on real data |
