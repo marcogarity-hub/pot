@@ -55,3 +55,7 @@
 ## 2026-11-13 — lane/events-data (wire deployed ABI)
 - Landed: /api/streams uses @/lib/pot potAbi + POT_ADDRESS; placeholder deleted; fixture generated from potAbi at the deployed address; end-to-end decode test; Expired → state 4.
 - Gates: vitest, tsc, lint, build OK on main after merge; reviewer (Sonnet) APPROVE. Lane 3 remaining: QuickNode Stream (needs Marco's account).
+
+## 2026-11-13 — lane/contract (liveness hardening)
+- Landed: invariant handler mustSucceed for Funding refunds after deadline and eligible expire; test_22 pins Expired-only; chain.ts strict assertPotAddress (+ re-export, 7 tests), POT_DEPLOY_BLOCK empty-safe. Pot.sol unchanged (deployed bytecode still matches).
+- Gates: arc-forge 75/75 + invariants 10000 runs; web vitest/tsc/lint/build OK; Codex adversarial approve (no findings); Opus round 1 CHANGES (assertPotAddress accepted invalid values) → fixed → APPROVE.
