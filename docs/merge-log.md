@@ -51,3 +51,7 @@
 ## 2026-11-13 — lane/wallet (wire deployed ABI)
 - Landed: production uses @/lib/pot potAbi/POT_ADDRESS/arcTestnet; mocks removed; 503 when address unset; real PotCreated/PotView decoding tests.
 - Gates: vitest 182/182, tsc, lint, build OK; reviewer (Sonnet) APPROVE.
+
+## 2026-11-13 — lane/events-data (wire deployed ABI)
+- Landed: /api/streams uses @/lib/pot potAbi + POT_ADDRESS; placeholder deleted; fixture generated from potAbi at the deployed address; end-to-end decode test; Expired → state 4.
+- Gates: vitest, tsc, lint, build OK on main after merge; reviewer (Sonnet) APPROVE. Lane 3 remaining: QuickNode Stream (needs Marco's account).
