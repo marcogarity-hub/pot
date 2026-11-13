@@ -2,8 +2,8 @@ import 'server-only';
 import { createPublicClient, http, zeroAddress } from 'viem';
 import { potAddress, potInterface, validAddress } from './contract';
 
-// Only the fields these routes consume. Lane 1's generated ABI supplies the
-// complete PotView tuple; until configured, potInterface() fails closed.
+// viem decodes the ABI's named PotView tuple into an object. Consume names
+// instead of positional indexes so state/counts cannot be confused.
 export type ActionPot = {
   organizer: string;
   share: bigint;

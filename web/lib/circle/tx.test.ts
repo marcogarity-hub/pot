@@ -1,15 +1,15 @@
+vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import { ContractFunctionExecutionError, ContractFunctionRevertedError, encodeErrorResult, encodeFunctionData, parseUnits } from 'viem';
-import { potAbi, arcTestnet } from './__mocks__/pot';
+import { potAbi, arcTestnet } from '@/lib/pot';
 const m = vi.hoisted(() => ({ createWallets: vi.fn(), getWallet: vi.fn(), simulateContract: vi.fn(), publicClient: vi.fn(), createContractExecutionTransaction: vi.fn(), getTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), receipt: vi.fn() }));
 vi.mock('@circle-fin/developer-controlled-wallets', () => ({ initiateDeveloperControlledWalletsClient: () => m }));
 vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createPublicClient: (options: unknown) => { m.publicClient(options); return { simulateContract: m.simulateContract, waitForTransactionReceipt: m.receipt }; } }));
-import { configurePotInterface } from './contract';
 import { callPot } from './tx';
 import { createWallet } from './wallets';
 beforeEach(() => {
- vi.resetAllMocks(); configurePotInterface({ abi: potAbi, chain: arcTestnet });
+ vi.resetAllMocks();
  process.env.NEXT_PUBLIC_POT_ADDRESS = '0x1111111111111111111111111111111111111111';
  process.env.CIRCLE_API_KEY = 'test'; process.env.CIRCLE_ENTITY_SECRET = 'test'; process.env.CIRCLE_WALLET_SET_ID = 'set';
  m.getWallet.mockResolvedValue({ data: { wallet: { address: '0x2222222222222222222222222222222222222222' } } });
