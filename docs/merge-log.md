@@ -75,3 +75,8 @@
 ## 2026-11-13 — lane/events-data (full-review fixes)
 - Landed: fold clamps chain timestamps to 9999-12-31; per-pot isolation of deterministic fold errors (200, others still project; DB errors still 500); pot_meta in supabase_realtime + usePot listener (live receipt text); prefund_ledger + reserve_prefund/release_prefund (service_role only). Migrations 000300/000400 applied, db lint clean.
 - Gates: vitest/tsc/lint/build OK (after refreshing stale worktree deps); reviewed by the conductor (Opus) — APPROVE. Worker: Codex gpt-6-luna.
+
+## 2026-11-13 — lane/contract (POT_ADDRESS trim)
+- Landed: POT_ADDRESS export trimmed (undefined when blank) + 2 tests. Web-only; Pot.sol untouched.
+- Gates: lib/pot 9/9, tsc, lint, build OK; reviewed by the conductor (Opus) — APPROVE. Worker: Codex gpt-6-luna.
+- In review: Lane 2 round 1 (shared Response in finalize single-flight; first-time organizer sign-in/claim broken) and Lane 4 round 1 (invite "left" state fired before Stream projection).
