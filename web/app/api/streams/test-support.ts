@@ -20,5 +20,5 @@ export function event(name: DecodedEvent['name'], args: DecodedEvent['args'] = {
 }
 export const created = event('PotCreated', { organizer: alice, members: [alice, bob], total: '600000000000000000000', share: '300000000000000000000', deadline: '1800000000', threshold: '2', objectionWindow: '120', requestWindow: '600' });
 export function paidLog(index = 1) {
-  return { address, topics: encodeEventTopics({ abi, eventName: 'Paid', args: { potId: 1n, member: alice } }), data: encodeAbiParameters([{ type: 'uint256' }], [300000000000000000000n]), blockNumber: '0x20000000000001', logIndex: `0x${index.toString(16)}`, transactionHash: `0x${'12'.repeat(32)}` as Hex, removed: false };
+  return { address, topics: encodeEventTopics({ abi, eventName: 'Paid', args: { potId: BigInt(1), member: alice } }), data: encodeAbiParameters([{ type: 'uint256' }], [BigInt('300000000000000000000')]), blockNumber: '0x20000000000001', logIndex: `0x${index.toString(16)}`, transactionHash: `0x${'12'.repeat(32)}` as Hex, removed: false };
 }

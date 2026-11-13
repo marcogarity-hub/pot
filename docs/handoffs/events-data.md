@@ -114,3 +114,54 @@ The plan's referenced Superpowers execution skills were not found in installed
 skill directories; followed the explicit task-by-task TDD workflow directly.
 Fetched origin/main and fast-forward check confirmed this branch already matched
 main before implementation; no main worktree or branch was changed.
+
+## Task 3.3 — Streams webhook and stores (2026-11-12)
+
+Done: HMAC-SHA256 over exact `nonce + timestamp + uncompressed body`, strict
+hex digest validation and constant-time comparison; gzip decoding before
+verification; authenticated decode, append-only event inserts, full-history
+reload/fold, and projection writes. Duplicate deliveries still refold. Failed
+projections return 500 so retries repair them; missing creation histories are
+stored and return 500, converging once the creation batch arrives.
+
+Files: `web/app/api/streams/{route,handler,verify,store,abi-placeholder}.ts`,
+`route.test.ts`, and new migration
+`supabase/migrations/20261113000200_atomic_projection.sql`. Small TypeScript
+compatibility adjustments in `decode.ts`, `fold.ts`, and `test-support.ts`.
+No merged migrations were edited.
+
+**Apply the new migration before enabling the Stream.** It is needed to write
+parent/member projections atomically and serialize concurrent projection writers
+with a per-pot transaction advisory lock. A stored-event-count check rejects
+stale folds, making slower deliveries retry rather than overwrite newer state.
+The RPC is executable only by service_role. Event reloads page in append-only id
+order to avoid the API row limit and page shifts during out-of-order backfill;
+`foldPot` then sorts by block/log. Numeric IDs and block numbers are selected
+with `::text` to avoid JSON number rounding. RPC execution itself has not been
+tested against a database or applied; Supabase tests are fully mocked as requested.
+
+QuickNode verification source checked before implementation:
+https://www.quicknode.com/guides/quicknode-products/streams/validating-incoming-streams-webhook-messages
+No freshness window is imposed, so authenticated historical/retried deliveries
+remain usable; event identity makes replay idempotent.
+
+Integration gate: `route.ts` imports an intentionally empty `potAbi` from our
+`abi-placeholder.ts`. **Swap that import to Lane 1's generated `@/lib/pot/abi`
+when available**, verify the exact signatures/indexing, and remove the placeholder.
+Until then POST returns 503 and cannot silently acknowledge undecoded events.
+It uses existing env names `QUICKNODE_STREAM_TOKEN` and
+`NEXT_PUBLIC_POT_ADDRESS`. Admin client is `@/lib/supabase/admin` as requested.
+No Stream was created, and no keys or settings were changed.
+
+TDD: initial route suite failed on missing `./handler`; implementation passed:
+```text
+$ cd web && npx vitest run app/api/streams
+ Test Files  2 passed (2)
+      Tests  16 passed (16)
+$ cd web && npx next typegen && npx tsc --noEmit
+Generating route types...
+✓ Types generated successfully
+```
+TypeScript exit 0. `next typegen` generated ignored framework types needed by the
+existing layout's global `LayoutProps`; no shared source/config was modified.
+Existing Vite config-loader warning remains (conductor-owned config).

@@ -7,7 +7,7 @@ export type PotRow = {
   release_eligible_at: string | null;
 };
 export type MemberRow = { pot_id: string; address: string; has_paid: boolean; has_objected: boolean; has_refunded: boolean; active: boolean };
-const timestamp = (seconds: string) => new Date(Number(BigInt(seconds) * 1000n)).toISOString();
+const timestamp = (seconds: string) => new Date(Number(BigInt(seconds) * BigInt(1000))).toISOString();
 
 /** Deterministic chain-only projection. Persistence adds updated_at. */
 export function foldPot(input: DecodedEvent[]): { pot: PotRow; members: MemberRow[] } {
@@ -41,7 +41,7 @@ export function foldPot(input: DecodedEvent[]): { pot: PotRow; members: MemberRo
       case 'SeatSwapped': {
         const leaver = member(arg('leaver'));
         leaver.active = false;
-        if (BigInt(arg('refunded')) > 0n) { leaver.has_refunded = true; pot.payments_count--; }
+        if (BigInt(arg('refunded')) > BigInt(0)) { leaver.has_refunded = true; pot.payments_count--; }
         add(arg('replacement'), e.potId); break;
       }
       case 'Refunded': member(arg('member')).has_refunded = true; break;
