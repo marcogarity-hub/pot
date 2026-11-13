@@ -71,3 +71,7 @@
 - Review workflow wf_4ab1801f-9e4 (6 dimensions, adversarial verify). First pass hit the usage limit; resumed with failed agents on Haiku (wallet-api finder + integration skeptics).
 - Confirmed so far: (1) streams fold throws on huge deadline → whole batch 500s, can stall the Stream [medium]; (2) receipt_text not in Realtime publication / written after PayoutRequested, so members don't see it live [medium]; (3) organizer can swapSeat after members paid to dilute the objection electorate [low, needs Marco: contract]; (4) WindowField custom input vanishes mid-typing [low]; (5) swapped-out member's invite link leads to an unreadable pot [low]; (6) POT_ADDRESS not trimmed in chain.ts [low]; (7) prefund cap / rate limit in-memory per instance on Vercel [low].
 - Next: wait for resume results → send fixes to lanes (Codex workers on gpt-6-luna, Claude reviewers on Haiku per Marco) → morning report.
+
+## 2026-11-13 — lane/events-data (full-review fixes)
+- Landed: fold clamps chain timestamps to 9999-12-31; per-pot isolation of deterministic fold errors (200, others still project; DB errors still 500); pot_meta in supabase_realtime + usePot listener (live receipt text); prefund_ledger + reserve_prefund/release_prefund (service_role only). Migrations 000300/000400 applied, db lint clean.
+- Gates: vitest/tsc/lint/build OK (after refreshing stale worktree deps); reviewed by the conductor (Opus) — APPROVE. Worker: Codex gpt-6-luna.
