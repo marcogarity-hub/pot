@@ -86,3 +86,180 @@ Interfaces for Lane 2 and Lane 4 (all tables/view in `public`):
   `pot_id`, and refetch `pot_status`. Only those two tables are added to
   `supabase_realtime`. Browser roles have no write grants or write policies;
   server writers use the service role. Unauthenticated reads have no grants.
+
+## Task 3.2 — Decode and fold (2026-11-12)
+
+Done: injectable `decodePotLogs(payload, abi, potAddress)` and deterministic
+`foldPot`, with exact decimal string chain values, lowercase addresses/hashes,
+sorted/deduplicated histories, all ten event effects, and former-member history.
+Missing creation history and removed logs fail rather than produce false state.
+Files: `web/app/api/streams/{decode,fold,fold.test,test-support}.ts` and
+`web/app/api/streams/__fixtures__/arc-logs.json`.
+
+The fixture is **docs-derived synthetic data, not a live Arc capture**. It uses
+QuickNode's EVM Logs JSON schema, `data[block][receipt][log]`, with encoded
+PotCreated/Paid events from the plan's Task 1.2 signatures. Sources checked:
+https://www.quicknode.com/docs/streams/data-sources/ethereum-evm
+https://www.quicknode.com/docs/streams/data-sources
+The decoder also accepts arrays flattened inside `data` by a filter.
+
+TDD: first run failed resolving missing `./decode`; implementation then passed:
+```text
+$ cd web && npx vitest run app/api/streams/fold.test.ts
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+```
+Blockers: Lane 1 ABI is absent; tests define the minimal event ABI locally.
+The plan's referenced Superpowers execution skills were not found in installed
+skill directories; followed the explicit task-by-task TDD workflow directly.
+Fetched origin/main and fast-forward check confirmed this branch already matched
+main before implementation; no main worktree or branch was changed.
+
+## Task 3.3 — Streams webhook and stores (2026-11-12)
+
+Done: HMAC-SHA256 over exact `nonce + timestamp + uncompressed body`, strict
+hex digest validation and constant-time comparison; gzip decoding before
+verification; authenticated decode, append-only event inserts, full-history
+reload/fold, and projection writes. Duplicate deliveries still refold. Failed
+projections return 500 so retries repair them; missing creation histories are
+stored and return 500, converging once the creation batch arrives.
+
+Files: `web/app/api/streams/{route,handler,verify,store,abi-placeholder}.ts`,
+`route.test.ts`, and new migration
+`supabase/migrations/20261113000200_atomic_projection.sql`. Small TypeScript
+compatibility adjustments in `decode.ts`, `fold.ts`, and `test-support.ts`.
+No merged migrations were edited.
+
+**Apply the new migration before enabling the Stream.** It is needed to write
+parent/member projections atomically and serialize concurrent projection writers
+with a per-pot transaction advisory lock. A stored-event-count check rejects
+stale folds, making slower deliveries retry rather than overwrite newer state.
+The RPC is executable only by service_role. Event reloads page in append-only id
+order to avoid the API row limit and page shifts during out-of-order backfill;
+`foldPot` then sorts by block/log. Numeric IDs and block numbers are selected
+with `::text` to avoid JSON number rounding. RPC execution itself has not been
+tested against a database or applied; Supabase tests are fully mocked as requested.
+
+QuickNode verification source checked before implementation:
+https://www.quicknode.com/guides/quicknode-products/streams/validating-incoming-streams-webhook-messages
+No freshness window is imposed, so authenticated historical/retried deliveries
+remain usable; event identity makes replay idempotent.
+
+Integration gate: `route.ts` imports an intentionally empty `potAbi` from our
+`abi-placeholder.ts`. **Swap that import to Lane 1's generated `@/lib/pot/abi`
+when available**, verify the exact signatures/indexing, and remove the placeholder.
+Until then POST returns 503 and cannot silently acknowledge undecoded events.
+It uses existing env names `QUICKNODE_STREAM_TOKEN` and
+`NEXT_PUBLIC_POT_ADDRESS`. Admin client is `@/lib/supabase/admin` as requested.
+No Stream was created, and no keys or settings were changed.
+
+TDD: initial route suite failed on missing `./handler`; implementation passed:
+```text
+$ cd web && npx vitest run app/api/streams
+ Test Files  2 passed (2)
+      Tests  16 passed (16)
+$ cd web && npx next typegen && npx tsc --noEmit
+Generating route types...
+✓ Types generated successfully
+```
+TypeScript exit 0. `next typegen` generated ignored framework types needed by the
+existing layout's global `LayoutProps`; no shared source/config was modified.
+Existing Vite config-loader warning remains (conductor-owned config).
+
+## Task 3.4 Steps 1–4 — Realtime hook (2026-11-12)
+
+Done: `usePot(potId)` exports `{ status, loading, refetch }` and `PotStatusRow`.
+It registers both `pots` and `pot_members` subscriptions before its initial fetch,
+refetches on every change and SUBSCRIBED notification (including reconnect), and
+removes the channel on cleanup. Serialized reads queue invalidations rather than
+letting an old initial response overwrite newer state. A separate regression test
+covers a change queued between a read's completion and its cleanup. Changing
+potId or unmounting discards old in-flight results. Numeric pot/amount columns
+are selected as text. `refetch` is stable and awaitable; failed reads retain the
+last successful status and end loading, and subsequent refetches can recover.
+The specified hook interface has no error field, so errors are not exposed.
+
+Files changed: `web/lib/realtime/usePot.ts` and `usePot.test.tsx`.
+Lane 4 can import `usePot`, `PotStatusRow`, `PotRow`, and `MemberRow` from
+`@/lib/realtime/usePot`. Status mirrors the existing `pot_status` view, including
+nullable offchain metadata and the member JSON array. Use `has_paid` independently
+of `has_refunded`; former members remain in the array with `active=false`.
+Receipt-text verification remains the UI lane's responsibility (A12).
+
+TDD evidence: the first hook run failed resolving missing `./usePot`. After
+implementation, a new completion-race test failed (`expected +0 to be 3`), then
+passed after preserving the queued invalidation in promise cleanup.
+
+Final validation (no network in tests; both Supabase clients mocked):
+```text
+$ cd web && npx vitest run app/api/streams lib/realtime
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /Users/marcogarity/code/pot-events-data/web
+
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  23:15:25
+   Duration  767ms (environment 54%, import 18%, tests 13%, setup 13%, transform 2%)
+
+$ cd web && npx tsc --noEmit
+(no output; exit 0)
+
+$ git diff --check
+(no output; exit 0)
+```
+
+Remaining conductor work: apply and validate the new atomic-projection migration;
+swap the route's ABI-placeholder import after Lane 1 lands the actual ABI; set the
+existing Stream-token/address env values; then create/configure the Stream after
+deploy. **Task 3.4 Steps 5–7 were intentionally not performed.** No QuickNode
+Stream was created, no live Paid-to-browser check was attempted, and the fixture
+remains docs-derived. Replace it with a real capture during that later live check.
+The live Lane 3 done-when remains pending with the conductor. No merge or push.
+
+## Conductor review round 1 (2026-11-12)
+
+Done: removed the synchronous effect state reset in `usePot`; its return value
+continues to derive null status/loading for a changed potId. Limited raw webhook
+bodies and gzip output to 5 * 1024 * 1024 bytes. Oversized raw bodies return 413
+before decompression; `ERR_BUFFER_TOO_LARGE` from bounded gunzip returns 413.
+Other malformed bodies retain their existing 400 behavior.
+
+Files changed: `web/lib/realtime/usePot.ts`,
+`web/app/api/streams/handler.ts`, `web/app/api/streams/route.test.ts`, and this handoff.
+One added regression test covers both raw and gzip-expanded oversized bodies and
+checks that neither stores events. TDD: it first failed with `expected 400 to be
+413`, then passed after the size limits were implemented. All usePot tests remain
+green. No other implementation changes, merges, or pushes.
+
+Validation output (combined command exit 0; TypeScript produced no output):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /Users/marcogarity/code/pot-events-data/web
+
+
+ Test Files  3 passed (3)
+      Tests  23 passed (23)
+   Start at  23:21:15
+   Duration  1.58s (environment 67%, setup 13%, import 12%, tests 7%, transform 2%)
+
+
+> web@0.1.0 lint
+> eslint
+```
+
+Commit blocker: `git add` failed before staging with:
+```text
+fatal: Unable to create '/Users/marcogarity/code/pot/.git/worktrees/pot-events-data/index.lock': Operation not permitted
+```
+The session disallows sandbox escalation, so the requested
+`fix(data): review round 1` commit could not be created. The four review files
+remain uncommitted. Earlier ABI/deployment integration gates remain as documented
+above.
