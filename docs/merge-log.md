@@ -32,3 +32,7 @@
 - Spikes done: PAYMENT_PATH=native, ACCOUNT_TYPE=EOA (A14 gate passed). Treasury 0x9f74…7c07, deployer 0xe38E…862A, ~19 USDC each.
 - Reviewer models: Opus for Lane 1, Sonnet for others (Marco, overnight).
 - Morning questions so far: custom SMTP provider account; QuickNode account; may Lane 4 build plain sign-in/join before the design bundle?
+
+## 2026-11-13 — lane/wallet (A15 treasury)
+- Landed: relayer signs via Circle treasury wallet (no raw key); native transfers send tokenAddress "" + blockchain ARC-TESTNET; idempotency keys; STUCK = failure; balance check advisory.
+- Gates: round 1 CHANGES (missing blockchain on transfer) → fixed; vitest 162/162, tsc, lint, build OK; reviewer APPROVE.
