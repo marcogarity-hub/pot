@@ -86,3 +86,31 @@ Interfaces for Lane 2 and Lane 4 (all tables/view in `public`):
   `pot_id`, and refetch `pot_status`. Only those two tables are added to
   `supabase_realtime`. Browser roles have no write grants or write policies;
   server writers use the service role. Unauthenticated reads have no grants.
+
+## Task 3.2 — Decode and fold (2026-11-12)
+
+Done: injectable `decodePotLogs(payload, abi, potAddress)` and deterministic
+`foldPot`, with exact decimal string chain values, lowercase addresses/hashes,
+sorted/deduplicated histories, all ten event effects, and former-member history.
+Missing creation history and removed logs fail rather than produce false state.
+Files: `web/app/api/streams/{decode,fold,fold.test,test-support}.ts` and
+`web/app/api/streams/__fixtures__/arc-logs.json`.
+
+The fixture is **docs-derived synthetic data, not a live Arc capture**. It uses
+QuickNode's EVM Logs JSON schema, `data[block][receipt][log]`, with encoded
+PotCreated/Paid events from the plan's Task 1.2 signatures. Sources checked:
+https://www.quicknode.com/docs/streams/data-sources/ethereum-evm
+https://www.quicknode.com/docs/streams/data-sources
+The decoder also accepts arrays flattened inside `data` by a filter.
+
+TDD: first run failed resolving missing `./decode`; implementation then passed:
+```text
+$ cd web && npx vitest run app/api/streams/fold.test.ts
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+```
+Blockers: Lane 1 ABI is absent; tests define the minimal event ABI locally.
+The plan's referenced Superpowers execution skills were not found in installed
+skill directories; followed the explicit task-by-task TDD workflow directly.
+Fetched origin/main and fast-forward check confirmed this branch already matched
+main before implementation; no main worktree or branch was changed.
