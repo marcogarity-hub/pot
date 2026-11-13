@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { postJson } from './api';
 import type { Action } from './actions';
+import { finalizePot } from './finalize';
 
 const ROUTES: Record<Action, string> = {
   pay: 'pay', refund: 'refund', object: 'object', requestRelease: 'request-release',
@@ -38,7 +39,10 @@ export function PotActions({ potId, actions, status, onSettled }: {
     pendingRef.current = true;
     setPending(action);
     setError(null);
-    const res = await postJson<{ transactionHash?: string }>(`/api/pots/${potId}/${ROUTES[action]}`, body);
+    // Finalize shares its in-flight request with the status page's auto tick.
+    const res = action === 'finalize'
+      ? await finalizePot(potId)
+      : await postJson<{ transactionHash?: string }>(`/api/pots/${potId}/${ROUTES[action]}`, body);
     pendingRef.current = false;
     setPending(null);
     if (!res.ok) { setError(res.message); return; }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +13,11 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
   seconds: number; onChange(seconds: number): void; error?: string;
 }) {
   const match = presets.find(p => p.seconds === seconds);
-  const choice = match ? String(match.seconds) : 'custom';
+  // Custom mode latches: typing a value that happens to equal a preset must not unmount the input.
+  // It ends only when the user picks a preset. A value that matches no preset always shows the input.
+  const [customChosen, setCustomChosen] = useState(() => !match);
+  const showCustom = customChosen || !match;
+  const choice = showCustom ? 'custom' : String(match.seconds);
   const items = [...presets.map(p => ({ value: String(p.seconds), label: p.label })), { value: 'custom', label: 'Custom' }];
   return (
     <div className="space-y-2">
@@ -21,8 +26,13 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
         items={items}
         value={choice}
         onValueChange={value => {
-          if (value === 'custom') onChange(match ? seconds + 60 : seconds);
-          else if (value) onChange(Number(value));
+          if (value === 'custom') {
+            setCustomChosen(true);
+            if (match) onChange(seconds + 60);
+          } else if (value) {
+            setCustomChosen(false);
+            onChange(Number(value));
+          }
         }}
       >
         <SelectTrigger id={`${id}-trigger`} className="w-full">
@@ -32,7 +42,7 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
           {items.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
         </SelectContent>
       </Select>
-      {choice === 'custom' && (
+      {showCustom && (
         <div className="flex items-center gap-2">
           <Input
             id={id}

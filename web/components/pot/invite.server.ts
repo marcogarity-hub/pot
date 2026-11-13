@@ -1,6 +1,6 @@
 import 'server-only';
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import type { InviteLookup } from './auth';
+import type { InviteLookup, MemberState } from './auth';
 
 /** Resolves an invite token with the admin client (the caller isn't a member yet, so RLS would hide it). */
 export async function lookupInvite(token: string, email: string): Promise<InviteLookup> {
@@ -16,7 +16,16 @@ export async function lookupInvite(token: string, email: string): Promise<Invite
   ]);
   const wallet = (user as { wallet_address: string | null } | null)?.wallet_address?.toLowerCase();
   const organizer = (pot as { organizer_address: string } | null)?.organizer_address?.toLowerCase();
-  return { potId, invited: !!invite, isOrganizer: !!wallet && wallet === organizer };
+  const inviteAddress = (invite as { address: string } | null)?.address?.toLowerCase();
+  let memberState: MemberState = 'unknown';
+  if (inviteAddress) {
+    // pot_invites keeps its row after a swap. Read the seat without an `active` filter, so that
+    // 'inactive' (swapped out) is distinguishable from 'no row yet' (projection lag).
+    const { data: member } = await db.from('pot_members').select('active')
+      .eq('pot_id', potId).eq('address', inviteAddress).maybeSingle();
+    if (member) memberState = (member as { active: boolean }).active ? 'active' : 'inactive';
+  }
+  return { potId, invited: !!invite, isOrganizer: !!wallet && wallet === organizer, memberState };
 }
 
 /** Title for the signed-out invite screen. The token itself is the secret. */
