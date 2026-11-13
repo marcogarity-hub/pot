@@ -3,10 +3,11 @@ import { parseEventLogs, parseUnits, type Hex } from 'viem';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { ensureUser } from '@/lib/circle/identity';
-import { callPot } from '@/lib/circle/tx';
+import { callPot, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { createPotSchema } from './schema';
 import { createPotLimiter } from './limiter';
+import { toHttp } from './errors';
 export async function POST(request: Request) {
   const supabase = await createServerSupabase();
   const session = await supabase.auth.getUser();
@@ -41,7 +42,9 @@ export async function POST(request: Request) {
     const args = logs[0]?.args as {potId?: bigint; organizer?: string} | undefined;
     if (typeof args?.potId !== 'bigint' || args.organizer?.toLowerCase() !== organizer.wallet_address.toLowerCase()) throw new Error('Missing PotCreated event');
     potId = args.potId.toString();
-  } catch { return Response.json({message:'Pot creation could not be confirmed. Reconcile the transaction before retrying.',...(transactionHash?{transactionHash}:{})},{status:502}); }
+  } catch (error) {
+    if (error instanceof PotRevertError) return toHttp(error);
+    return Response.json({message:'Pot creation could not be confirmed. Reconcile the transaction before retrying.',...(transactionHash?{transactionHash}:{})},{status:502}); }
   const inviteToken = randomBytes(32).toString('base64url');
   try {
     const admin = createAdminSupabase();

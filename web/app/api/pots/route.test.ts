@@ -5,7 +5,8 @@ const m=vi.hoisted(()=>({server:vi.fn(),admin:vi.fn(),ensureUser:vi.fn(),callPot
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/circle/identity',()=>({ensureUser:m.ensureUser}));
-vi.mock('@/lib/circle/tx',()=>({callPot:m.callPot}));
+vi.mock('@/lib/circle/tx',async original=>({...await original<typeof import('@/lib/circle/tx')>(),callPot:m.callPot}));
+vi.mock('server-only',()=>({}));
 import { configurePotInterface } from '@/lib/circle/contract';
 import { POST } from './route';
 import { createPotLimiter } from './limiter';
@@ -43,3 +44,8 @@ it('limits simultaneous requests before any async provisioning completes',async(
 });
 it('expires a creation slot at exactly one hour',()=>{for(let i=0;i<5;i++)expect(createPotLimiter.take('user',1000)).toBe(true);expect(createPotLimiter.take('user',3600999)).toBe(false);expect(createPotLimiter.take('user',3601000)).toBe(true);expect(createPotLimiter.take('other',1000)).toBe(true);});
 it('does not write invites when metadata fails',async()=>{m.insert.mockResolvedValueOnce({error:{message:'failed'}});await post(body());expect(m.insert).toHaveBeenCalledTimes(1);});
+it('maps create contract reverts to 409 with code',async()=>{
+ const {PotRevertError}=await import('@/lib/circle/tx');
+ m.callPot.mockRejectedValue(new PotRevertError('InvalidParams'));
+ const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'InvalidParams',message:'InvalidParams'});
+});

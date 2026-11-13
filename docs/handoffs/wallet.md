@@ -199,3 +199,98 @@ This session's sandbox denies the shared worktree metadata write and its approva
 policy is never, so escalation is unavailable. The verified changes are left
 uncommitted. Once Git metadata is writable, stage the nine lane files listed
 above and commit with exactly `fix(wallet): review round 1`.
+
+## Task 2.5 — Action routes and finalize (2026-11-12)
+
+Done: Steps 1–4 and 6; Step 5 (live check) explicitly skipped. Added POST pay,
+refund, object, expire, request-release, swap, and unauthenticated finalize routes.
+Verified Supabase sessions select the caller's Circle wallet through ensureUser;
+all signed member/organizer transactions reuse callPot. pay reads the exact bigint
+share from onchain getPot. Contract checks remain authoritative for member and
+boundary eligibility, including DeadlinePassed at equality.
+
+request-release checks organizer and Locked state, hashes the exact 1–500 character
+receiptText with keccak256(toBytes(text)), and updates pot_meta.receipt_text only
+after callPot confirms. Missing metadata rows and database errors return 503 with
+confirmed potId/transactionHash and recovery guidance. swap checks organizer before
+replacement provisioning, normalizes both emails, looks up (never provisions) the
+leaver in users, ensures the replacement, signs swapSeat, then upserts pot_invites
+on pot_id,address. Former-member invites remain for historical email display.
+Confirmed swap persistence failures also return recovery details. No chain-derived
+projection tables are written.
+
+finalize reads getPot directly, returns alreadyFinalized for Released, otherwise
+requires PayoutRequested, objectionsCount < threshold, and the latest chain block
+timestamp >= releaseEligibleAt before calling existing relayerFinalize. This uses
+chain time rather than the app server clock. Successful action responses contain
+transactionHash; finalize returns the relayer's submitted hash (its existing helper
+does not wait for a receipt). The chain/projection determines eventual release.
+
+errors.ts centralizes PotRevertError -> 409 {error: code, message}, including all
+four specified readable messages and code fallback; unexpected errors get generic
+500 responses. The create route now uses this mapping for PotRevertError while
+retaining its existing ambiguous-confirmation/recovery responses for other errors.
+Invalid uint256 IDs and invalid/zero wallet addresses are rejected before signing.
+
+Files changed:
+- web/app/api/pots/[potId]/{pay,refund,object,expire,request-release,swap,finalize}/route.ts
+- web/app/api/pots/{actions,actions.test,errors,route,route.test}.ts
+- web/lib/circle/read.ts
+- web/lib/circle/__mocks__/pot.ts (test-only ABI additions)
+- docs/handoffs/wallet.md
+
+TDD: wrote action tests and create regression first. Initial run failed resolving
+missing [potId]/pay/route, and create regression failed `expected 502 to be 409`.
+Implemented, then corrected a test-title formatter that could not serialize bigint.
+Added passing edge-case checks for confirmed-only swap metadata, missing leaver,
+zero replacement, second pay, metadata failure recovery, and invalid chain shape.
+All Circle/viem clients/Supabase calls are mocked; tests make no network calls.
+Read installed Circle SDK dist/types declarations for existing transaction method
+names; this task introduces no new SDK calls and reuses the previously reviewed
+transaction, provisioning, prefund, and relayer implementations.
+
+Final validation output (exit 0 for tests, tsc, and lane-scoped ESLint):
+```text
+$ cd web && npx vitest run lib/circle lib/relayer app/api/pots app/api/wallet
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set "type": "module" in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /Users/marcogarity/code/pot-wallet/web
+
+ Test Files  5 passed (5)
+      Tests  104 passed (104)
+   Start at  23:28:57
+   Duration  2.97s (environment 53%, import 27%, setup 12%, tests 6%, transform 2%)
+
+$ cd web && npx tsc --noEmit
+(no output; exit 0)
+$ cd web && npx eslint lib/circle lib/relayer app/api/pots app/api/wallet
+(no output; exit 0)
+$ git diff --check
+(no output; exit 0)
+```
+
+Integration / blockers for conductor:
+- No keys or deployed contract: Task 2.1 and the Task 2.5 live check remain pending;
+  no live transactions were submitted. WALLET_PATH=circle remains assumed.
+- Still no production @/lib/pot imports and no production test-fixture imports.
+  Configure the existing configurePotInterface boundary with Lane 1's actual
+  generated potAbi and arcTestnet (id 5042002), or replace that boundary with direct
+  imports once available. In addition to earlier write/event/error requirements,
+  read.ts needs getPot(uint256) returning the named PotView tuple in Task 1.2:
+  organizer,address; total/share/deadline/threshold/objectionWindow/requestWindow/
+  lockedAt,uint256; state,uint8; paymentsCount/objectionsCount,uint256;
+  receiptHash,bytes32; releaseEligibleAt,uint256; members,address[]. Specifically
+  these routes consume organizer, share, state, threshold, objectionsCount, and
+  releaseEligibleAt; malformed tuple results fail closed. Temporary fragments
+  remain only in web/lib/circle/__mocks__/pot.ts and are imported only by tests.
+- A7 Task 2.4 choice is unchanged: InMemoryCreatePotLimiter behind CreatePotLimiter,
+  five accepted attempts/auth user/rolling hour, single-process only. Conductor
+  still needs distributed/durable limits before multi-instance use, along with
+  provisioning recovery and live fee/error-shape verification noted above.
+- Confirmed metadata failures require manual recovery using returned potId/hash.
+  Receipt integrity verification remains Lane 4's responsibility (A12).
+- Fetched origin/main and fast-forwarded check: Already up to date. No changes
+  outside lane ownership, no push, no merge to main. The referenced Superpowers
+  execution skills were not found in installed skills; followed explicit TDD.
