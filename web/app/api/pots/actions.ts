@@ -15,6 +15,7 @@ const swapSchema = z.object({ leaverEmail: email, replacementEmail: email });
 const releaseSchema = z.object({ receiptText: z.string().min(1).max(500) });
 type Action = 'pay' | 'refund' | 'object' | 'expire' | 'request-release' | 'swap' | 'finalize';
 type Context = { params: Promise<{ potId: string }> };
+const finalizeFlights = new Map<string, Promise<Response>>();
 
 function recovery(potId: string, transactionHash: string) {
   return Response.json({
@@ -34,20 +35,26 @@ export function actionHandler(action: Action) {
       const potId = BigInt(rawId);
       const id = potId.toString();
       if (action === 'finalize') {
-        const pot = await readPot(potId);
-        if (pot.state === 3) return Response.json({ alreadyFinalized: true });
-        if (pot.state !== 2 || pot.objectionsCount >= pot.threshold || await chainTimestamp() < pot.releaseEligibleAt) {
-          return Response.json({ error: 'NotEligible' }, { status: 409 });
+        let flight = finalizeFlights.get(id);
+        if (!flight) {
+          flight = (async () => {
+            const pot = await readPot(potId);
+            if (pot.state === 3) return Response.json({ alreadyFinalized: true });
+            if (pot.state !== 2 || pot.objectionsCount >= pot.threshold || await chainTimestamp() < pot.releaseEligibleAt) {
+              return Response.json({ error: 'NotEligible' }, { status: 409 });
+            }
+            try {
+              return Response.json({ transactionHash: await relayerFinalize(potId) });
+            } catch (error) {
+              try { if ((await readPot(potId)).state === 3) return Response.json({ alreadyFinalized: true }); }
+              catch { /* Preserve the original relayer error if the re-read fails. */ }
+              throw error;
+            }
+          })();
+          finalizeFlights.set(id, flight);
+          void flight.finally(() => { if (finalizeFlights.get(id) === flight) finalizeFlights.delete(id); }).catch(() => {});
         }
-        try {
-          return Response.json({ transactionHash: await relayerFinalize(potId) });
-        } catch (error) {
-          // Another caller may have released the pot after our eligibility read.
-          try {
-            if ((await readPot(potId)).state === 3) return Response.json({ alreadyFinalized: true });
-          } catch { /* Preserve the original relayer error if the re-read fails. */ }
-          throw error;
-        }
+        return (await flight).clone();
       }
 
       const supabase = await createServerSupabase();

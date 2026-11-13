@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { parseEventLogs, parseUnits, type Hex } from 'viem';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import { ensureUser } from '@/lib/circle/identity';
+import { claimUser, ensureUser } from '@/lib/circle/identity';
 import { callPot, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { createPotSchema } from './schema';
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   let organizer: Awaited<ReturnType<typeof ensureUser>>;
   try {
     organizer = await ensureUser(session.data.user.email.trim().toLowerCase());
+    await claimUser(session.data.user.id, session.data.user.email.trim().toLowerCase());
     const members = await Promise.all(body.memberEmails.map(email=>ensureUser(email)));
     // Provisioning is separate from validation: never submit zero or duplicate wallets.
     try {
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
     if (typeof args?.potId !== 'bigint' || args.organizer?.toLowerCase() !== organizer.wallet_address.toLowerCase()) throw new Error('Missing PotCreated event');
     potId = args.potId.toString();
   } catch (error) {
+    if (error instanceof Error && error.name === 'CircleTimeoutError') return toHttp(error);
     if (error instanceof PotRevertError) return toHttp(error);
     return Response.json({message:'Pot creation could not be confirmed. Reconcile the transaction before retrying.',...(transactionHash?{transactionHash}:{})},{status:502}); }
   const inviteToken = randomBytes(32).toString('base64url');

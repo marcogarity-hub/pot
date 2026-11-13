@@ -1,6 +1,6 @@
 import { PotConfigurationError } from '@/lib/circle/contract';
 import { PotNotFoundError } from '@/lib/circle/read';
-import { PotRevertError } from '@/lib/circle/tx';
+import { CircleTimeoutError, PotRevertError } from '@/lib/circle/tx';
 
 const messages: Record<string, string> = {
   AlreadyPaid: "You've already paid into this pot.",
@@ -10,6 +10,7 @@ const messages: Record<string, string> = {
 };
 
 export function toHttp(error: unknown): Response {
+  if (error instanceof CircleTimeoutError) return Response.json({ error: 'TransactionPending', message: 'Your transaction is still processing. Refresh in a minute before retrying.', circleTransactionId: error.circleTransactionId }, { status: 502 });
   if (error instanceof PotConfigurationError) return Response.json({ error: 'PotUnavailable', message: error.message }, { status: 503 });
   if (error instanceof PotNotFoundError) return Response.json({ error: 'PotNotFound' }, { status: 404 });
   if (error instanceof PotRevertError) {

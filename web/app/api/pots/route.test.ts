@@ -2,10 +2,10 @@ vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib
 import { beforeEach, expect, it, vi } from 'vitest';
 import { encodeAbiParameters, encodeEventTopics, parseUnits } from 'viem';
 import { potAbi } from '@/lib/pot';
-const m=vi.hoisted(()=>({server:vi.fn(),admin:vi.fn(),ensureUser:vi.fn(),callPot:vi.fn(),insert:vi.fn()}));
+const m=vi.hoisted(()=>({server:vi.fn(),admin:vi.fn(),ensureUser:vi.fn(),claimUser:vi.fn(),callPot:vi.fn(),insert:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
-vi.mock('@/lib/circle/identity',()=>({ensureUser:m.ensureUser}));
+vi.mock('@/lib/circle/identity',()=>({ensureUser:m.ensureUser,claimUser:m.claimUser}));
 vi.mock('@/lib/circle/tx',async original=>({...await original<typeof import('@/lib/circle/tx')>(),callPot:m.callPot}));
 vi.mock('server-only',()=>({}));
 import { POST } from './route';
@@ -34,6 +34,7 @@ it('allows organizer as a member',async()=>{expect((await post({...body(),member
 it('uses real potAbi to decode PotCreated, sends exact createPot args, and saves metadata',async()=>{
  const input=body();const response=await post(input);expect(response.status).toBe(201);const result=await response.json();expect(result).toEqual({potId:'42',inviteToken:expect.any(String)});
  expect(m.callPot).toHaveBeenCalledWith('organizer-wallet','createPot',[parseUnits('2400',18),parseUnits('300',18),members.map((_,index)=>`0x${(index+2).toString(16).padStart(40,'0')}`),BigInt(Math.floor(Date.parse(input.deadline)/1000)),BigInt(5),BigInt(120),BigInt(120)]);
+ expect(m.claimUser).toHaveBeenCalledWith('auth-id','organizer@x.com');
  expect(m.insert).toHaveBeenCalledWith({pot_id:'42',title:'Airbnb',invite_token:result.inviteToken});expect(m.insert).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({pot_id:'42',email:'friend0@x.com',address:`0x${'2'.padStart(40,'0')}`})]));
 });
 it('does not persist without a PotCreated log from the configured contract',async()=>{m.callPot.mockResolvedValue({logs:[{address:`0x${'9'.repeat(40)}`,topics:[],data:'0x'}]});expect((await post(body())).status).toBe(502);expect(m.insert).not.toHaveBeenCalled();});
@@ -48,6 +49,11 @@ it('maps create contract reverts to 409 with code',async()=>{
  const {PotRevertError}=await import('@/lib/circle/tx');
  m.callPot.mockRejectedValue(new PotRevertError('InvalidParams'));
  const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'InvalidParams',message:'InvalidParams'});
+});
+it('maps a Circle timeout to a pending response with reconciliation id',async()=>{
+ const {CircleTimeoutError}=await import('@/lib/circle/tx');m.callPot.mockRejectedValue(new CircleTimeoutError('circle-id'));
+ const response=await post(body());expect(response.status).toBe(502);
+ expect(await response.json()).toEqual({error:'TransactionPending',message:'Your transaction is still processing. Refresh in a minute before retrying.',circleTransactionId:'circle-id'});
 });
 
 it('returns a clear 503 before provisioning when the deployed address is unset', async () => {

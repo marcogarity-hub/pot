@@ -4,10 +4,10 @@ import { arcTestnet } from 'viem/chains';
 import { validAddress } from '../circle/contract';
 import { circleClient } from '../circle/client';
 import { callPot } from '../circle/tx';
+import { createAdminSupabase } from '@/lib/supabase/admin';
 export class PrefundRefusedError extends Error {}
-let budget = { day: '', spent: BigInt(0) };
-// In-process budget; conservative reservation includes failures with uncertain delivery.
-export function resetPrefundBudget() { budget = { day: '', spent: BigInt(0) }; }
+// Kept as a no-op for backwards-compatible callers; Postgres owns the shared budget.
+export function resetPrefundBudget() {}
 function treasuryWalletId() {
   const id = process.env.CIRCLE_TREASURY_WALLET_ID;
   if (!id) throw new PrefundRefusedError('CIRCLE_TREASURY_WALLET_ID unavailable');
@@ -21,12 +21,19 @@ function validateFunding(to: Hex, amount: bigint) {
 export async function prefund(to: Hex, amount = BigInt(10) ** BigInt(18)): Promise<Hex> {
   validateFunding(to, amount);
   const walletId = treasuryWalletId();
-  const cap = parseUnits(process.env.PREFUND_DAILY_CAP ?? '50',18);
-  const day = new Date().toISOString().slice(0,10);
-  if (budget.day !== day) budget = { day, spent: BigInt(0) };
-  if (budget.spent + amount > cap) throw new PrefundRefusedError('Daily prefund cap exceeded');
-  budget.spent += amount;
-  return sendFunding(to, amount, walletId);
+  const p_amount = formatUnits(amount, 18);
+  const p_cap = process.env.PREFUND_DAILY_CAP ?? '50';
+  const db = createAdminSupabase();
+  const reservation = await db.rpc('reserve_prefund', { p_amount, p_cap });
+  if (reservation.error || reservation.data !== true) throw new PrefundRefusedError('Daily prefund cap exceeded');
+  try { return await sendFunding(to, amount, walletId); }
+  catch (error) {
+    if (error instanceof PrefundRefusedError) {
+      const released = await db.rpc('release_prefund', { p_amount });
+      if (released.error) console.error('Could not release refused prefund reservation', released.error);
+    }
+    throw error;
+  }
 }
 async function sendFunding(to: Hex, amount: bigint, walletId: string): Promise<Hex> {
   const client = circleClient();

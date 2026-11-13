@@ -6,7 +6,7 @@ import { potAbi, arcTestnet } from '@/lib/pot';
 const m = vi.hoisted(() => ({ createWallets: vi.fn(), getWallet: vi.fn(), simulateContract: vi.fn(), publicClient: vi.fn(), createContractExecutionTransaction: vi.fn(), getTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), receipt: vi.fn() }));
 vi.mock('@circle-fin/developer-controlled-wallets', () => ({ initiateDeveloperControlledWalletsClient: () => m }));
 vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createPublicClient: (options: unknown) => { m.publicClient(options); return { simulateContract: m.simulateContract, waitForTransactionReceipt: m.receipt }; } }));
-import { callPot } from './tx';
+import { callPot, CircleTimeoutError } from './tx';
 import { createWallet } from './wallets';
 beforeEach(() => {
  vi.resetAllMocks();
@@ -88,4 +88,13 @@ it.each(['RPC unavailable', 'wallet lookup unavailable', 'undecodable revert'])(
 it('includes the Circle transaction id when the confirmed receipt reverted', async () => {
  m.receipt.mockResolvedValueOnce({ status: 'reverted' });
  await expect(callPot('wallet', 'pay', [BigInt(1)])).rejects.toMatchObject({ code: 'TransactionFailed', message: expect.stringContaining('reconcile transaction tx') });
+});
+it('throws a dedicated timeout carrying the Circle transaction id', async () => {
+ vi.useFakeTimers(); m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'SENT' } } });
+ const pending = callPot('wallet', 'pay', [BigInt(1)]);
+ const rejection = pending.catch(error => error);
+ await vi.advanceTimersByTimeAsync(120000);
+ const error = await rejection;
+ expect(error).toBeInstanceOf(CircleTimeoutError);
+ expect(error).toMatchObject({ circleTransactionId: 'tx' });
 });

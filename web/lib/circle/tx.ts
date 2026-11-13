@@ -5,6 +5,12 @@ export type PotWriteFn = 'createPot' | 'pay' | 'swapSeat' | 'refund' | 'requestR
 export class PotRevertError extends Error {
   constructor(public code: string, message = code) { super(message); this.name = 'PotRevertError'; }
 }
+export class CircleTimeoutError extends Error {
+  constructor(public circleTransactionId: string) {
+    super(`Circle confirmation timed out; reconcile transaction ${circleTransactionId} before retrying`);
+    this.name = 'CircleTimeoutError';
+  }
+}
 function failure(id: string, state: string, reason?: string, details?: string): PotRevertError {
   const message = `Wallet transaction ${state}: ${reason ?? 'Unknown reason'}; ${details ?? 'No details'}; reconcile transaction ${id}`;
   const data = details?.match(/0x[\da-fA-F]{8,}/)?.[0];
@@ -54,5 +60,5 @@ export async function callPot(walletId: string, fn: PotWriteFn, args: readonly u
     }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  throw new Error(`Circle confirmation timed out; reconcile transaction ${id} before retrying`);
+  throw new CircleTimeoutError(id);
 }

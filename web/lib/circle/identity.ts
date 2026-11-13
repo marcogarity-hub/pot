@@ -14,10 +14,23 @@ export async function ensureUser(input: string): Promise<WalletUser> {
   const db = createAdminSupabase();
   // INSERT ... ON CONFLICT DO NOTHING RETURNING: database arbitrates ownership,
   // including separate server instances. No in-process lock can replace this.
-  const inserted = await db.from('users').upsert({ email, claimed: false }, { onConflict: 'email', ignoreDuplicates: true }).select('id,email,circle_wallet_id,wallet_address').maybeSingle();
+  const inserted = await db.from('users').upsert({ email, claimed: false }, { onConflict: 'email', ignoreDuplicates: true }).select('id,email,created_at,circle_wallet_id,wallet_address').maybeSingle();
   if (inserted.error) throw new Error('Could not reserve wallet identity');
-  if (inserted.data) {
-    const id = inserted.data.id;
+  let reservation = inserted.data;
+  if (!reservation) {
+    const existing = await db.from('users').select('id,email,created_at,circle_wallet_id,wallet_address').eq('email', email).maybeSingle();
+    if (existing.error) throw new Error('Could not read wallet mapping');
+    const row = existing.data;
+    const created = typeof row?.created_at === 'string' ? Date.parse(row.created_at) : NaN;
+    if (row && row.circle_wallet_id == null && Number.isFinite(created) && Date.now() - created > 120_000) {
+      const now = new Date().toISOString();
+      const takeover = await db.from('users').update({ created_at: now }).eq('id', row.id).is('circle_wallet_id', null).eq('created_at', row.created_at).select('id,email,created_at,circle_wallet_id,wallet_address').maybeSingle();
+      if (takeover.error) throw new Error('Could not take over stale wallet reservation');
+      reservation = takeover.data;
+    }
+  }
+  if (reservation) {
+    const id = reservation.id;
     const releaseReservation = () => db.from('users').delete().eq('id', id).is('circle_wallet_id', null);
     let wallet: Awaited<ReturnType<typeof createWallet>>;
     try { wallet = await createWallet(email); }
@@ -27,7 +40,7 @@ export async function ensureUser(input: string): Promise<WalletUser> {
       if (error instanceof PrefundRefusedError) await releaseReservation();
       throw error;
     }
-    const saved = await db.from('users').update({ circle_wallet_id: wallet.walletId, wallet_address: validAddress(wallet.address) }).eq('id', inserted.data.id).select('id,circle_wallet_id,wallet_address').maybeSingle();
+    const saved = await db.from('users').update({ circle_wallet_id: wallet.walletId, wallet_address: validAddress(wallet.address) }).eq('id', reservation.id).select('id,circle_wallet_id,wallet_address').maybeSingle();
     if (saved.error || !ready(saved.data)) throw new Error('Could not persist wallet mapping; operator recovery required');
     return saved.data;
   }
@@ -42,10 +55,11 @@ export async function ensureUser(input: string): Promise<WalletUser> {
 }
 export async function claimUser(authUserId: string, input: string): Promise<void> {
   const email = normalizeEmail(input);
-  const user = await ensureUser(email);
   const db = createAdminSupabase();
-  const current = await db.from('users').select('auth_user_id').eq('id',user.id).maybeSingle();
-  if (current.error || !current.data || (current.data.auth_user_id && current.data.auth_user_id !== authUserId)) throw new Error('Identity already linked to another account');
-  const claimed = await db.from('users').update({ auth_user_id: authUserId, claimed: true }).eq('id',user.id).or(`auth_user_id.is.null,auth_user_id.eq.${authUserId}`).select('id').maybeSingle();
+  const current = await db.from('users').select('id,auth_user_id').eq('email', email).maybeSingle();
+  if (current.error) throw new Error('Could not read wallet identity');
+  if (!current.data) return;
+  if (current.data.auth_user_id && current.data.auth_user_id !== authUserId) throw new Error('Identity already linked to another account');
+  const claimed = await db.from('users').update({ auth_user_id: authUserId, claimed: true }).eq('id',current.data.id).or(`auth_user_id.is.null,auth_user_id.eq.${authUserId}`).select('id').maybeSingle();
   if (claimed.error || !claimed.data) throw new Error('Could not claim wallet identity');
 }
