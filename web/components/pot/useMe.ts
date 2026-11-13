@@ -1,19 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchMeState, type MeState } from './meState';
 
-export type Me = { email: string; wallet_address: string };
+export type { MeState } from './meState';
 
-/** The signed-in user's email and wallet, or null when signed out. */
-export function useMe(): { me: Me | null; loading: boolean } {
-  const [state, setState] = useState<{ me: Me | null; loading: boolean }>({ me: null, loading: true });
+/**
+ * The signed-in user's wallet state. `me` is null only while the first request is in flight.
+ * `retry` re-requests after an `error`.
+ */
+export function useMe(): { me: MeState | null; loading: boolean; retry: () => void } {
+  const [me, setMe] = useState<MeState | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/wallet/me')
-      .then(async res => (res.ok ? ((await res.json()) as Me) : null))
-      .catch(() => null)
-      .then(me => { if (!cancelled) setState({ me, loading: false }); });
+    void fetchMeState().then(state => { if (!cancelled) setMe(state); });
     return () => { cancelled = true; };
+  }, [attempt]);
+  const retry = useCallback(() => {
+    setMe(null);
+    setAttempt(n => n + 1);
   }, []);
-  return state;
+  return { me, loading: me === null, retry };
 }

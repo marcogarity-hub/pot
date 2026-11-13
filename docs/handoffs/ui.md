@@ -95,3 +95,41 @@ Not run here: `npm run build` (the conductor runs it).
 - Tests: `invite.server.test.ts` (active → pot, inactive → left, no row → pot, organizer with inactive row → pot, not-invited, unknown token) and `auth.test.ts` (same matrix at the pure-function level).
 - Files: `web/components/pot/auth.ts`, `auth.test.ts`, `invite.server.ts`, `invite.server.test.ts`, `docs/handoffs/ui.md`.
 - Checks: `cd web && npx vitest run` → 19 files, 254 tests passed. `npx tsc --noEmit` → exit 0. `npm run lint` → exit 0.
+
+## Fix: distinguish signed-out, no-wallet and error in useMe (conductor /code-review high)
+
+### Done
+- `useMe` no longer turns every non-200 into "signed out". `fetchMeState` maps the `/api/wallet/me` response to a discriminated `MeState`:
+  - `ready` (200 with email and wallet_address)
+  - `signed-out` (401)
+  - `no-wallet` (404 with `error: 'NoWallet'`; the email is echoed if present)
+  - `error` (5xx, any other status or body, unreadable JSON, network failure)
+- `useMe()` returns `{ me, loading, retry }`. `me` is null only while the first request is in flight. `retry` re-requests after an error.
+- `PotStatus`: only `ready` gets actions (`availableActions` runs only for `ready`, and so does `useAutoFinalize`, through `actions`). The invite link is also shown only for `ready`.
+  - `no-wallet`: "You're signed in but not part of this pot yet." No buttons and no sign-in prompt.
+  - `error`: "We couldn't check your account…" with a "Try again" button. No sign-in button.
+  - `signed-out` with the pot visible: a "Sign in to take actions on this pot" line with a sign-in link. This is a small addition beyond the brief, so the signed-out viewer still has a way in.
+  - `signed-out` with no pot found: the sign-in link as before.
+- Unchanged: `/api/wallet/me` (it is outside this lane's file list) and `availableActions` itself.
+
+### Files changed
+- `web/components/pot/meState.ts` (new): `MeState`, `meStateFromResponse`, `fetchMeState`
+- `web/components/pot/meState.test.ts` (new): every status and body case, plus network failure and non-JSON body
+- `web/components/pot/useMe.ts`: hook returns `{ me, loading, retry }`
+- `web/components/pot/useMe.test.tsx` (new): loading, retry after 5xx → ready, 404 NoWallet
+- `web/components/pot/PotStatus.tsx`: state-based rendering, `IdentityNotice`
+- `web/components/pot/PotStatus.test.tsx` (new): one test per state, with usePot, useMe and autoFinalize mocked
+- `docs/handoffs/ui.md`
+
+### Tests (TDD: each new file failed for the expected reason first, then passed)
+```
+$ cd web && npx vitest run
+ Test Files  22 passed (22)
+      Tests  287 passed (287)     # before this fix: 19 files / 254 tests
+$ npx tsc --noEmit                 # exit 0
+$ npm run lint                     # exit 0
+```
+
+### Notes for the conductor
+- The server still sends no `email` in the 404 body, so `no-wallet` carries no email. The client handles one if it arrives. Adding it is a route change in `web/app/api/`, which is outside this lane.
+- The no-pot signed-out sign-in button is now `linkButton({ size: 'sm' })` and no longer full width. This is a small visual change.
