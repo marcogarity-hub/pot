@@ -1,18 +1,25 @@
 import { isAddress, zeroAddress, type Abi, type Chain, type Hex } from 'viem';
 
-// Lane 1 supplies the generated ABI and verified chain after Task 1.2 lands.
-// No production code imports the temporary test fixture.
-let contractInterface: { abi: Abi; chain: Chain } | undefined;
+import { potAbi, arcTestnet, POT_ADDRESS } from '@/lib/pot';
+
+// Production is ready without setup; tests may inject an alternate interface.
+let contractInterface: { abi: Abi; chain: Chain } = { abi: potAbi, chain: arcTestnet };
+export class PotConfigurationError extends Error {
+  constructor(message: string) { super(message); this.name = 'PotConfigurationError'; }
+}
 export function configurePotInterface(value: { abi: Abi; chain: Chain }) {
   if (value.chain.id !== 5042002) throw new Error('Expected Arc testnet');
   contractInterface = value;
 }
 export function potInterface() {
-  if (!contractInterface) throw new Error('Pot interface unavailable: configure Lane 1 ABI and Arc chain');
   return contractInterface;
 }
 export function validAddress(value: string): Hex {
   if (!isAddress(value) || value.toLowerCase() === zeroAddress) throw new Error('Invalid or zero address');
   return value.toLowerCase() as Hex;
 }
-export function potAddress() { return validAddress(process.env.NEXT_PUBLIC_POT_ADDRESS ?? ''); }
+export function potAddress() {
+  if (!POT_ADDRESS) throw new PotConfigurationError('NEXT_PUBLIC_POT_ADDRESS is not configured.');
+  try { return validAddress(POT_ADDRESS); }
+  catch { throw new PotConfigurationError('NEXT_PUBLIC_POT_ADDRESS must be a valid nonzero address.'); }
+}

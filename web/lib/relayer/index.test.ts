@@ -1,17 +1,17 @@
+vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 const m = vi.hoisted(() => ({ getWallet: vi.fn(), simulateContract: vi.fn(), createTransaction: vi.fn(), estimateTransferFee: vi.fn(), createContractExecutionTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), getTransaction: vi.fn(), getBalance: vi.fn(), receipt: vi.fn() }));
 vi.mock('../circle/client', () => ({ circleClient: () => m }));
 vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createPublicClient: () => ({ simulateContract: m.simulateContract, getBalance: m.getBalance, waitForTransactionReceipt: m.receipt }) }));
 import { prefund, relayerFinalize, relayerBalance, resetPrefundBudget, PrefundRefusedError } from './index';
-import { configurePotInterface } from '../circle/contract';
-import { potAbi, arcTestnet } from '../circle/__mocks__/pot';
+import { potAbi } from '@/lib/pot';
 import { encodeFunctionData } from 'viem';
 const to = '0x1111111111111111111111111111111111111111';
 const treasury = '0x2222222222222222222222222222222222222222';
 const unit = BigInt(10) ** BigInt(18);
 beforeEach(() => {
- vi.resetAllMocks(); resetPrefundBudget(); configurePotInterface({ abi: potAbi, chain: arcTestnet });
+ vi.resetAllMocks(); resetPrefundBudget();
  vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', 'treasury-wallet'); vi.stubEnv('TREASURY_ADDRESS', treasury);
  vi.stubEnv('PREFUND_DAILY_CAP', '2'); vi.stubEnv('NEXT_PUBLIC_POT_ADDRESS', to);
  const estimate = { data: { medium: { gasLimit: '21000', maxFee: '10', priorityFee: '1' } } };

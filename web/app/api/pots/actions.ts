@@ -4,7 +4,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { ensureUser } from '@/lib/circle/identity';
 import { callPot, PotRevertError } from '@/lib/circle/tx';
-import { validAddress } from '@/lib/circle/contract';
+import { potAddress, validAddress } from '@/lib/circle/contract';
 import { readPot, chainTimestamp } from '@/lib/circle/read';
 import { relayerFinalize } from '@/lib/relayer';
 import { toHttp } from './errors';
@@ -30,6 +30,7 @@ export function actionHandler(action: Action) {
       if (!/^\d{1,78}$/.test(rawId) || BigInt(rawId) > uint256Max) {
         return Response.json({ error: 'InvalidPotId' }, { status: 400 });
       }
+      potAddress();
       const potId = BigInt(rawId);
       const id = potId.toString();
       if (action === 'finalize') {

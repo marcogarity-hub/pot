@@ -1,3 +1,4 @@
+import { PotConfigurationError } from '@/lib/circle/contract';
 import { PotNotFoundError } from '@/lib/circle/read';
 import { PotRevertError } from '@/lib/circle/tx';
 
@@ -9,6 +10,7 @@ const messages: Record<string, string> = {
 };
 
 export function toHttp(error: unknown): Response {
+  if (error instanceof PotConfigurationError) return Response.json({ error: 'PotUnavailable', message: error.message }, { status: 503 });
   if (error instanceof PotNotFoundError) return Response.json({ error: 'PotNotFound' }, { status: 404 });
   if (error instanceof PotRevertError) {
     return Response.json({ error: error.code, message: messages[error.code] ?? error.code }, { status: 409 });

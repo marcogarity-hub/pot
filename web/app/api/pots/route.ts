@@ -17,6 +17,7 @@ export async function POST(request: Request) {
   const validated = createPotSchema.safeParse(raw);
   if (!validated.success) return Response.json({message:validated.error.issues[0].message},{status:400});
   const body = validated.data;
+  try { potAddress(); } catch (error) { return toHttp(error); }
   if (!createPotLimiter.take(session.data.user.id)) return Response.json({message:'You can create at most 5 pots per hour. Please try again later.'},{status:429,headers:{'Retry-After':'3600'}});
   let addresses: Hex[];
   let organizer: Awaited<ReturnType<typeof ensureUser>>;

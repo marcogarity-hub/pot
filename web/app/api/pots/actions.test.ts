@@ -1,6 +1,6 @@
+vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
 import { beforeEach, expect, it, vi } from 'vitest';
 import { keccak256, parseUnits, toBytes } from 'viem';
-import { potAbi, arcTestnet } from '@/lib/circle/__mocks__/pot';
 const m = vi.hoisted(() => ({ server: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: m.server }));
@@ -9,7 +9,6 @@ vi.mock('@/lib/circle/identity', () => ({ ensureUser: m.ensureUser }));
 vi.mock('@/lib/circle/tx', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/circle/tx')>(), callPot: m.callPot }));
 vi.mock('@/lib/relayer', () => ({ relayerFinalize: m.finalize }));
 vi.mock('viem', async importOriginal => ({ ...await importOriginal<typeof import('viem')>(), createPublicClient: () => ({ readContract: m.read, getBlock: m.block }) }));
-import { configurePotInterface } from '@/lib/circle/contract';
 import { PotRevertError } from '@/lib/circle/tx';
 import { POST as pay } from './[potId]/pay/route';
 import { POST as refund } from './[potId]/refund/route';
@@ -27,7 +26,7 @@ const pot = () => ({ organizer: org, share: parseUnits('300', 18), state: 1, thr
 type Handler = typeof pay;
 const post = (handler: Handler, body?: unknown, potId = '42') => handler(new Request('https://pot.test/api/pots/42', { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), { params: Promise.resolve({ potId }) });
 beforeEach(() => {
- vi.resetAllMocks(); configurePotInterface({ abi: potAbi, chain: arcTestnet }); process.env.NEXT_PUBLIC_POT_ADDRESS = org;
+ vi.resetAllMocks();  process.env.NEXT_PUBLIC_POT_ADDRESS = org;
  m.server.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: 'auth', email: ' Organizer@x.com ' } }, error: null }) } });
  m.ensureUser.mockImplementation(async (email: string) => ({ circle_wallet_id: email === 'replacement@x.com' ? 'replacement-wallet' : 'caller-wallet', wallet_address: email === 'replacement@x.com' ? replacement : org }));
  m.read.mockResolvedValue(pot()); m.block.mockResolvedValue({ timestamp: BigInt(1000) });
@@ -189,4 +188,13 @@ it('preserves the relayer error when the finalize re-read fails', async () => {
  expect(response.status).toBe(409);
  expect(await response.json()).toEqual({ error: 'WrongState', message: 'WrongState' });
  expect(m.read).toHaveBeenCalledTimes(2);
+});
+
+it.each([pay, refund, object, expire, release, swap, finalize])('returns 503 before wallet or chain calls when the address is unset', async handler => {
+ delete process.env.NEXT_PUBLIC_POT_ADDRESS;
+ const response = await post(handler);
+ expect(response.status).toBe(503);
+ expect(await response.json()).toMatchObject({ error: 'PotUnavailable', message: 'NEXT_PUBLIC_POT_ADDRESS is not configured.' });
+ expect(m.ensureUser).not.toHaveBeenCalled();
+ expect(m.read).not.toHaveBeenCalled();
 });

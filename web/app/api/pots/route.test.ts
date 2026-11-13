@@ -1,13 +1,13 @@
+vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
 import { beforeEach, expect, it, vi } from 'vitest';
 import { encodeAbiParameters, encodeEventTopics, parseUnits } from 'viem';
-import { potAbi, arcTestnet } from '@/lib/circle/__mocks__/pot';
+import { potAbi } from '@/lib/pot';
 const m=vi.hoisted(()=>({server:vi.fn(),admin:vi.fn(),ensureUser:vi.fn(),callPot:vi.fn(),insert:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/circle/identity',()=>({ensureUser:m.ensureUser}));
 vi.mock('@/lib/circle/tx',async original=>({...await original<typeof import('@/lib/circle/tx')>(),callPot:m.callPot}));
 vi.mock('server-only',()=>({}));
-import { configurePotInterface } from '@/lib/circle/contract';
 import { POST } from './route';
 import { createPotLimiter } from './limiter';
 const address='0x1111111111111111111111111111111111111111';
@@ -15,7 +15,7 @@ const members=Array.from({length:8},(_,i)=>`friend${i}@x.com`);
 const body=()=>({title:'Airbnb',total:'2400',memberEmails:members,deadline:new Date(Date.now()+86400000).toISOString(),threshold:5,objectionWindowSeconds:120,requestWindowSeconds:120});
 const post=(data:unknown)=>POST(new Request('https://pot.test/api/pots',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)}));
 beforeEach(()=>{
- vi.clearAllMocks();createPotLimiter.clear();configurePotInterface({abi:potAbi,chain:arcTestnet});process.env.NEXT_PUBLIC_POT_ADDRESS=address;
+ vi.clearAllMocks();createPotLimiter.clear();process.env.NEXT_PUBLIC_POT_ADDRESS=address;
  m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:{id:'auth-id',email:' Organizer@x.com '}}})}});
  m.insert.mockResolvedValue({error:null});m.admin.mockReturnValue({from:()=>({insert:m.insert})});
  m.ensureUser.mockImplementation(async(email:string)=>({id:email,circle_wallet_id:email==='organizer@x.com'?'organizer-wallet':email,wallet_address:email==='organizer@x.com'?address:`0x${(members.indexOf(email)+2).toString(16).padStart(40,'0')}`}));
@@ -31,7 +31,7 @@ it.each([
  {memberEmails:Array.from({length:21},(_,i)=>`a${i}@x.com`)}, {memberEmails:[]}, {total:'0'}, {total:'-1'}, {total:'1.0000000000000000001'}, {threshold:0}, {threshold:9}, {threshold:1.5}, {deadline:'2000-01-01T00:00:00Z'}, {objectionWindowSeconds:59}, {objectionWindowSeconds:604801}, {requestWindowSeconds:59}, {requestWindowSeconds:2592001},
 ])('rejects invalid creation input %j',async(patch)=>{expect((await post({...body(),...patch})).status).toBe(400);expect(m.ensureUser).not.toHaveBeenCalled();});
 it('allows organizer as a member',async()=>{expect((await post({...body(),memberEmails:[' ORGANIZER@x.com '],threshold:1})).status).toBe(201);});
-it('uses organizer wallet, exact bigint args, decodes id, and saves normalized metadata',async()=>{
+it('uses real potAbi to decode PotCreated, sends exact createPot args, and saves metadata',async()=>{
  const input=body();const response=await post(input);expect(response.status).toBe(201);const result=await response.json();expect(result).toEqual({potId:'42',inviteToken:expect.any(String)});
  expect(m.callPot).toHaveBeenCalledWith('organizer-wallet','createPot',[parseUnits('2400',18),parseUnits('300',18),members.map((_,index)=>`0x${(index+2).toString(16).padStart(40,'0')}`),BigInt(Math.floor(Date.parse(input.deadline)/1000)),BigInt(5),BigInt(120),BigInt(120)]);
  expect(m.insert).toHaveBeenCalledWith({pot_id:'42',title:'Airbnb',invite_token:result.inviteToken});expect(m.insert).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({pot_id:'42',email:'friend0@x.com',address:`0x${'2'.padStart(40,'0')}`})]));
@@ -48,4 +48,13 @@ it('maps create contract reverts to 409 with code',async()=>{
  const {PotRevertError}=await import('@/lib/circle/tx');
  m.callPot.mockRejectedValue(new PotRevertError('InvalidParams'));
  const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'InvalidParams',message:'InvalidParams'});
+});
+
+it('returns a clear 503 before provisioning when the deployed address is unset', async () => {
+ delete process.env.NEXT_PUBLIC_POT_ADDRESS;
+ const response = await post(body());
+ expect(response.status).toBe(503);
+ expect(await response.json()).toEqual({ error: 'PotUnavailable', message: 'NEXT_PUBLIC_POT_ADDRESS is not configured.' });
+ expect(m.ensureUser).not.toHaveBeenCalled();
+ expect(m.callPot).not.toHaveBeenCalled();
 });

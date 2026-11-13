@@ -508,3 +508,51 @@ Blockers: none for this task. Lane 1 still supplies the real ABI and production
 configurePotInterface setup. Simulation is advisory: state can change before
 Circle submits, and Circle failures without revert data still use
 TransactionFailed, now with the reconciliation transaction ID.
+
+## Deployed Pot ABI and address wiring (2026-11-13)
+
+Done: contract.ts defaults to potAbi and arcTestnet from @/lib/pot at module
+load, and potAddress validates the shared POT_ADDRESS export. Production no
+longer needs configurePotInterface; the injection hook remains for tests.
+Missing/invalid deployment addresses produce PotConfigurationError mapped to
+503 PotUnavailable with a clear NEXT_PUBLIC_POT_ADDRESS message. Creation and
+all seven action routes check configuration before provisioning or chain calls.
+Removed the temporary __mocks__/pot.ts ABI; all wallet/relayer/route tests now
+exercise the generated real ABI. Tests mock only the shared address export where
+per-test environment changes are needed (production uses its build-time value).
+
+Confirmed createPot argument order is total, share, members, deadline, threshold,
+objectionWindow, requestWindow. The route test builds a PotCreated log with real
+potAbi and checks decoded ID, organizer, submitted arguments, and metadata.
+readPot consumes the named object viem returns for the real PotView tuple; a
+real-ABI wire encode/decode round trip with distinct values checks share, state,
+threshold, objectionsCount, and releaseEligibleAt, including Frozen state 4.
+No positional decoding change was necessary. No Lane 1 files changed.
+
+Files changed: web/lib/circle/{contract,contract.test,read,tx.test}.ts;
+removed web/lib/circle/__mocks__/pot.ts; web/lib/relayer/index.test.ts;
+web/app/api/pots/{actions,actions.test,errors,route,route.test}.ts; this handoff.
+
+TDD: switched existing suites to the real ABI without configuring the interface,
+and added missing-address route regressions first: 54 failures / 36 passes in
+the route/action suites before implementation. Added default-interface, injection,
+shared-address and real PotView wire-decoding checks. All providers mocked; no
+live transactions submitted.
+
+Required validation (combined exit 0):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  9 passed (9)
+      Tests  182 passed (182)
+(TypeScript: no diagnostics; exit 0)
+> web@0.1.0 lint
+> eslint
+(no diagnostics; exit 0)
+```
+Existing Vite config CommonJS/ESM compatibility warning remains. git diff --check
+passed. Production build is left to the conductor as requested. Pulled origin/main
+before edits (already up to date; escalation required for shared Git metadata).
+No route segment config exports, shared config edits, merge, or push.
+
+Blockers: none for this wiring task. Set NEXT_PUBLIC_POT_ADDRESS to the deployed
+address before building; no deployment environment files were changed here.
