@@ -341,3 +341,116 @@ permission error (exit 1). The production build cannot run to completion in this
 sandbox; conductor must run it in an environment allowing Turbopack worker port
 binding. Build success is not claimed. git diff --check passed. Pulled origin/main
 before changes (already up to date). No merge, push, or live transactions.
+
+## Amendment A15 — Circle treasury relayer (2026-11-12)
+
+Done: replaced all raw-key relayer signing with the Circle developer-controlled
+treasury wallet. Gas prefund and demo-principal topup share createTransaction;
+finalize uses callPot with finalizeRelease and returns the confirmed receipt hash.
+relayerBalance reads the TREASURY_ADDRESS native balance through viem and warns
+below 5 USDC (also checked before finalize). No route changes or segment exports.
+
+Verified the installed SDK dist/types/developer-controlled-wallets.d.ts:
+CreateTransferTransactionInput/createTransaction use amount: string[], walletId,
+and tokenAddress: '' for native tokens. With walletId, the submission blockchain
+field is excluded by the type, but the 2026-11-13 conductor spike verified that
+submission must include blockchain: 'ARC-TESTNET' with tokenAddress: ''. The
+review fix below uses a narrow cast to pass that field through to REST.
+EstimateTransferFeeInput accepts blockchain: 'ARC-TESTNET' alongside that native
+selector. Both funding paths use decimal USDC amounts, estimate absolute fees,
+and apply max(estimate.maxFee, 20) in gwei, matching callPot. Funding polls for
+COMPLETE, rejects FAILED/DENIED/CANCELLED, and verifies a successful viem receipt;
+CONFIRMED remains pending, with a 120-second Circle polling deadline.
+
+Environment: CIRCLE_TREASURY_WALLET_ID + TREASURY_ADDRESS replace
+RELAYER_PRIVATE_KEY, which is gone from TypeScript. Existing CIRCLE_API_KEY and
+CIRCLE_ENTITY_SECRET remain required for Circle signing. No .env files changed.
+CLI from web (export these env vars first):
+`NODE_OPTIONS=--conditions=react-server npx tsx lib/relayer/topup.ts <address> <usdc>`.
+It uses the same Circle treasury transfer while bypassing only the gas cap.
+PREFUND_DAILY_CAP retains its default 50 USDC, synchronous reservation, UTC-day
+reset, and conservative retention after uncertain failures. The budget remains
+in-memory per process; distributed/durable enforcement remains conductor work.
+PrefundRefusedError covers zero/invalid destination, non-positive amount, cap
+exhaustion, and missing treasury wallet ID before submission. Circle owns nonces.
+
+Files changed: web/lib/relayer/{index,index.test,topup}.ts;
+web/lib/circle/tx.ts; docs/handoffs/wallet.md.
+
+TDD: replaced raw-key/nonce-manager tests first; observed 12 failures against the
+old implementation (including missing relayerBalance and absent Circle submits).
+Implementation then passed. Tests mock Circle and viem: no network or live
+transactions. Covers two concurrent Circle prefunds, cap reservations/default/UTC
+reset, refused and ambiguous failures, CLI principal separation, terminal states,
+timeout, receipt failure, both fee-floor cases, finalize calldata/treasury wallet,
+and balance warning boundary.
+
+Required validation:
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+ Test Files  8 passed (8)
+      Tests  154 passed (154)
+   Duration  2.30s
+(TypeScript: no diagnostics, exit 0)
+> web@0.1.0 lint
+> eslint
+(lint exit 0)
+> web@0.1.0 build
+> next build
+Error [TurbopackInternalError]: [project]/app/globals.css.css [app-client] (css)
+Caused by: creating new process; binding to a port;
+Operation not permitted (os error 1)
+(build exit 1)
+```
+Retried npm run build with sandbox escalation: same port-binding restriction,
+exit 1. Build cannot complete in this sandbox; conductor must run it outside this
+restriction. Existing Vite config compatibility warning remains. git diff --check
+passes; grep -rn RELAYER_PRIVATE_KEY web --include='*.ts' --exclude-dir=node_modules
+returns no matches (exit 1). Pulled origin/main before edits: already up to date.
+No changes outside the five listed files, no merge, no push. Remaining live-spike,
+ABI setup, and provisioning-recovery gates from earlier handoffs are unchanged.
+
+## Treasury review — round 1 (2026-11-13)
+
+Done: addressed all four requested fixes, limited to the two libraries and this
+handoff. Native createTransaction now sends tokenAddress: '' and blockchain:
+'ARC-TESTNET' with walletId, using the requested narrow SDK-input cast and a
+comment citing the conductor's 2026-11-13 live spike. Corrected the A15 note above.
+Each transfer submission gets crypto.randomUUID() as idempotencyKey; polling
+timeouts include both the Circle transaction ID and that submitted key for
+reconciliation. Both transfer and contract waiters reject STUCK alongside
+FAILED/DENIED/CANCELLED and include errorReason/errorDetails. Contract failures
+retain PotRevertError codes, including decoded custom errors when data exists.
+Finalize catches advisory balance-read failures and logs a warning, then proceeds
+through callPot even with an unset TREASURY_ADDRESS or failed balance RPC.
+
+Files changed: web/lib/relayer/{index,index.test}.ts;
+web/lib/circle/{tx,tx.test}.ts; docs/handoffs/wallet.md.
+
+TDD: updated tests first and observed 14 failing tests, then implemented fixes.
+Coverage includes explicit native submission chain, unique UUID keys for concurrent
+funding, timeout key reconciliation, all four terminal states with diagnostics in
+both waiters, preservation of decoded revert codes, and successful finalize after
+missing-address/RPC balance failures. All service calls are mocked; no live
+transactions were submitted.
+
+Required validation (combined command exit 0):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  8 passed (8)
+      Tests  162 passed (162)
+(TypeScript: no diagnostics; exit 0)
+> web@0.1.0 lint
+> eslint
+(lint exit 0)
+```
+Existing Vite CommonJS/ESM configuration warning remains. git diff --check passed.
+Production build is left to the conductor as requested. No route files, segment
+config exports, or shared configuration changed. No merge or push.
+
+Before edits, fetched origin/main via git pull --ff-only origin main; the pull
+could not fast-forward because main and this lane have diverged. The local
+conductor handoff was still a heading only, so read the fetched
+origin/main:docs/handoffs/conductor.md for the 2026-11-13 verified spike results.
+No merge/rebase performed; conductor integrates this commit. No new blockers for
+the four review fixes. Other integration items remain with the conductor.

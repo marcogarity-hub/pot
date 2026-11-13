@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import { encodeErrorResult, parseUnits } from 'viem';
 import { potAbi, arcTestnet } from './__mocks__/pot';
@@ -17,6 +17,7 @@ beforeEach(() => {
  m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'COMPLETE', txHash: '0x1234' } } });
  m.receipt.mockResolvedValue({ status: 'success', logs: [{ data: '0x', topics: [] }] });
 });
+afterEach(() => { vi.useRealTimers(); });
 it('sends the exact share and fee floor, returning receipt logs', async () => {
  const receipt = await callPot('wallet', 'pay', [BigInt(1)], parseUnits('300',18));
  expect(m.createContractExecutionTransaction).toHaveBeenCalledWith(expect.objectContaining({ walletId: 'wallet', amount: '300', fee: { type: 'absolute', config: { gasLimit: '100000', maxFee: '20', priorityFee: '1' } } }));
@@ -44,4 +45,17 @@ it('estimates using only the supported request fields', async () => {
   contractAddress: process.env.NEXT_PUBLIC_POT_ADDRESS,
   amount: '300', source: { walletId: 'wallet' },
  });
+});
+
+it.each(['FAILED', 'DENIED', 'CANCELLED', 'STUCK'])('reports terminal contract state %s with Circle diagnostics', async state => {
+ vi.useFakeTimers();
+ m.getTransaction.mockResolvedValue({ data: { transaction: { state, errorReason: 'ESTIMATION_ERROR', errorDetails: 'execution reverted' } } });
+ const assertion = expect(callPot('wallet', 'pay', [BigInt(1)])).rejects.toMatchObject({ code: 'TransactionFailed', message: `Wallet transaction ${state}: ESTIMATION_ERROR; execution reverted` });
+ await vi.advanceTimersByTimeAsync(120000); await assertion;
+ expect(m.receipt).not.toHaveBeenCalled();
+});
+it('preserves the decoded revert code and Circle diagnostics', async () => {
+ const errorDetails = encodeErrorResult({ abi: potAbi, errorName: 'AlreadyPaid' });
+ m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'FAILED', errorReason: 'ESTIMATION_ERROR', errorDetails } } });
+ await expect(callPot('wallet', 'pay', [BigInt(1)])).rejects.toMatchObject({ code: 'AlreadyPaid', message: `Wallet transaction FAILED: ESTIMATION_ERROR; ${errorDetails}` });
 });
