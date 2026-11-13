@@ -389,3 +389,9 @@ Source: [`docs/reviews/2026-11-12-codex-spec-plan-review.md`](../../reviews/2026
 | # | Decision | Approved by |
 |---|---|---|
 | A14 | **Developer-controlled EOA wallets.** Member and organizer wallets are Circle developer-controlled wallets with `accountType: 'EOA'` on `ARC-TESTNET`. A treasury wallet tops up each member wallet with a small amount of USDC for gas (the pre-fund model above). Gas Station / Paymaster sponsorship is deferred. **Verification gate:** the Lane 2 spike (Task 2.1) must confirm that EOA wallets can be created on `ARC-TESTNET` and can send a payable contract call. If they can't, Lane 2 switches to `accountType: 'SCA'` and the conductor tells Marco. | Marco |
+
+## Amendment A15 (2026-11-13, approved by Marco)
+
+| # | Decision | Approved by |
+|---|---|---|
+| A15 | **Treasury is a Circle developer-controlled wallet, not a raw key.** The relayer/treasury (gas top-ups, demo principal top-ups, `finalizeRelease`) is a Circle developer-controlled EOA wallet in the project wallet set (`CIRCLE_TREASURY_WALLET_ID`, `TREASURY_ADDRESS`), signed through Circle like member wallets. No raw relayer private key exists; `RELAYER_PRIVATE_KEY` is removed. Vercel holds only Circle API credentials. The **deploy key** (`DEPLOYER_PRIVATE_KEY`) is local-only in `contracts/.env`, used by Arc Foundry for deploys, and is never added to Vercel. Created 2026-11-13: treasury `0x9f7402e58eb01dcaa221e0bdb413984595830c07` (ARC-TESTNET, EOA, LIVE), deployer `0xe38Ef5Ba6766371C7a783D8bb298bA8aa291862A`. | Marco |
