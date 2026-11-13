@@ -94,3 +94,8 @@
 ## 2026-11-13 — lane/ui (/code-review high fix)
 - Landed: useMe returns signed-out / no-wallet / error / ready; only ready gets actions; no-wallet and error get their own messages (error has Try again) instead of a Sign in loop.
 - Gates: vitest/tsc/lint/build OK; conductor (Opus) review APPROVE. Worker: Claude Haiku.
+
+## 2026-11-13 — lane/wallet (/code-review high fixes)
+- Landed: time-based reservation takeover removed; wallet persisted right after createWallet; prefund uses a deterministic per-user Circle idempotency key; existing users re-prefunded only at zero balance; actions resolve the caller read-only (403 NotAMember); ledger RPC errors ≠ cap refusal; pre-submit failures release the cap; createPot timeout → 502 CreatePending (don't resubmit); identity conflict → 409; finalize single-flight caches {status, body}.
+- Gates: vitest/tsc/lint/build OK; conductor (Opus) review round 1 CHANGES (prefund + cap charge on every action via ensureUser) → fixed → APPROVE. Worker: Codex gpt-6-luna.
+- Follow-up noted: createPot reconcile endpoint for CreatePending.
