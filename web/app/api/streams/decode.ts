@@ -1,7 +1,8 @@
 import { decodeEventLog, type Abi, type Hex } from 'viem';
+import type { PotEventName } from '@/lib/pot';
+export type { PotEventName } from '@/lib/pot';
 
 export const eventNames = ['PotCreated', 'Paid', 'Locked', 'SeatSwapped', 'Refunded', 'PayoutRequested', 'Objected', 'Released', 'Expired', 'Frozen'] as const;
-export type PotEventName = typeof eventNames[number];
 export type DecodedEvent = {
   potId: string; name: PotEventName; txHash: string; logIndex: number;
   blockNumber: string; args: Record<string, string | string[]>;

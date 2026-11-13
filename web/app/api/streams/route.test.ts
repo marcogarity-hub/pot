@@ -2,7 +2,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
-import fixture from './__fixtures__/arc-logs.json';
+import allEventsFixture from './__fixtures__/arc-logs.json';
+import { decodePotLogs } from './decode';
+const fixture = { data: [[[...allEventsFixture.data[0][0].slice(0, 2)]]] };
 import { abi, address, created, event, alice } from './test-support';
 import { createStreamsHandler } from './handler';
 import { memoryStore, supabaseStore, type PotStore } from './store';
@@ -10,7 +12,6 @@ import { verifyQuickNode } from './verify';
 import { foldPot } from './fold';
 vi.mock('@/lib/supabase/admin', () => ({ createAdminSupabase: vi.fn() }));
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import { POST } from './route';
 const secret = 'test-stream-secret';
 function request(payload: unknown = fixture, gzip = false) {
   const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -29,6 +30,20 @@ describe('Streams HTTP', () => {
       expect(await response.json()).toEqual({ events: 2, pots: 1 });
       expect(store.projections.get('1')?.pot.payments_count).toBe(1);
     }
+  });
+  it('ingests every deployed-contract event from the complete fixture end to end', async () => {
+    const store = memoryStore();
+    const post = handler(store);
+    const response = await post(request(allEventsFixture));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ events: 22, pots: 3 });
+    expect(store.projections.get('1')?.pot).toMatchObject({ state: 3, payments_count: 2 });
+    expect(store.projections.get('2')?.pot).toMatchObject({ state: 4, objections_count: 1 });
+    expect(store.projections.get('3')?.pot.state).toBe(4);
+    const first = structuredClone([...store.projections]);
+    expect((await post(request(allEventsFixture, true))).status).toBe(200);
+    expect(store.events.size).toBe(22);
+    expect([...store.projections]).toEqual(first);
   });
   it('rejects bad signatures without storing anything', async () => {
     const store = memoryStore();
@@ -78,13 +93,38 @@ describe('Streams HTTP', () => {
       expect(store.events.size).toBe(0);
     }
   });
-  it('production route fails closed while the ABI placeholder is empty', async () => {
-    vi.stubEnv('QUICKNODE_STREAM_TOKEN', secret);
-    vi.stubEnv('NEXT_PUBLIC_POT_ADDRESS', address);
-    expect((await POST(request())).status).toBe(503);
-    expect(createAdminSupabase).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
+  it.each([['', secret], [address, ''], ['', '']])('returns 503 for missing configuration (%s, %s)', async (potAddress, token) => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_POT_ADDRESS', potAddress);
+    vi.stubEnv('QUICKNODE_STREAM_TOKEN', token);
+    try {
+      const { POST } = await import('./route');
+      expect((await POST(request())).status).toBe(503);
+      expect(createAdminSupabase).not.toHaveBeenCalled();
+    } finally { vi.unstubAllEnvs(); }
   });
+  it('production route decodes the deployed ABI and persists the fixture', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_POT_ADDRESS', address);
+    vi.stubEnv('QUICKNODE_STREAM_TOKEN', secret);
+    const events = decodePotLogs(fixture, abi, address);
+    const rows = events.map(e => ({ pot_id: e.potId, event_name: e.name, transaction_hash: e.txHash, log_index: e.logIndex, block_number: e.blockNumber, args: e.args }));
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const range = vi.fn().mockResolvedValue({ data: rows, error: null });
+    vi.mocked(createAdminSupabase).mockReturnValue({
+      from: vi.fn(() => ({ upsert, select: () => ({ eq: () => ({ order: () => ({ range }) }) }) })), rpc,
+    } as unknown as ReturnType<typeof createAdminSupabase>);
+    try {
+      const { POST } = await import('./route');
+      const response = await POST(request());
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ events: 2, pots: 1 });
+      expect(upsert).toHaveBeenCalledWith(rows, { onConflict: 'transaction_hash,log_index', ignoreDuplicates: true });
+      expect(rpc).toHaveBeenCalledWith('apply_pot_projection', expect.objectContaining({ p_pot: expect.objectContaining({ pot_id: '1', payments_count: 1 }) }));
+    } finally { vi.unstubAllEnvs(); }
+  });
+
 });
 describe('verifyQuickNode', () => {
   it('requires all headers, an exact hex digest, an untampered body and a secret', () => {

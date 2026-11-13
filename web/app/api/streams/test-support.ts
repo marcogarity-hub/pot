@@ -1,17 +1,8 @@
-import { parseAbi, encodeAbiParameters, encodeEventTopics, type Hex } from 'viem';
+import { encodeAbiParameters, encodeEventTopics, type Hex } from 'viem';
+import { potAbi } from '@/lib/pot';
 import type { DecodedEvent } from './decode';
-export const abi = parseAbi([
-  'event PotCreated(uint256 indexed potId, address indexed organizer, address[] members, uint256 total, uint256 share, uint256 deadline, uint256 threshold, uint256 objectionWindow, uint256 requestWindow)',
-  'event Paid(uint256 indexed potId, address indexed member, uint256 amount)',
-  'event Locked(uint256 indexed potId, uint256 lockedAt)',
-  'event SeatSwapped(uint256 indexed potId, address indexed leaver, address indexed replacement, uint256 refunded)',
-  'event Refunded(uint256 indexed potId, address indexed member, uint256 amount)',
-  'event PayoutRequested(uint256 indexed potId, bytes32 receiptHash, uint256 releaseEligibleAt)',
-  'event Objected(uint256 indexed potId, address indexed member, uint256 objectionsCount)',
-  'event Released(uint256 indexed potId, address indexed organizer, uint256 amount)',
-  'event Expired(uint256 indexed potId)', 'event Frozen(uint256 indexed potId)',
-]);
-export const address = '0x1111111111111111111111111111111111111111';
+export const abi = potAbi;
+export const address = '0xf842F699128A2e575d20BcC92F0472C7ad59e5C8';
 export const alice = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 export const bob = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 export const receipt = `0x${'ab'.repeat(32)}`;
