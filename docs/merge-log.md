@@ -19,3 +19,7 @@
 ## 2026-11-12 — lane/wallet (Task 2.5)
 - Landed: pay/refund/object/expire/request-release/swap/finalize routes, errors.ts toHttp (409s), create route revert mapping. Live check (Step 5) pending keys + deploy.
 - Gates: vitest, tsc, lint clean; `npm run build` OK on main after merge; reviewer APPROVE (non-blocking: 404 for missing pot, finalize race → alreadyFinalized).
+
+## 2026-11-12 — lane/wallet (polish)
+- Landed: 404 PotNotFound for non-existent pots on all [potId] routes; finalize returns alreadyFinalized after a lost race.
+- Gates: vitest 138/138, tsc, lint, build OK (conductor + reviewer; worker sandbox can't run Turbopack build); reviewer APPROVE.
