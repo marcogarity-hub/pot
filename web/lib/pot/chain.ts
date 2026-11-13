@@ -22,8 +22,20 @@ export const arcTestnet = defineChain({
  */
 export const POT_ADDRESS = process.env.NEXT_PUBLIC_POT_ADDRESS as `0x${string}`;
 
-/** Block the Pot was deployed in; the earliest block worth scanning for logs. */
-export const POT_DEPLOY_BLOCK: bigint = BigInt(process.env.POT_DEPLOY_BLOCK ?? "0");
+/** Returns the deployed Pot address, or throws a clear error if NEXT_PUBLIC_POT_ADDRESS is unset. */
+export function assertPotAddress(): `0x${string}` {
+  const address = process.env.NEXT_PUBLIC_POT_ADDRESS;
+  if (!address) {
+    throw new Error(
+      "NEXT_PUBLIC_POT_ADDRESS is not set: configure the deployed Pot contract address in the environment.",
+    );
+  }
+  return address as `0x${string}`;
+}
+
+/** Block the Pot was deployed in; the earliest block worth scanning for logs.
+ *  Server-only env var, so this is 0 in browser bundles; an empty value also falls back to 0. */
+export const POT_DEPLOY_BLOCK: bigint = BigInt(process.env.POT_DEPLOY_BLOCK || "0");
 
 /** Mirrors IPot.State (uint8 on the wire). */
 export enum PotState {

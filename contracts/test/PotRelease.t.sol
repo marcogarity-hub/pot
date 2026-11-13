@@ -314,8 +314,14 @@ contract PotReleaseTest is Base {
         vm.warp(lockedAt + REQ_WINDOW);
         vm.expectEmit(true, false, false, true, address(pot));
         emit IPot.Expired(id);
+        vm.recordLogs();
         vm.prank(stranger);
         pot.expire(id);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 1, "only Expired expected");
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != IPot.Frozen.selector, "expire must not emit Frozen");
+        }
 
         assertEq(uint8(_state(id)), uint8(IPot.State.Frozen));
 
