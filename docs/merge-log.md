@@ -44,3 +44,10 @@
 ## 2026-11-13 — lane/contract (Tasks 1.2–1.5)
 - Landed: IPot/Pot.sol (createPot, pay, swapSeat, refund, requestRelease, object, finalizeRelease, expire; PotCreated…Frozen events; MAX_MEMBERS 20), tests 0–23 + 3 invariants, web/lib/pot (potAbi, arcTestnet, POT_ADDRESS, POT_DEPLOY_BLOCK).
 - Gates: arc-forge test 75/75, invariants 10000 runs 0 reverts (271s); web tsc/vitest/build OK; Opus reviewer APPROVE; Codex adversarial "needs-attention" with one HIGH (not critical) finding = known gap: a contract organizer that rejects payment strands a PayoutRequested pot. Not reachable in-app (organizers are Circle EOAs, A1/A14). Fix needs a spec change → question for Marco.
+
+## 2026-11-13 — conductor: shadcn init
+- Landed: shadcn 4.23.0 init + button/input/label/card/progress/badge/select/textarea/separator/sonner. New deps all from shadcn (cn, @base-ui/react, class-variance-authority, lucide-react, next-themes, sonner, tw-animate-css). Build/tests/lint OK.
+
+## 2026-11-13 — lane/wallet (wire deployed ABI)
+- Landed: production uses @/lib/pot potAbi/POT_ADDRESS/arcTestnet; mocks removed; 503 when address unset; real PotCreated/PotView decoding tests.
+- Gates: vitest 182/182, tsc, lint, build OK; reviewer (Sonnet) APPROVE.
