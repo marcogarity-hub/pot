@@ -272,7 +272,7 @@ Claude Design produces the design system and screens, then hands off to Claude C
 
 1. Pre-funds each member wallet with **~$1 USDC** at Circle provision time, so the member can pay their own gas on `pay`, `object`, and `refund`.
 2. Signs `finalizeRelease` (the cron trigger and the client fallback).
-3. Signs `swapSeat` is still done by the organizer's own wallet — only `createPot` and `finalize` need the relayer.
+`createPot` and `swapSeat` are signed by the organizer's own Circle wallet, so `msg.sender` is the organizer. The relayer only pre-funds wallets and signs `finalizeRelease`. (Amended 2026-11-12, see Amendments.)
 
 Pre-demo setup: load the relayer with ~**$20–50 testnet USDC**. Sized for ~20 member wallets × $1 each + ~$2 for finalize gas × a few runs.
 
@@ -305,7 +305,7 @@ The plan (written next, via `superpowers:writing-plans`) will be grouped by the 
 | Lane | Owns | Owner tag in plan | Done when |
 |---|---|---|---|
 | 1. Contract | `contracts/`, `web/lib/pot/` (ABI + address export) | `owner: claude-code` (TDD); Codex reviews every diff | **Day-1 verification spike passes**, then test 0 + all 21 tests pass; `Pot.sol` deployed and verified on Arc testnet Blockscout |
-| 2. Wallet | `web/lib/circle/`, `web/app/api/wallet/`, `web/lib/relayer/` | **`owner: codex`** | **Day-1 Circle+Arc spike passes** (dev-controlled wallet provisions on chain id 5042002 and sends a test tx); then test user signs in by email and sends a transaction on Arc testnet; relayer pre-fund flow works end-to-end |
+| 2. Wallet | `web/lib/circle/`, `web/app/api/wallet/`, `web/lib/relayer/`, `web/app/api/pots/` | **`owner: codex`** | **Day-1 Circle+Arc spike passes** (dev-controlled wallet provisions on chain id 5042002 and sends a test tx); then test user signs in by email and sends a transaction on Arc testnet; relayer pre-fund flow works end-to-end |
 | 3. Events + Data | `supabase/`, `web/app/api/streams/`, `web/lib/realtime/` | **`owner: codex`** | A test `Paid` event appears in Supabase and in an open browser within seconds |
 | 4. UI | `web/app/(screens)/`, `web/components/` | `owner: claude-design` → `owner: claude-code` (from the design handoff) | Create, join, pay, and status screens run on real data |
 
@@ -358,3 +358,10 @@ A fresh builder reviewed this spec before approval and raised 8 questions. Resol
 - [ ] Working user-facing frontend.
 - [ ] 2–3 minute demo video.
 - [ ] README section for QuickNode Streams: network, dataset, filter logic, destination, and why.
+
+## Amendments (2026-11-12, approved by Marco)
+
+| # | Issue | Decision |
+|---|---|---|
+| A1 | Infrastructure said the relayer signs `createPot`, which would make the relayer `msg.sender` and therefore the organizer and payout recipient of every pot. | The **organizer's own Circle wallet signs `createPot`**. Contract unchanged (`organizer = msg.sender`). The relayer only pre-funds member wallets (organizer included) and signs `finalizeRelease`. |
+| A2 | `web/app/api/pots/*` routes had no owning lane. | **Lane 2 (Wallet) owns `web/app/api/pots/`**: every route there signs via Circle or the relayer. |
