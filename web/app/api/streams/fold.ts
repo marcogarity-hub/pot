@@ -7,7 +7,12 @@ export type PotRow = {
   release_eligible_at: string | null;
 };
 export type MemberRow = { pot_id: string; address: string; has_paid: boolean; has_objected: boolean; has_refunded: boolean; active: boolean };
-const timestamp = (seconds: string) => new Date(Number(BigInt(seconds) * BigInt(1000))).toISOString();
+const MAX_TIMESTAMP_SECONDS = BigInt('253402300799');
+const timestamp = (seconds: string) => {
+  const value = BigInt(seconds);
+  const safeValue = value > MAX_TIMESTAMP_SECONDS ? MAX_TIMESTAMP_SECONDS : value;
+  return new Date(Number(safeValue * BigInt(1000))).toISOString();
+};
 
 /** Deterministic chain-only projection. Persistence adds updated_at. */
 export function foldPot(input: DecodedEvent[]): { pot: PotRow; members: MemberRow[] } {

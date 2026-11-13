@@ -34,6 +34,7 @@ describe('usePot', () => {
     expect(mock.order.slice(0, 2)).toEqual(['subscribe', 'fetch']);
     expect(mock.channel.on).toHaveBeenCalledWith('postgres_changes', { event: '*', schema: 'public', table: 'pots', filter: 'pot_id=eq.1' }, expect.any(Function));
     expect(mock.channel.on).toHaveBeenCalledWith('postgres_changes', { event: '*', schema: 'public', table: 'pot_members', filter: 'pot_id=eq.1' }, expect.any(Function));
+    expect(mock.channel.on).toHaveBeenCalledWith('postgres_changes', { event: '*', schema: 'public', table: 'pot_meta', filter: 'pot_id=eq.1' }, expect.any(Function));
     act(() => mock.changes[0]());
     await act(async () => first.resolve({ data: { pot_id: '1', payments_count: 0 }, error: null }));
     expect(result.current.loading).toBe(true);
@@ -53,6 +54,14 @@ describe('usePot', () => {
     expect(mock.maybeSingle).toHaveBeenCalledTimes(4);
     expect(mock.eq).toHaveBeenCalledWith('pot_id', '1');
     expect(mock.select).toHaveBeenCalledWith(expect.stringContaining('total::text'));
+  });
+  it('refetches when receipt metadata changes', async () => {
+    const mock = mockClient(); const { result } = renderHook(() => usePot('1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    mock.maybeSingle.mockResolvedValue({ data: { pot_id: '1', receipt_text: 'receipt' }, error: null });
+    await act(async () => mock.changes[2]());
+    expect(mock.maybeSingle).toHaveBeenCalledTimes(2);
+    expect(result.current.status?.receipt_text).toBe('receipt');
   });
   it('does not drop a change queued as a fetch finishes', async () => {
     const mock = mockClient();

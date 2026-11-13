@@ -29,7 +29,15 @@ export function createStreamsHandler(options: { abi: Abi; potAddress: string; se
       await options.store.insertEvents(events);
       for (const potId of potIds) {
         const history = await options.store.loadEvents(potId);
-        const { pot, members } = foldPot(history);
+        let projection: ReturnType<typeof foldPot>;
+        try {
+          projection = foldPot(history);
+        } catch (error) {
+          const errorName = error instanceof Error ? error.name : 'UnknownError';
+          console.error(`Skipping deterministic Streams fold failure for pot ${potId}`, { name: errorName });
+          continue;
+        }
+        const { pot, members } = projection;
         await options.store.upsertProjection(pot, members);
       }
       return Response.json({ events: events.length, pots: potIds.length });

@@ -67,6 +67,23 @@ describe('Streams HTTP', () => {
     expect((await post(request())).status).toBe(200);
     expect(store.projections.get('1')?.pot.payments_count).toBe(1);
   });
+  it('skips a deterministic poison pot and projects the other pots', async () => {
+    const store = memoryStore();
+    const load = store.loadEvents;
+    store.loadEvents = vi.fn(async (potId: string) => {
+      const history = await load(potId);
+      return potId === '2' ? history.map(e => e.name === 'Paid' ? { ...e, args: { ...e.args, member: '0xdddddddddddddddddddddddddddddddddddddddd' } } : e) : history;
+    });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await handler(store)(request(allEventsFixture));
+      expect(response.status).toBe(200);
+      expect(store.projections.has('1')).toBe(true);
+      expect(store.projections.has('3')).toBe(true);
+      expect(store.projections.has('2')).toBe(false);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('pot 2'), expect.objectContaining({ name: 'Error' }));
+    } finally { error.mockRestore(); }
+  });
   it('out-of-order batches converge, including when creation arrives last', async () => {
     const logs = fixture.data[0][0];
     const results = [];

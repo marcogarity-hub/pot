@@ -36,6 +36,10 @@ describe('foldPot', () => {
     const paid = { ...event('Paid', { member: alice.toUpperCase() }, 1), blockNumber: '9007199254740994', txHash: '0xAB' };
     expect(foldPot([paid, created, { ...paid, txHash: '0xab' }]).pot.payments_count).toBe(1);
   });
+  it('clamps chain timestamps above the supported date range', () => {
+    const result = foldPot([{ ...created, args: { ...created.args, deadline: '10000000000000' } }]);
+    expect(result.pot.deadline).toBe('9999-12-31T23:59:59.000Z');
+  });
 });
 describe('decodePotLogs', () => {
   it('decodes nested docs-shaped logs, preserves bigints, ignores other addresses', () => {

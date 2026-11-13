@@ -52,6 +52,7 @@ export function usePot(potId: string): { status: PotStatusRow | null; loading: b
     const channel = db.channel(`pot:${potId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pots', filter: `pot_id=eq.${potId}` }, () => { void refresh(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pot_members', filter: `pot_id=eq.${potId}` }, () => { void refresh(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pot_meta', filter: `pot_id=eq.${potId}` }, () => { void refresh(); })
       .subscribe(state => { if (state === 'SUBSCRIBED') void refresh(); });
     void refresh();
     return () => {

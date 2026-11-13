@@ -1,5 +1,47 @@
 # Handoffs: events-data lane
 
+## Review fixes — timestamp safety, pot isolation, metadata Realtime, prefund ledger (2026-11-13)
+
+Done: fold timestamps now clamp values above Unix second `253402300799` to
+`9999-12-31T23:59:59.000Z`. Streams still persists all decoded events, then
+skips and logs a pot's deterministic fold exception with its pot ID and error
+name; successful pots continue and the request returns 200. Event storage,
+history loading, and projection write failures (including stale-count mismatch)
+remain in the outer retry path and return 500. `usePot` now refetches on
+`pot_meta` changes. Added a migration to publish `pot_meta`, and a
+service-role-only daily UTC prefund ledger with atomic reserve and floor-at-zero
+release functions.
+
+Files changed:
+- `web/app/api/streams/fold.ts`, `fold.test.ts`, `handler.ts`, `route.test.ts`
+- `web/lib/realtime/usePot.ts`, `usePot.test.tsx`
+- `supabase/migrations/20261113000300_pot_meta_realtime.sql`
+- `supabase/migrations/20261113000400_prefund_ledger.sql`
+- `docs/handoffs/events-data.md`
+
+TDD: the added regressions initially failed: oversized deadline threw
+`RangeError`; poison pot caused a batch 500; and `pot_meta` lacked a subscription.
+After changes, lane tests passed:
+```text
+$ cd web && npx vitest run app/api/streams lib/realtime
+ Test Files  3 passed (3)
+      Tests  31 passed (31)
+```
+
+Required full validation was attempted. Full `npx vitest run` ran 233 passing
+tests but one unrelated UI suite could not resolve the missing `lucide-react`
+dependency in `components/pot/PotActions.test.tsx`. `npx tsc --noEmit` also
+fails on existing UI generated-route type errors and missing UI dependencies
+(`lucide-react`, Base UI, `class-variance-authority`, `cn`, `next-themes`, and
+`sonner`); no errors remain in the changed Lane 3 files. Lane-scoped
+`npx eslint app/api/streams lib/realtime` passed. The combined command
+`npx vitest run && npx tsc --noEmit && npm run lint` therefore did not complete
+successfully; full npm lint was not reached because of the test failure.
+
+Blockers: migrations were not pushed, as requested. The full validation gate is
+blocked by missing UI dependencies and UI type errors outside this lane. No
+other blockers known.
+
 ## Task 3.1 — Schema, RLS, Realtime (2026-11-12)
 
 Done: implemented only Task 3.1. Six tables, the `pot_status` view, SELECT-only
