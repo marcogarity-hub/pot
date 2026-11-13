@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
-const m = vi.hoisted(() => ({ createTransaction: vi.fn(), estimateTransferFee: vi.fn(), createContractExecutionTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), getTransaction: vi.fn(), getBalance: vi.fn(), receipt: vi.fn() }));
+const m = vi.hoisted(() => ({ getWallet: vi.fn(), simulateContract: vi.fn(), createTransaction: vi.fn(), estimateTransferFee: vi.fn(), createContractExecutionTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), getTransaction: vi.fn(), getBalance: vi.fn(), receipt: vi.fn() }));
 vi.mock('../circle/client', () => ({ circleClient: () => m }));
-vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createPublicClient: () => ({ getBalance: m.getBalance, waitForTransactionReceipt: m.receipt }) }));
+vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createPublicClient: () => ({ simulateContract: m.simulateContract, getBalance: m.getBalance, waitForTransactionReceipt: m.receipt }) }));
 import { prefund, relayerFinalize, relayerBalance, resetPrefundBudget, PrefundRefusedError } from './index';
 import { configurePotInterface } from '../circle/contract';
 import { potAbi, arcTestnet } from '../circle/__mocks__/pot';
@@ -20,6 +20,8 @@ beforeEach(() => {
  m.createContractExecutionTransaction.mockResolvedValue({ data: { id: 'finalize' } });
  m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'COMPLETE', txHash: '0x1234' } } });
  m.receipt.mockResolvedValue({ status: 'success', transactionHash: '0x1234' });
+ m.getWallet.mockResolvedValue({ data: { wallet: { address: treasury } } });
+ m.simulateContract.mockResolvedValue({ result: undefined });
  m.getBalance.mockResolvedValue(unit * BigInt(10));
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.restoreAllMocks(); });
