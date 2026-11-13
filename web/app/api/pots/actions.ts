@@ -2,7 +2,7 @@ import { keccak256, toBytes } from 'viem';
 import { z } from 'zod';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import { ensureUser } from '@/lib/circle/identity';
+import { ensureUser, getWalletUser } from '@/lib/circle/identity';
 import { callPot, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, validAddress } from '@/lib/circle/contract';
 import { readPot, chainTimestamp } from '@/lib/circle/read';
@@ -15,7 +15,7 @@ const swapSchema = z.object({ leaverEmail: email, replacementEmail: email });
 const releaseSchema = z.object({ receiptText: z.string().min(1).max(500) });
 type Action = 'pay' | 'refund' | 'object' | 'expire' | 'request-release' | 'swap' | 'finalize';
 type Context = { params: Promise<{ potId: string }> };
-const finalizeFlights = new Map<string, Promise<Response>>();
+const finalizeFlights = new Map<string, Promise<{ status: number; body: unknown }>>();
 
 function recovery(potId: string, transactionHash: string) {
   return Response.json({
@@ -39,14 +39,15 @@ export function actionHandler(action: Action) {
         if (!flight) {
           flight = (async () => {
             const pot = await readPot(potId);
-            if (pot.state === 3) return Response.json({ alreadyFinalized: true });
+            if (pot.state === 3) return { status: 200, body: { alreadyFinalized: true } };
             if (pot.state !== 2 || pot.objectionsCount >= pot.threshold || await chainTimestamp() < pot.releaseEligibleAt) {
-              return Response.json({ error: 'NotEligible' }, { status: 409 });
+              return { status: 409, body: { error: 'NotEligible' } };
             }
             try {
-              return Response.json({ transactionHash: await relayerFinalize(potId) });
+              return { status: 200, body: { transactionHash: await relayerFinalize(potId) } };
             } catch (error) {
-              try { if ((await readPot(potId)).state === 3) return Response.json({ alreadyFinalized: true }); }
+              // The re-read is the cross-instance protection when another server finalized concurrently.
+              try { if ((await readPot(potId)).state === 3) return { status: 200, body: { alreadyFinalized: true } }; }
               catch { /* Preserve the original relayer error if the re-read fails. */ }
               throw error;
             }
@@ -54,13 +55,15 @@ export function actionHandler(action: Action) {
           finalizeFlights.set(id, flight);
           void flight.finally(() => { if (finalizeFlights.get(id) === flight) finalizeFlights.delete(id); }).catch(() => {});
         }
-        return (await flight).clone();
+        const result = await flight;
+        return Response.json(result.body, { status: result.status });
       }
 
       const supabase = await createServerSupabase();
       const session = await supabase.auth.getUser();
       if (session.error || !session.data.user?.email) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      const caller = await ensureUser(session.data.user.email.trim().toLowerCase());
+      const caller = await getWalletUser(session.data.user.email);
+      if (!caller) return Response.json({ error: 'NotAMember', message: "You're not part of this pot." }, { status: 403 });
       let callerAddress: string;
       try { callerAddress = validAddress(caller.wallet_address); }
       catch { return Response.json({ error: 'InvalidWalletAddress' }, { status: 400 }); }

@@ -619,3 +619,79 @@ of the linked-to-another-account conflict. No wallet is created by callback.
 
 Validation (exit 0): `cd web && npx vitest run` (14 files, 243 tests),
 `npx tsc --noEmit`, and `npm run lint`. No live wallet or chain operations ran.
+
+## Conductor review — 2026-11-13 wallet fixes
+
+Done:
+- Removed the 120-second reservation takeover and all `created_at` rewrites. A
+  successful `createWallet` is persisted to `circle_wallet_id` and
+  `wallet_address` before prefunding. Only a `createWallet` failure releases a
+  reservation; ambiguous prefund failures retain the wallet mapping. Retries use
+  a stable UUID v5-style SHA-256-derived key from `pot-prefund:<users.id>` and
+  replay the same Circle transfer request.
+- Checked the installed `@circle-fin/developer-controlled-wallets` 10.8.1
+  typings (`dist/types/clients/core.d.ts`, `WithIdempotencyKey`): Circle defines
+  the key as a unique identifier for duplicate requests so identical requests
+  have the effect of one request; it generates one if omitted. This guarantees
+  transfer idempotency for the identical request. No live duplicate-key call
+  was made.
+- Prefund ledger RPC errors now throw plain `Error('Prefund ledger unavailable')`;
+  only `data === false` is the cap refusal. The daily cap must be a positive
+  decimal. Fee-estimation errors/incomplete estimates, invalid fee values, and
+  missing treasury wallet id are marked pre-submit and release the reservation;
+  once `createTransaction` is invoked, errors remain ambiguous and retain it.
+  Removed `resetPrefundBudget` and its test references.
+- Create-pot Circle timeouts now return the exact `CreatePending` 502 response
+  using `instanceof CircleTimeoutError`. Identity-link conflicts return the
+  specified 409. The rate-limit slot is still consumed for identity failures:
+  the limiter reserves synchronously before asynchronous identity provisioning
+  to preserve the five-concurrent-request bound; validation failures occur
+  before the limiter and do not consume a slot.
+- Finalize single-flight now shares a plain `{status, body}` result and creates
+  a fresh JSON Response per caller. Re-reading chain state after relayer failure
+  remains the cross-instance race protection.
+
+Files changed: `web/lib/circle/{identity,identity.test}.ts`,
+`web/lib/relayer/{index,index.test}.ts`, `web/app/api/pots/{route,route.test,
+actions,actions.test}.ts`, and this handoff.
+
+TDD: new/updated regression tests failed before implementation for wallet
+persistence ordering, ledger error distinctions, pre-submit reservation release,
+create-pending/identity-conflict mapping, and fresh finalize responses. All then
+passed. Full validation passed:
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  19 passed (19)
+      Tests  273 passed (273)
+TypeScript: no diagnostics
+ESLint: exit 0 (one pre-cleanup unused-import warning; removed afterward)
+```
+No live Circle operation was run. The create route still has its documented
+single-process rate limiter. Reconciliation of a pot whose Circle transaction
+confirms after timeout is a follow-up; this response prevents duplicate resubmits
+while metadata is pending.
+
+## Conductor review — round 1 (2026-11-13)
+
+Done: `ensureUser` now checks an existing wallet's native Arc balance and retries
+the deterministic-key prefund only when the balance is exactly zero. A balance
+read failure logs a warning and skips the retry; it does not block the caller.
+Added `getWalletUser`, a normalized-email read-only lookup that returns a wallet
+row or null. Pot action handlers use it for caller identity, return 403
+`NotAMember` when no wallet exists, and never provision/prefund the caller.
+`ensureUser` remains in the intended provisioning paths, including replacement
+wallet setup.
+
+Files changed: `web/lib/circle/{identity,identity.test}.ts`,
+`web/app/api/pots/{actions,actions.test}.ts`, and this handoff.
+
+Coverage: funded existing wallet skips prefund; zero-balance wallet retries with
+the stable key; balance-read failure skips prefund; read-only lookup normalizes
+email; pay/object and other simple actions do not provision; absent caller wallet
+returns the specified 403.
+
+Validation: `cd web && npx vitest run && npx tsc --noEmit && npm run lint` passed
+(19 files, 282 tests; no TypeScript diagnostics; ESLint exit 0). No live Circle
+or chain calls were made. `git pull --ff-only origin main` could not access the
+shared worktree's `FETCH_HEAD` due to sandbox metadata permissions; no merge or
+push performed.

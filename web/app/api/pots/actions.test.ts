@@ -1,11 +1,11 @@
 vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
 import { beforeEach, expect, it, vi } from 'vitest';
 import { keccak256, parseUnits, toBytes } from 'viem';
-const m = vi.hoisted(() => ({ server: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
+const m = vi.hoisted(() => ({ server: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), getWalletUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: m.server }));
 vi.mock('@/lib/supabase/admin', () => ({ createAdminSupabase: m.admin }));
-vi.mock('@/lib/circle/identity', () => ({ ensureUser: m.ensureUser }));
+vi.mock('@/lib/circle/identity', () => ({ ensureUser: m.ensureUser, getWalletUser: m.getWalletUser }));
 vi.mock('@/lib/circle/tx', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/circle/tx')>(), callPot: m.callPot }));
 vi.mock('@/lib/relayer', () => ({ relayerFinalize: m.finalize }));
 vi.mock('viem', async importOriginal => ({ ...await importOriginal<typeof import('viem')>(), createPublicClient: () => ({ readContract: m.read, getBlock: m.block }) }));
@@ -29,6 +29,7 @@ beforeEach(() => {
  vi.resetAllMocks();  process.env.NEXT_PUBLIC_POT_ADDRESS = org;
  m.server.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: 'auth', email: ' Organizer@x.com ' } }, error: null }) } });
  m.ensureUser.mockImplementation(async (email: string) => ({ circle_wallet_id: email === 'replacement@x.com' ? 'replacement-wallet' : 'caller-wallet', wallet_address: email === 'replacement@x.com' ? replacement : org }));
+ m.getWalletUser.mockResolvedValue({ circle_wallet_id: 'caller-wallet', wallet_address: org });
  m.read.mockResolvedValue(pot()); m.block.mockResolvedValue({ timestamp: BigInt(1000) });
  m.callPot.mockResolvedValue({ transactionHash: hash }); m.finalize.mockResolvedValue(hash);
  m.saved.mockResolvedValue({ data: { pot_id: '42' }, error: null }); m.leaver.mockResolvedValue({ data: { wallet_address: old }, error: null });
@@ -39,7 +40,7 @@ beforeEach(() => {
 it('pay reads the chain share and sends exact value from the caller wallet', async () => {
  expect((await post(pay)).status).toBe(200);
  expect(m.read).toHaveBeenCalledWith(expect.objectContaining({ address: org, functionName: 'getPot', args: [BigInt(42)] }));
- expect(m.ensureUser).toHaveBeenCalledWith('organizer@x.com');
+ expect(m.getWalletUser).toHaveBeenCalledWith(' Organizer@x.com '); expect(m.ensureUser).not.toHaveBeenCalled();
  expect(m.callPot).toHaveBeenCalledWith('caller-wallet', 'pay', [BigInt(42)], parseUnits('300', 18));
 });
 it.each([['AlreadyPaid', "You've already paid into this pot."], ['DeadlinePassed', 'The deadline has passed.']])('maps pay revert %s to 409', async (code, message) => {
@@ -49,13 +50,25 @@ it.each([pay, refund, object, expire, release, swap])('requires authentication b
  m.server.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: null } }) } });
  expect((await post(handler)).status).toBe(401); expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled();
 });
+it.each([pay, refund, object, expire])('does not provision or prefund a caller on %s', async handler => {
+ const response = await post(handler);
+ expect(response.status).toBe(200); expect(m.getWalletUser).toHaveBeenCalledTimes(1); expect(m.ensureUser).not.toHaveBeenCalled();
+});
+it('uses read-only caller lookup for object and does not provision', async()=>{
+ expect((await post(object)).status).toBe(200); expect(m.getWalletUser).toHaveBeenCalledTimes(1); expect(m.ensureUser).not.toHaveBeenCalled();
+});
+it('returns 403 for an authenticated caller without a wallet', async()=>{
+ m.getWalletUser.mockResolvedValueOnce(null);
+ const response=await post(pay); expect(response.status).toBe(403); expect(await response.json()).toEqual({error:'NotAMember',message:"You're not part of this pot."});
+ expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled();
+});
 it.each([[refund, 'refund'], [object, 'object'], [expire, 'expire']] as const)('signs simple actions with caller wallet', async (handler, fn) => {
  expect((await post(handler)).status).toBe(200); expect(m.callPot).toHaveBeenCalledWith('caller-wallet', fn, [BigInt(42)]);
 });
 it.each([release, swap])('refuses a non-organizer before tx or replacement provisioning', async handler => {
  m.read.mockResolvedValue({ ...pot(), organizer: old });
  expect((await post(handler, { receiptText: 'receipt', leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' })).status).toBe(403);
- expect(m.callPot).not.toHaveBeenCalled(); expect(m.ensureUser).toHaveBeenCalledTimes(1); expect(m.update).not.toHaveBeenCalled();
+ expect(m.callPot).not.toHaveBeenCalled(); expect(m.getWalletUser).toHaveBeenCalledTimes(1); expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.update).not.toHaveBeenCalled();
 });
 it('does not save receipt text after a failed requestRelease', async () => {
  m.callPot.mockRejectedValue(new PotRevertError('WrongState'));
@@ -98,6 +111,7 @@ it('single-flights concurrent finalize requests for the same pot', async () => {
  expect(responses.map(r => r.status)).toEqual([200, 200]);
  expect(await Promise.all(responses.map(r => r.json()))).toEqual([{ transactionHash: hash }, { transactionHash: hash }]);
  expect(m.finalize).toHaveBeenCalledTimes(1);
+ expect(responses[0]).not.toBe(responses[1]);
 });
 it.each([{ state: 0 }, { state: 1 }, { state: 4 }, { state: 2, objectionsCount: BigInt(5) }])('refuses ineligible finalize', async patch => {
  m.read.mockResolvedValue({ ...pot(), ...patch }); expect((await post(finalize)).status).toBe(409); expect(m.finalize).not.toHaveBeenCalled();
@@ -145,10 +159,10 @@ it('reports confirmed swap hash on invite persistence failure', async () => {
 it('does not provision a missing leaver', async () => {
  m.leaver.mockResolvedValue({ data: null, error: null });
  expect((await post(swap, { leaverEmail: 'missing@x.com', replacementEmail: 'replacement@x.com' })).status).toBe(400);
- expect(m.ensureUser).toHaveBeenCalledTimes(1); expect(m.callPot).not.toHaveBeenCalled();
+ expect(m.getWalletUser).toHaveBeenCalledTimes(1); expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled();
 });
 it('rejects invalid replacement wallets before signing', async () => {
- m.ensureUser.mockResolvedValueOnce({ circle_wallet_id: 'caller', wallet_address: org }).mockResolvedValueOnce({ circle_wallet_id: 'replacement', wallet_address: `0x${'0'.repeat(40)}` });
+ m.getWalletUser.mockResolvedValueOnce({ circle_wallet_id: 'caller', wallet_address: org }); m.ensureUser.mockResolvedValueOnce({ circle_wallet_id: 'replacement', wallet_address: `0x${'0'.repeat(40)}` });
  expect((await post(swap, { leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' })).status).toBe(400); expect(m.callPot).not.toHaveBeenCalled();
 });
 it('does not relay after an unexpected chain read failure', async () => {
@@ -169,7 +183,7 @@ it.each([
  expect(response.status).toBe(404);
  expect(await response.json()).toEqual({ error: 'PotNotFound' });
  expect(m.callPot).not.toHaveBeenCalled(); expect(m.finalize).not.toHaveBeenCalled();
- expect(m.ensureUser.mock.calls.every(([email]) => email === 'organizer@x.com')).toBe(true);
+ expect(m.getWalletUser.mock.calls.every(([email]) => email === ' Organizer@x.com ')).toBe(true); expect(m.ensureUser).not.toHaveBeenCalled();
  expect(m.update).not.toHaveBeenCalled(); expect(m.upsert).not.toHaveBeenCalled();
 });
 
@@ -208,5 +222,6 @@ it.each([pay, refund, object, expire, release, swap, finalize])('returns 503 bef
  expect(response.status).toBe(503);
  expect(await response.json()).toMatchObject({ error: 'PotUnavailable', message: 'NEXT_PUBLIC_POT_ADDRESS is not configured.' });
  expect(m.ensureUser).not.toHaveBeenCalled();
+ expect(m.getWalletUser).not.toHaveBeenCalled();
  expect(m.read).not.toHaveBeenCalled();
 });

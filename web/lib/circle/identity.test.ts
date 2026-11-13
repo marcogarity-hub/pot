@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const m = vi.hoisted(() => ({ createWallet: vi.fn(), prefund: vi.fn(), admin: vi.fn(), server: vi.fn(), deleteReserved: vi.fn() }));
+const m = vi.hoisted(() => ({ createWallet: vi.fn(), prefund: vi.fn(), admin: vi.fn(), server: vi.fn(), deleteReserved: vi.fn(), getBalance: vi.fn() }));
+vi.mock('viem', async importOriginal => ({ ...(await importOriginal<typeof import('viem')>()), createPublicClient: () => ({ getBalance: m.getBalance }), http: () => ({}) }));
 vi.mock('./wallets',()=>({createWallet:m.createWallet}));
 vi.mock('../relayer',()=>({prefund:m.prefund, PrefundRefusedError: class PrefundRefusedError extends Error {}}));
-import { PrefundRefusedError } from '../relayer';
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
-import { ensureUser, claimUser, normalizeEmail } from './identity';
+import { ensureUser, getWalletUser, claimUser, normalizeEmail } from './identity';
 import { GET as callback } from '@/app/api/wallet/callback/route';
 import { GET as me } from '@/app/api/wallet/me/route';
 let rows: Record<string, unknown>[];
@@ -13,6 +13,7 @@ beforeEach(()=>{
  vi.clearAllMocks(); rows=[];
  m.createWallet.mockImplementation(async()=>{ await Promise.resolve(); return {walletId:'wallet',address:'0x1111111111111111111111111111111111111111'}; });
  m.prefund.mockResolvedValue('0x1234');
+ m.getBalance.mockResolvedValue(BigInt(1));
  m.admin.mockImplementation(()=>({from:()=>{
   let action='select'; let value: Record<string,unknown>={}; const filters: Record<string,unknown>={};
   const q = { delete:()=>({eq:(idColumn:string,id:unknown)=>({is:async(column:string,value:unknown)=>{m.deleteReserved(idColumn,id,column,value); rows=rows.filter(row=>!(row[idColumn]===id && row[column]===value));return {error:null};}})}), upsert:(v:Record<string,unknown>)=>{action='insert';value=v;return q;},update:(v:Record<string,unknown>)=>{action='update';value=v;return q;},select:()=>q,eq:(k:string,v:unknown)=>{filters[k]=v;return q;},is:(k:string,v:unknown)=>{filters[k]=v;return q;},or:()=>q,
@@ -49,7 +50,7 @@ it('times out waiting for an already-reserved identity without provisioning agai
  try { rows.push({id:'pending',email:'a@x.com',auth_user_id:null});const pending=expect(ensureUser('a@x.com')).rejects.toThrow('provisioning pending');await vi.advanceTimersByTimeAsync(10000);await pending;expect(m.createWallet).not.toHaveBeenCalled();expect(m.prefund).not.toHaveBeenCalled(); } finally {vi.useRealTimers();}
 });
 it('keeps the reservation after an ambiguous prefunding failure',async()=>{
- m.prefund.mockRejectedValue(new Error('connection lost after send'));await expect(ensureUser('a@x.com')).rejects.toThrow('connection lost after send');expect(rows[0].wallet_address).toBeUndefined();expect(m.deleteReserved).not.toHaveBeenCalled();
+ m.prefund.mockRejectedValue(new Error('connection lost after send'));await expect(ensureUser('a@x.com')).rejects.toThrow('connection lost after send');expect(rows[0].wallet_address).toBe('0x1111111111111111111111111111111111111111');expect(m.deleteReserved).not.toHaveBeenCalled();
 });
 it('does not reassign a wallet linked to a different auth user',async()=>{
  rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'someone-else',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});await expect(claimUser('auth-id','a@x.com')).rejects.toThrow('already linked');expect(rows[0].auth_user_id).toBe('someone-else');
@@ -63,17 +64,33 @@ it('callback redirects for a new organizer without provisioning a wallet', async
  expect(response.status).toBe(303); expect(response.headers.get('location')).toBe('https://pot.test/');
  expect(m.createWallet).not.toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled(); expect(rows).toHaveLength(0);
 });
-it('takes over an incomplete reservation older than 120 seconds',async()=>{
- vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-13T00:02:01Z'));
- rows.push({id:'stale',email:'a@x.com',auth_user_id:null,circle_wallet_id:null,created_at:'2026-11-13T00:00:00.000Z'});
- try { const user=await ensureUser('a@x.com'); expect(user.circle_wallet_id).toBe('wallet'); expect(m.createWallet).toHaveBeenCalledTimes(1); expect(m.prefund).toHaveBeenCalledTimes(1); }
- finally { vi.useRealTimers(); }
+it('persists the Circle wallet before deterministic idempotent prefunding',async()=>{
+ m.prefund.mockImplementationOnce(async (_address:string, _amount:undefined, key:string)=>{expect(rows[0]).toMatchObject({circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});expect(key).toMatch(/^[\da-f]{8}-[\da-f]{4}-5[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i);throw new Error('ambiguous');});
+ await expect(ensureUser('a@x.com')).rejects.toThrow('ambiguous');
+ expect(m.createWallet).toHaveBeenCalledTimes(1);expect(rows[0].created_at).toBeDefined();expect(m.deleteReserved).not.toHaveBeenCalled();
+});
+it('retries the same idempotent prefund when a persisted wallet is found',async()=>{
+ m.getBalance.mockResolvedValueOnce(BigInt(0));
+ rows.push({id:'done',email:'a@x.com',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
+ await ensureUser('a@x.com');expect(m.prefund).toHaveBeenCalledWith('0x1111111111111111111111111111111111111111',undefined,expect.stringMatching(/^[\da-f]{8}-[\da-f]{4}-5[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i));
+});
+it('does not reserve or submit a prefund for an existing funded user', async()=>{
+ rows.push({id:'done',email:'a@x.com',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
+ await ensureUser('a@x.com'); expect(m.getBalance).toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled(); expect(m.createWallet).not.toHaveBeenCalled();
+});
+it('skips prefund when the existing wallet balance cannot be read', async()=>{
+ rows.push({id:'done',email:'a@x.com',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
+ m.getBalance.mockRejectedValueOnce(new Error('RPC unavailable')); const warn=vi.spyOn(console,'warn').mockImplementation(()=>{});
+ await expect(ensureUser('a@x.com')).resolves.toMatchObject({circle_wallet_id:'wallet'}); expect(m.prefund).not.toHaveBeenCalled(); warn.mockRestore();
+});
+it('looks up an existing wallet by normalized email without provisioning', async()=>{
+ rows.push({id:'done',email:'a@x.com',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
+ await expect(getWalletUser(' A@X.com ')).resolves.toMatchObject({circle_wallet_id:'wallet'}); expect(m.createWallet).not.toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled();
+ await expect(getWalletUser('missing@x.com')).resolves.toBeNull();
 });
 
-it.each(['createWallet', 'cap refusal'])('releases a reservation after %s failure and allows a later successful ensure', async (reason) => {
- const failure = reason === 'createWallet' ? new Error('Circle unavailable') : new PrefundRefusedError('Daily prefund cap exceeded');
- if (reason === 'createWallet') m.createWallet.mockRejectedValueOnce(failure);
- else m.prefund.mockRejectedValueOnce(failure);
+it('releases only a reservation whose Circle wallet creation failed', async () => {
+ const failure = new Error('Circle unavailable');m.createWallet.mockRejectedValueOnce(failure);
  await expect(ensureUser(' A@x.com ')).rejects.toBe(failure);
  expect(m.deleteReserved).toHaveBeenCalledWith('id','internal-id','circle_wallet_id',null);
  expect(rows).toHaveLength(0);

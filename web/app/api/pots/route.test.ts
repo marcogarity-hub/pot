@@ -53,7 +53,11 @@ it('maps create contract reverts to 409 with code',async()=>{
 it('maps a Circle timeout to a pending response with reconciliation id',async()=>{
  const {CircleTimeoutError}=await import('@/lib/circle/tx');m.callPot.mockRejectedValue(new CircleTimeoutError('circle-id'));
  const response=await post(body());expect(response.status).toBe(502);
- expect(await response.json()).toEqual({error:'TransactionPending',message:'Your transaction is still processing. Refresh in a minute before retrying.',circleTransactionId:'circle-id'});
+ expect(await response.json()).toEqual({error:'CreatePending',message:'Your pot is still being created. Do not submit again — refresh in a minute.',circleTransactionId:'circle-id'});
+});
+it('maps an identity conflict to 409',async()=>{
+ m.claimUser.mockRejectedValue(new Error('Identity already linked to another account'));
+ const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'IdentityConflict',message:'This email is linked to a different sign-in.'});expect(m.callPot).not.toHaveBeenCalled();
 });
 
 it('returns a clear 503 before provisioning when the deployed address is unset', async () => {
