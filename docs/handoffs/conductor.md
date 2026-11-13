@@ -17,3 +17,10 @@
 - **Reverts fail at Circle's estimation step:** state `FAILED`, `errorReason: ESTIMATION_ERROR`, `errorDetails: "execution reverted"`, no txHash and **no revert data**. So custom-error decoding (`PotRevertError`) can't rely on Circle; the server must simulate the call first (viem `simulateContract`/`eth_call` from the wallet's address) to get the custom error, then submit through Circle.
 
 **For Lane 2:** (1) confirm `callPot`/prefund waiters treat `COMPLETE` as success and `FAILED`/`CANCELLED`/`DENIED` as failure; (2) add a pre-flight `simulateContract` from the caller's address so contract errors map to `PotRevertError` codes; (3) native transfers use `tokenAddress: ""` + `blockchain: "ARC-TESTNET"`.
+
+## 2026-11-13 — Task 1.6: Pot deployed and verified (conductor)
+- **Pot:** `0xf842F699128A2e575d20BcC92F0472C7ad59e5C8` on Arc testnet (5042002), deploy tx `0x7e2eeff353da1b43eed74297f5d5a1472d5434c55a94cdc8e9cce19457c15f63`, **block 72173814**. Deployed from main at 724e47c (`arc-forge create src/Pot.sol:Pot`) by the local deployer `0xe38E…862A`.
+- **Verified:** `arc-forge verify-contract … --verifier blockscout --verifier-url https://explorer.testnet.arc.io/api/` → "Pass - Verified". Explorer: https://explorer.testnet.arc.io/address/0xf842F699128A2e575d20BcC92F0472C7ad59e5C8
+- **web/.env.local:** `NEXT_PUBLIC_POT_ADDRESS` and `POT_DEPLOY_BLOCK` set. **Marco must add both to Vercel.**
+- **Live smoke test (pot 0, 1 member, 0.01 USDC, 60 s windows):** createPot ✓ → pay ✓ (pot balance 1e16) → Locked → requestRelease ✓ (state 2) → finalize 17 s early correctly refused (WindowOpen).
+- **Revert data:** `eth_call` of `pay` on the locked pot returned `0xde4168ba` = `WrongState()`. Arc's RPC returns custom-error data, so Lane 2's pre-flight simulation works.
