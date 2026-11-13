@@ -89,3 +89,9 @@ Not run here: `npm run build` (the conductor runs it).
 ### Blockers / notes for other lanes
 - **Lane 3 / conductor:** the invite fix depends on `pot_members.active` being set to false on a swap and on `pot_invites` keeping the leaver's row. Both hold in the current projection. Keep that in mind if the swap projection changes.
 - Nothing here touches `web/lib/`, `web/lib/supabase/`, `package.json`, or shared config.
+
+### Review round 1 (conductor: invite left-state only for inactive rows)
+- Blocking regression fixed: `pot_members` comes from the QuickNode projection, which lags. A freshly invited member opening the link before PotCreated is projected used to get "You're no longer in this pot". Now the lookup returns `memberState: 'active' | 'inactive' | 'unknown'`, read from the invite's `pot_members` row with no `active` filter. `resolveInvite` returns `left` only for `inactive`. `unknown` (no row yet) and `active` both resolve to `pot`, and the organizer always resolves to `pot`.
+- Tests: `invite.server.test.ts` (active → pot, inactive → left, no row → pot, organizer with inactive row → pot, not-invited, unknown token) and `auth.test.ts` (same matrix at the pure-function level).
+- Files: `web/components/pot/auth.ts`, `auth.test.ts`, `invite.server.ts`, `invite.server.test.ts`, `docs/handoffs/ui.md`.
+- Checks: `cd web && npx vitest run` → 19 files, 254 tests passed. `npx tsc --noEmit` → exit 0. `npm run lint` → exit 0.

@@ -45,19 +45,27 @@ beforeEach(() => {
 });
 
 describe('lookupInvite', () => {
-  it('reports an active invited member as an active member', async () => {
+  it('reports an active invited member as active', async () => {
     const lookup = await lookupInvite('tok', 'alice@example.com');
-    expect(lookup).toEqual({ potId: '9', invited: true, isOrganizer: false, isActiveMember: true });
+    expect(lookup).toEqual({ potId: '9', invited: true, isOrganizer: false, memberState: 'active' });
     expect(resolveInvite(lookup)).toEqual({ kind: 'pot', potId: '9' });
   });
 
-  it('does not treat a swapped-out member as an active member', async () => {
+  it('reports a swapped-out member as inactive, which resolves to left', async () => {
     const lookup = await lookupInvite('tok', 'bob@example.com');
-    expect(lookup).toMatchObject({ invited: true, isActiveMember: false });
+    expect(lookup).toMatchObject({ invited: true, memberState: 'inactive' });
     expect(resolveInvite(lookup)).toEqual({ kind: 'left' });
   });
 
-  it('still lets the organizer in', async () => {
+  it('treats an invitee with no pot_members row yet as still invited (projection lag)', async () => {
+    tables.pot_members = tables.pot_members.filter(r => r.address !== '0xalice');
+    const lookup = await lookupInvite('tok', 'alice@example.com');
+    expect(lookup).toMatchObject({ invited: true, memberState: 'unknown' });
+    expect(resolveInvite(lookup)).toEqual({ kind: 'pot', potId: '9' });
+  });
+
+  it('still lets the organizer in, even when their member row is inactive', async () => {
+    tables.pot_members.push({ pot_id: '9', address: '0xorg', active: false });
     const lookup = await lookupInvite('tok', 'org@example.com');
     expect(resolveInvite(lookup)).toEqual({ kind: 'pot', potId: '9' });
   });
