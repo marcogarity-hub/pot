@@ -27,14 +27,17 @@ describe('magicLinkRedirect', () => {
 });
 
 describe('resolveInvite', () => {
-  it('sends an invited member to the pot', () => {
-    expect(resolveInvite({ potId: '4', invited: true, isOrganizer: false })).toEqual({ kind: 'pot', potId: '4' });
+  it('sends an invited active member to the pot', () => {
+    expect(resolveInvite({ potId: '4', invited: true, isOrganizer: false, isActiveMember: true })).toEqual({ kind: 'pot', potId: '4' });
   });
   it('sends the organizer to the pot even without an invite row', () => {
-    expect(resolveInvite({ potId: '4', invited: false, isOrganizer: true })).toEqual({ kind: 'pot', potId: '4' });
+    expect(resolveInvite({ potId: '4', invited: false, isOrganizer: true, isActiveMember: false })).toEqual({ kind: 'pot', potId: '4' });
   });
   it('rejects someone whose email is not on the invite', () => {
-    expect(resolveInvite({ potId: '4', invited: false, isOrganizer: false })).toEqual({ kind: 'not-invited' });
+    expect(resolveInvite({ potId: '4', invited: false, isOrganizer: false, isActiveMember: false })).toEqual({ kind: 'not-invited' });
+  });
+  it('tells a swapped-out member they are no longer in the pot', () => {
+    expect(resolveInvite({ potId: '4', invited: true, isOrganizer: false, isActiveMember: false })).toEqual({ kind: 'left' });
   });
   it('reports an unknown token', () => {
     expect(resolveInvite(null)).toEqual({ kind: 'not-found' });

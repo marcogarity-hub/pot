@@ -9,11 +9,15 @@ export function magicLinkRedirect(appUrl: string, next: string | null | undefine
   return `${appUrl.replace(/\/+$/, '')}/api/wallet/callback?next=${encodeURIComponent(safeNext(next))}`;
 }
 
-export type InviteLookup = { potId: string; invited: boolean; isOrganizer: boolean } | null;
-export type InviteOutcome = { kind: 'pot'; potId: string } | { kind: 'not-invited' } | { kind: 'not-found' };
+/** `isActiveMember`: the invite's wallet is an active pot_members row (false after a swap). */
+export type InviteLookup = { potId: string; invited: boolean; isOrganizer: boolean; isActiveMember: boolean } | null;
+export type InviteOutcome = { kind: 'pot'; potId: string } | { kind: 'not-invited' } | { kind: 'not-found' } | { kind: 'left' };
 
 export function resolveInvite(lookup: InviteLookup): InviteOutcome {
   if (!lookup) return { kind: 'not-found' };
-  if (lookup.invited || lookup.isOrganizer) return { kind: 'pot', potId: lookup.potId };
+  if (lookup.isOrganizer) return { kind: 'pot', potId: lookup.potId };
+  if (lookup.invited && lookup.isActiveMember) return { kind: 'pot', potId: lookup.potId };
+  // The invite row survives a swap, so an invite without an active seat means the member left.
+  if (lookup.invited) return { kind: 'left' };
   return { kind: 'not-invited' };
 }

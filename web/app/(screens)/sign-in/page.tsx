@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { safeNext } from '@/components/pot/auth';
 import { Screen } from '@/components/pot/Screen';
 import { SignInForm } from '@/components/pot/SignInForm';
+import { SignInFormSkeleton } from '@/components/pot/SignInFormSkeleton';
 
 export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
   return (
@@ -13,8 +14,8 @@ export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
           <CardDescription>We&apos;ll email you a link. Use the address your organizer invited.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* searchParams are runtime data under Cache Components. */}
-          <Suspense fallback={<SignInForm next="/" />}>
+          {/* searchParams are runtime data under Cache Components. The fallback must not be interactive. */}
+          <Suspense fallback={<SignInFormSkeleton />}>
             {searchParams.then(sp => <SignInForm next={safeNext(typeof sp.next === 'string' ? sp.next : null)} />)}
           </Suspense>
         </CardContent>

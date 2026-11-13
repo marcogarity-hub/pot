@@ -16,7 +16,15 @@ export async function lookupInvite(token: string, email: string): Promise<Invite
   ]);
   const wallet = (user as { wallet_address: string | null } | null)?.wallet_address?.toLowerCase();
   const organizer = (pot as { organizer_address: string } | null)?.organizer_address?.toLowerCase();
-  return { potId, invited: !!invite, isOrganizer: !!wallet && wallet === organizer };
+  const inviteAddress = (invite as { address: string } | null)?.address?.toLowerCase();
+  let isActiveMember = false;
+  if (inviteAddress) {
+    // pot_invites keeps its row after a swap, so the seat must still be active.
+    const { data: member } = await db.from('pot_members').select('address')
+      .eq('pot_id', potId).eq('address', inviteAddress).eq('active', true).maybeSingle();
+    isActiveMember = !!member;
+  }
+  return { potId, invited: !!invite, isOrganizer: !!wallet && wallet === organizer, isActiveMember };
 }
 
 /** Title for the signed-out invite screen. The token itself is the secret. */

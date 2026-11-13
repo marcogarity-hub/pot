@@ -42,6 +42,7 @@ async function JoinGate({ token }: { token: string }) {
   const outcome = resolveInvite(await lookupInvite(token, data.user.email));
   if (outcome.kind === 'pot') redirect(`/pots/${outcome.potId}`);
   if (outcome.kind === 'not-found') return <NotFound />;
+  if (outcome.kind === 'left') return <NoLongerMember />;
   return (
     <Card>
       <CardHeader>
@@ -52,6 +53,18 @@ async function JoinGate({ token }: { token: string }) {
         <SignOutButton />
         <Link href="/" className={linkButton({ variant: 'outline', size: 'sm' })}>Go home</Link>
       </CardContent>
+    </Card>
+  );
+}
+
+function NoLongerMember() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>You&apos;re no longer in this pot.</CardTitle>
+        <CardDescription>Your seat was given to someone else. Ask the organizer if you think this is a mistake.</CardDescription>
+      </CardHeader>
+      <CardContent><Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link></CardContent>
     </Card>
   );
 }

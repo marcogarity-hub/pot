@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { PotState } from '@/lib/pot/chain';
 import { usePot, type PotStatusRow } from '@/lib/realtime/usePot';
@@ -9,6 +8,7 @@ import { linkButton } from '@/components/pot/linkButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { availableActions, verifiedReceipt } from './actions';
+import { useAutoFinalize } from './autoFinalize';
 import { Countdown, useNow } from './Countdown';
 import { InviteLink } from './InviteLink';
 import { MemberList } from './MemberList';
@@ -23,8 +23,6 @@ const STATE_LABEL: Record<number, string> = {
   [PotState.Released]: 'Paid out',
   [PotState.Frozen]: 'Frozen',
 };
-
-const FINALIZE_RETRY_MS = 10_000;
 
 export function PotStatus({ potId }: { potId: string }) {
   const { status, loading, refetch } = usePot(potId);
@@ -115,20 +113,4 @@ function StateDetail({ status, now }: { status: PotStatusRow; now: Date }) {
     default:
       return null;
   }
-}
-
-/** A9: no per-minute cron on Hobby, so an open status page retries finalize while eligible. */
-function useAutoFinalize(potId: string, eligible: boolean) {
-  const inFlight = useRef(false);
-  useEffect(() => {
-    if (!eligible) return;
-    const tick = () => {
-      if (inFlight.current) return;
-      inFlight.current = true;
-      fetch(`/api/pots/${potId}/finalize`, { method: 'POST' }).catch(() => {}).finally(() => { inFlight.current = false; });
-    };
-    tick();
-    const id = setInterval(tick, FINALIZE_RETRY_MS);
-    return () => clearInterval(id);
-  }, [potId, eligible]);
 }

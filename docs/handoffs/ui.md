@@ -57,3 +57,35 @@ Note: `tsc --noEmit` needs `npx next typegen` first on a fresh checkout (the exi
 - **Lane 2:** `/api/wallet/me` returns 503 while the wallet is being provisioned, and the status page then treats the viewer as signed out (no actions). A retry or a "setting up your wallet" state could come later.
 - Join redirects straight to the pot, as the plan says. The design refs' "You're in" step can go in with the 4.1 design pass.
 - No new dependencies or shadcn components were needed.
+
+## Review fixes (2026-11-13 full-codebase review)
+
+### Done
+1. **Sign-in fallback (low):** the Suspense fallback was a working `SignInForm` with `next="/"`, so a fast submit dropped the redirect. It is now `SignInFormSkeleton`, which has disabled controls and `aria-busy`.
+2. **Inactive invites (low):** `lookupInvite` checks that the invite's address is an active `pot_members` row. A swapped-out member gets the distinct `left` outcome and sees "You're no longer in this pot." The organizer still gets in. Pot members are projected from events at creation, so a new invitee already has an active row before they pay.
+3. **Custom window input (low):** `WindowField` latches custom mode in local state. The input stays mounted while the user types a value that equals a preset, and ends only when a preset is picked. A value that matches no preset always shows the input.
+4. **Finalize jitter and guard (low):** `finalizeJitterMs(potId)` gives a deterministic 0–3000 ms offset (no `Math.random`). `finalizePot` in `finalize.ts` holds one in-flight request per pot, shared by the auto tick and the Finalize button. `useAutoFinalize` (moved to `autoFinalize.ts`) fires after the jitter, then every 10 s, and its cleanup stops the timers once finalize is no longer eligible.
+
+### Files changed
+- `web/app/(screens)/sign-in/page.tsx` (fallback uses `SignInFormSkeleton`)
+- `web/app/(screens)/join/[inviteToken]/page.tsx` (handles `left`; new `NoLongerMember` card)
+- `web/components/pot/auth.ts`, `auth.test.ts` (`InviteLookup.isActiveMember`, `resolveInvite` → `left`)
+- `web/components/pot/invite.server.ts`, `invite.server.test.ts` (new; active-member query, fake-DB test)
+- `web/components/pot/SignInFormSkeleton.tsx` (new), `signInFallback.test.tsx` (new)
+- `web/components/pot/WindowField.tsx`, `WindowField.test.tsx` (new)
+- `web/components/pot/finalize.ts`, `finalize.test.ts` (new), `autoFinalize.ts`, `autoFinalize.test.tsx` (new, fake timers)
+- `web/components/pot/PotActions.tsx` (finalize goes through `finalizePot`), `PotStatus.tsx` (inline auto tick removed)
+
+### Tests (TDD: every new test file failed first, for the expected reason, then passed)
+```
+$ cd web && npx vitest run
+ Test Files  19 passed (19)
+      Tests  251 passed (251)        # baseline was 14 files / 235 tests
+$ npx tsc --noEmit        # exit 0
+$ npm run lint            # exit 0
+```
+Not run here: `npm run build` (the conductor runs it).
+
+### Blockers / notes for other lanes
+- **Lane 3 / conductor:** the invite fix depends on `pot_members.active` being set to false on a swap and on `pot_invites` keeping the leaver's row. Both hold in the current projection. Keep that in mind if the swap projection changes.
+- Nothing here touches `web/lib/`, `web/lib/supabase/`, `package.json`, or shared config.
