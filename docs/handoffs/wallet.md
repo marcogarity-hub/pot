@@ -454,3 +454,57 @@ conductor handoff was still a heading only, so read the fetched
 origin/main:docs/handoffs/conductor.md for the 2026-11-13 verified spike results.
 No merge/rebase performed; conductor integrates this commit. No new blockers for
 the four review fixes. Other integration items remain with the conductor.
+
+## Pre-flight contract simulation (2026-11-13)
+
+Done: callPot looks up the signing address with Circle getWallet({id: walletId})
+and simulates the configured Pot ABI/function/args/native value from that address
+before Circle fee estimation or submission. Uses the configured Arc chain and
+explicit https://rpc.testnet.arc.io transport. Walks viem BaseError causes for
+ContractFunctionRevertedError; ABI-declared custom errors become PotRevertError
+codes immediately, without submitting to Circle. RPC failures, unavailable wallet
+lookups, and undecodable reverts log a warning and defer to Circle. Existing
+callPot signatures/callers and configurePotInterface boundary remain unchanged.
+Submitted terminal failures and reverted receipts now include the Circle
+transaction ID in their error message for reconciliation.
+
+Files changed: web/lib/circle/{tx,tx.test}.ts;
+web/lib/circle/__mocks__/pot.ts (test-only DeadlinePassed fragment);
+web/lib/relayer/index.test.ts (mock the treasury pre-flight); this handoff.
+No route, route segment config, shared config, or production ABI changes.
+
+Checked installed declarations before implementation:
+- viem/_types/actions/public/simulateContract.d.ts: account override, ABI,
+  functionName, args, and mutability-aware value parameters.
+- viem/_types/errors/{base,contract}.d.ts: BaseError.walk,
+  ContractFunctionExecutionError, ContractFunctionRevertedError.data.errorName.
+- Circle dist/types/developer-controlled-wallets.d.ts: getWallet({id}) returns
+  data.wallet, whose address supplies the simulation account.
+
+TDD: new regressions first failed against the old implementation (12 failures,
+5 passes after correcting the wrapped viem error test's required args). Then
+implementation passed. Covers AlreadyPaid/DeadlinePassed stopping estimation and
+submission, correct signing address/function/value, unchanged Circle calldata and
+amount, simulation before estimation, RPC/lookup/undecodable-error fallback,
+terminal-state diagnostics, and reverted-receipt transaction ID. Existing route
+409 message tests continue passing. All providers are mocked; no live calls or
+transactions were performed.
+
+Required validation (combined exit 0):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  8 passed (8)
+      Tests  169 passed (169)
+(TypeScript: no diagnostics; exit 0)
+> web@0.1.0 lint
+> eslint
+(lint exit 0)
+```
+Existing Vite CommonJS/ESM configuration warning remains. Production build stays
+with the conductor as requested. Pulled origin/main before editing: already up
+to date (required escalation for shared Git metadata). No merge or push.
+
+Blockers: none for this task. Lane 1 still supplies the real ABI and production
+configurePotInterface setup. Simulation is advisory: state can change before
+Circle submits, and Circle failures without revert data still use
+TransactionFailed, now with the reconciliation transaction ID.

@@ -7,5 +7,5 @@ export const potAbi = parseAbi([
  'function requestRelease(uint256 potId,bytes32 receiptHash)', 'function swapSeat(uint256 potId,address leaver,address replacement)',
  'function getPot(uint256 potId) view returns ((address organizer,uint256 total,uint256 share,uint256 deadline,uint256 threshold,uint256 objectionWindow,uint256 requestWindow,uint256 lockedAt,uint8 state,uint256 paymentsCount,uint256 objectionsCount,bytes32 receiptHash,uint256 releaseEligibleAt,address[] members) pot)',
  'event PotCreated(uint256 indexed potId,address indexed organizer,address[] members,uint256 total,uint256 share,uint256 deadline,uint256 threshold,uint256 objectionWindow,uint256 requestWindow)',
- 'event Paid(uint256 indexed potId,address indexed member,uint256 amount)', 'error AlreadyPaid()',
+ 'event Paid(uint256 indexed potId,address indexed member,uint256 amount)', 'error AlreadyPaid()', 'error DeadlinePassed()',
 ]);
