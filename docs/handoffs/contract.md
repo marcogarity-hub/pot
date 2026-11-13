@@ -180,3 +180,22 @@ $ npm run lint            -> exit 0
 No contract changes. I did not re-run the forge suite, per the conductor.
 
 Files: `web/lib/pot/chain.ts`, `web/lib/pot/index.ts`, `web/lib/pot/chain.test.ts`.
+
+## Trim exported POT_ADDRESS (2026-11-13)
+
+Done:
+- `POT_ADDRESS` now reads `process.env.NEXT_PUBLIC_POT_ADDRESS` directly and exports its trimmed value, or `undefined` when unset/blank. Its existing TypeScript type is preserved.
+- Added tests for a padded address and an all-whitespace address.
+
+Checks:
+```
+$ cd web && npx vitest run lib/pot
+Tests 9 passed (9)
+$ npx tsc --noEmit
+Passed after `npx next typegen`. The initial typecheck before generation reported route-type errors in the join, pot and sign-in pages.
+$ npm run lint
+Passed
+```
+
+Files: `web/lib/pot/chain.ts`, `web/lib/pot/chain.test.ts`.
+No contract changes. Not merged or pushed.
