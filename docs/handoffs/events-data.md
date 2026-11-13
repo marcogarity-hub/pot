@@ -165,3 +165,57 @@ Generating route types...
 TypeScript exit 0. `next typegen` generated ignored framework types needed by the
 existing layout's global `LayoutProps`; no shared source/config was modified.
 Existing Vite config-loader warning remains (conductor-owned config).
+
+## Task 3.4 Steps 1–4 — Realtime hook (2026-11-12)
+
+Done: `usePot(potId)` exports `{ status, loading, refetch }` and `PotStatusRow`.
+It registers both `pots` and `pot_members` subscriptions before its initial fetch,
+refetches on every change and SUBSCRIBED notification (including reconnect), and
+removes the channel on cleanup. Serialized reads queue invalidations rather than
+letting an old initial response overwrite newer state. A separate regression test
+covers a change queued between a read's completion and its cleanup. Changing
+potId or unmounting discards old in-flight results. Numeric pot/amount columns
+are selected as text. `refetch` is stable and awaitable; failed reads retain the
+last successful status and end loading, and subsequent refetches can recover.
+The specified hook interface has no error field, so errors are not exposed.
+
+Files changed: `web/lib/realtime/usePot.ts` and `usePot.test.tsx`.
+Lane 4 can import `usePot`, `PotStatusRow`, `PotRow`, and `MemberRow` from
+`@/lib/realtime/usePot`. Status mirrors the existing `pot_status` view, including
+nullable offchain metadata and the member JSON array. Use `has_paid` independently
+of `has_refunded`; former members remain in the array with `active=false`.
+Receipt-text verification remains the UI lane's responsibility (A12).
+
+TDD evidence: the first hook run failed resolving missing `./usePot`. After
+implementation, a new completion-race test failed (`expected +0 to be 3`), then
+passed after preserving the queued invalidation in promise cleanup.
+
+Final validation (no network in tests; both Supabase clients mocked):
+```text
+$ cd web && npx vitest run app/api/streams lib/realtime
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /Users/marcogarity/code/pot-events-data/web
+
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  23:15:25
+   Duration  767ms (environment 54%, import 18%, tests 13%, setup 13%, transform 2%)
+
+$ cd web && npx tsc --noEmit
+(no output; exit 0)
+
+$ git diff --check
+(no output; exit 0)
+```
+
+Remaining conductor work: apply and validate the new atomic-projection migration;
+swap the route's ABI-placeholder import after Lane 1 lands the actual ABI; set the
+existing Stream-token/address env values; then create/configure the Stream after
+deploy. **Task 3.4 Steps 5–7 were intentionally not performed.** No QuickNode
+Stream was created, no live Paid-to-browser check was attempted, and the fixture
+remains docs-derived. Replace it with a real capture during that later live check.
+The live Lane 3 done-when remains pending with the conductor. No merge or push.
