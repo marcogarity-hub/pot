@@ -7,3 +7,7 @@
 ## 2026-11-12 — lane/events-data (Tasks 3.2, 3.3, 3.4 hook)
 - Landed: decodePotLogs/foldPot, /api/streams with QuickNode HMAC + 5 MB cap, PotStore (memory + Supabase), apply_pot_projection migration (applied), usePot hook. Route returns 503 until Lane 1's ABI replaces abi-placeholder.ts.
 - Gates: round 1 CHANGES (lint error, gzip cap) → fixed (conductor committed; worker sandbox couldn't write git lock); vitest 23/23, tsc, lint clean; db push + db lint clean; reviewer APPROVE.
+
+## 2026-11-12 — lane/wallet (Tasks 2.2, 2.3, 2.4)
+- Landed: Circle wallet/tx libs, relayer (nonceManager, PrefundRefusedError, cap), ensureUser/claimUser + /api/wallet/callback + /me, POST /api/pots with rate limit. Real contract calls wait on Lane 1's ABI (configurePotInterface).
+- Gates: round 1 CHANGES (relayer nonce race, stuck users row + 4 small) → fixed (conductor committed; sandbox git lock); vitest, tsc, lint clean on main after merge; reviewer APPROVE.
