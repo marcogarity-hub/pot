@@ -47,3 +47,26 @@ describe("assertPotAddress", () => {
     expect(reexported).toBe(assertPotAddress);
   });
 });
+
+describe("POT_ADDRESS", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("exports a whitespace-padded address trimmed", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POT_ADDRESS", `  ${VALID}\n`);
+    vi.resetModules();
+
+    const { POT_ADDRESS } = await import("./chain");
+    expect(POT_ADDRESS).toBe(VALID);
+  });
+
+  it("exports undefined when the address is all whitespace", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POT_ADDRESS", "  \t\n");
+    vi.resetModules();
+
+    const { POT_ADDRESS } = await import("./chain");
+    expect(POT_ADDRESS).toBeUndefined();
+  });
+});
