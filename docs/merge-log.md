@@ -23,3 +23,12 @@
 ## 2026-11-12 — lane/wallet (polish)
 - Landed: 404 PotNotFound for non-existent pots on all [potId] routes; finalize returns alreadyFinalized after a lost race.
 - Gates: vitest 138/138, tsc, lint, build OK (conductor + reviewer; worker sandbox can't run Turbopack build); reviewer APPROVE.
+
+## STATE SNAPSHOT — 2026-11-13 (overnight start; resume from here after any cutoff)
+- Lane 1 (contract): background Claude worker `lane-contract` (claude --bg, id 4a244727) in ~/code/pot-contract, Tasks 1.2–1.5. Next: gates (tests, Opus reviewer, /codex:adversarial-review) → deploy with contracts/.env deployer (pre-approved) → publish ABI+address to web/lib/pot/ → tell Lanes 2/3 to swap mocks/placeholder.
+- Lane 2 (wallet): treasury round-1 fix 22b6a2f on lane/wallet in ~/code/pot-wallet; tests/build pass; awaiting re-review. Next task after merge: pre-flight simulateContract for revert codes (docs/handoffs/conductor.md item 2). Then wire real potAbi when Lane 1 lands.
+- Lane 3 (events): idle, merged through build fix. Next: swap abi-placeholder for @/lib/pot potAbi after Lane 1 deploy; then QuickNode Stream (needs a QuickNode account → morning question).
+- Lane 4 (UI): not started (waits on Claude Design bundle from Marco).
+- Spikes done: PAYMENT_PATH=native, ACCOUNT_TYPE=EOA (A14 gate passed). Treasury 0x9f74…7c07, deployer 0xe38E…862A, ~19 USDC each.
+- Reviewer models: Opus for Lane 1, Sonnet for others (Marco, overnight).
+- Morning questions so far: custom SMTP provider account; QuickNode account; may Lane 4 build plain sign-in/join before the design bundle?
