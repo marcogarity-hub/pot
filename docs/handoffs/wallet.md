@@ -294,3 +294,50 @@ Integration / blockers for conductor:
 - Fetched origin/main and fast-forwarded check: Already up to date. No changes
   outside lane ownership, no push, no merge to main. The referenced Superpowers
   execution skills were not found in installed skills; followed explicit TDD.
+
+## Task 2.5 review — missing pots and finalize race (2026-11-12)
+
+Done: readPot identifies a zero organizer with PotNotFoundError; the shared HTTP
+mapper returns exactly 404 {error: 'PotNotFound'}. All six authenticated action
+routes now read the pot before signing, including refund/object/expire; finalize
+uses the same missing-pot handling. Authentication still precedes member reads.
+After a relayer finalize failure, re-read getPot: Released (state 3) returns
+200 {alreadyFinalized: true}; any other state preserves the original error
+mapping. A failed re-read also preserves the original relayer error.
+
+Files changed: web/lib/circle/read.ts;
+web/app/api/pots/{actions,actions.test,errors}.ts; docs/handoffs/wallet.md.
+No route segment config exports or shared configuration changes.
+
+TDD: seven missing-pot route tests first failed (four 500 responses; three 200
+responses), then all passed. Finalize race/error tests first failed (409 instead
+of 200 for a competing release; only one read for unreleased failures), then
+passed. Reset mocks between tests to discard unconsumed one-shot responses.
+Tests cover all seven action routes, Released after a revert, unreleased custom
+and unexpected errors, and a failed re-read. All providers remain mocked.
+
+Required command run:
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+ Test Files  8 passed (8)
+      Tests  138 passed (138)
+   Duration  2.03s
+(TypeScript: no diagnostics, exit 0)
+> web@0.1.0 lint
+> eslint
+(lint exit 0)
+> web@0.1.0 build
+> next build
+Error [TurbopackInternalError]: [project]/app/globals.css.css [app-client] (css)
+Caused by:
+- creating new process
+- binding to a port
+- Operation not permitted (os error 1)
+(build exit 1)
+```
+Existing Vite CommonJS/ESM config compatibility warning remains. Retried
+`npm run build` with sandbox escalation; it failed with the same port-binding
+permission error (exit 1). The production build cannot run to completion in this
+sandbox; conductor must run it in an environment allowing Turbopack worker port
+binding. Build success is not claimed. git diff --check passed. Pulled origin/main
+before changes (already up to date). No merge, push, or live transactions.

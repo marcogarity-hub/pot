@@ -27,7 +27,7 @@ const pot = () => ({ organizer: org, share: parseUnits('300', 18), state: 1, thr
 type Handler = typeof pay;
 const post = (handler: Handler, body?: unknown, potId = '42') => handler(new Request('https://pot.test/api/pots/42', { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), { params: Promise.resolve({ potId }) });
 beforeEach(() => {
- vi.clearAllMocks(); configurePotInterface({ abi: potAbi, chain: arcTestnet }); process.env.NEXT_PUBLIC_POT_ADDRESS = org;
+ vi.resetAllMocks(); configurePotInterface({ abi: potAbi, chain: arcTestnet }); process.env.NEXT_PUBLIC_POT_ADDRESS = org;
  m.server.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: 'auth', email: ' Organizer@x.com ' } }, error: null }) } });
  m.ensureUser.mockImplementation(async (email: string) => ({ circle_wallet_id: email === 'replacement@x.com' ? 'replacement-wallet' : 'caller-wallet', wallet_address: email === 'replacement@x.com' ? replacement : org }));
  m.read.mockResolvedValue(pot()); m.block.mockResolvedValue({ timestamp: BigInt(1000) });
@@ -147,4 +147,46 @@ it('does not relay after an unexpected chain read failure', async () => {
 it('refuses a mismatched getPot return shape', async () => {
  m.read.mockResolvedValue({ ...pot(), share: '300000000000000000000' });
  expect((await post(pay)).status).toBe(500); expect(m.callPot).not.toHaveBeenCalled();
+});
+
+it.each([
+ ['pay', pay], ['refund', refund], ['object', object], ['expire', expire],
+ ['request-release', release], ['swap', swap], ['finalize', finalize],
+] as const)('returns 404 for a missing pot on %s', async (_action, handler) => {
+ m.read.mockResolvedValue({ ...pot(), organizer: `0x${'0'.repeat(40)}` });
+ const response = await post(handler, { receiptText: 'receipt', leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' });
+ expect(response.status).toBe(404);
+ expect(await response.json()).toEqual({ error: 'PotNotFound' });
+ expect(m.callPot).not.toHaveBeenCalled(); expect(m.finalize).not.toHaveBeenCalled();
+ expect(m.ensureUser.mock.calls.every(([email]) => email === 'organizer@x.com')).toBe(true);
+ expect(m.update).not.toHaveBeenCalled(); expect(m.upsert).not.toHaveBeenCalled();
+});
+
+it('returns alreadyFinalized when a competing finalize wins before the relayer reverts', async () => {
+ m.read.mockResolvedValueOnce({ ...pot(), state: 2 }).mockResolvedValueOnce({ ...pot(), state: 3 });
+ m.finalize.mockRejectedValueOnce(new PotRevertError('WrongState'));
+ const response = await post(finalize);
+ expect(response.status).toBe(200);
+ expect(await response.json()).toEqual({ alreadyFinalized: true });
+ expect(m.read).toHaveBeenCalledTimes(2);
+ expect(m.finalize).toHaveBeenCalledTimes(1);
+});
+it.each([
+ [new PotRevertError('WrongState'), 409, { error: 'WrongState', message: 'WrongState' }],
+ [new Error('secret'), 500, { error: 'InternalServerError', message: 'The request could not be completed.' }],
+] as const)('preserves error mapping after a failed finalize if the pot is still unreleased', async (error, status, body) => {
+ m.read.mockResolvedValue({ ...pot(), state: 2 });
+ m.finalize.mockRejectedValueOnce(error);
+ const response = await post(finalize);
+ expect(response.status).toBe(status); expect(await response.json()).toEqual(body);
+ expect(m.read).toHaveBeenCalledTimes(2);
+});
+
+it('preserves the relayer error when the finalize re-read fails', async () => {
+ m.read.mockResolvedValueOnce({ ...pot(), state: 2 }).mockRejectedValueOnce(new Error('RPC unavailable'));
+ m.finalize.mockRejectedValueOnce(new PotRevertError('WrongState'));
+ const response = await post(finalize);
+ expect(response.status).toBe(409);
+ expect(await response.json()).toEqual({ error: 'WrongState', message: 'WrongState' });
+ expect(m.read).toHaveBeenCalledTimes(2);
 });

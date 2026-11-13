@@ -38,7 +38,15 @@ export function actionHandler(action: Action) {
         if (pot.state !== 2 || pot.objectionsCount >= pot.threshold || await chainTimestamp() < pot.releaseEligibleAt) {
           return Response.json({ error: 'NotEligible' }, { status: 409 });
         }
-        return Response.json({ transactionHash: await relayerFinalize(potId) });
+        try {
+          return Response.json({ transactionHash: await relayerFinalize(potId) });
+        } catch (error) {
+          // Another caller may have released the pot after our eligibility read.
+          try {
+            if ((await readPot(potId)).state === 3) return Response.json({ alreadyFinalized: true });
+          } catch { /* Preserve the original relayer error if the re-read fails. */ }
+          throw error;
+        }
       }
 
       const supabase = await createServerSupabase();
@@ -49,8 +57,8 @@ export function actionHandler(action: Action) {
       try { callerAddress = validAddress(caller.wallet_address); }
       catch { return Response.json({ error: 'InvalidWalletAddress' }, { status: 400 }); }
 
+      const pot = await readPot(potId);
       if (action === 'pay') {
-        const pot = await readPot(potId);
         const receipt = await callPot(caller.circle_wallet_id, 'pay', [potId], pot.share);
         return Response.json({ transactionHash: receipt.transactionHash });
       }
@@ -59,7 +67,6 @@ export function actionHandler(action: Action) {
         return Response.json({ transactionHash: receipt.transactionHash });
       }
 
-      const pot = await readPot(potId);
       if (pot.organizer.toLowerCase() !== callerAddress) return Response.json({ error: 'Forbidden' }, { status: 403 });
       let body: unknown;
       try { body = await request.json(); }
