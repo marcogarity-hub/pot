@@ -263,3 +263,65 @@ The session disallows sandbox escalation, so the requested
 `fix(data): review round 1` commit could not be created. The four review files
 remain uncommitted. Earlier ABI/deployment integration gates remain as documented
 above.
+
+## Cache Components runtime build fix (2026-11-12)
+
+Done: removed only `export const runtime = 'nodejs';` from the Streams route.
+Files changed: `web/app/api/streams/route.ts` and this handoff. Pulled origin/main
+with `git pull --ff-only origin main` before implementation. No shared config
+changes, merge, or push.
+
+Bundled documentation checked (paths relative to repo root):
+- `web/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/cacheComponents.md`,
+  line 31: Cache Components requires Node.js and requires removal of every
+  `runtime` export, including `nodejs`.
+- `web/node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md`,
+  Caching / With Cache Components: non-GET methods are not cached; the Cache
+  Components prerendering discussion applies to GET handlers.
+- `web/node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/route.md`,
+  Webhooks: POST can read the request body directly without bodyParser or
+  additional configuration.
+- `web/node_modules/next/dist/docs/01-app/02-guides/environment-variables.md`,
+  Runtime Environment Variables: server environment reads are supported during
+  dynamic rendering; NEXT_PUBLIC_ values are subject to build-time inlining.
+
+Conclusion: this uncached POST handler needs no replacement segment config,
+connection() call, or body configuration for its existing body/env reads.
+
+Required checks:
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  7 passed (7)
+      Tests  81 passed (81)
+   Duration  1.99s
+(TypeScript: no diagnostics; exit 0)
+> web@0.1.0 lint
+> eslint
+(combined command exit 0)
+```
+Existing Vite warning: vitest.config.ts uses ESM syntax while loaded as CommonJS;
+configLoader native compatibility warning only.
+
+```text
+$ cd web && npm run build
+> web@0.1.0 build
+> next build
+- Cache Components enabled
+- Partial Prefetching enabled
+Creating an optimized production build ...
+```
+Initial sandbox build exited 1 because it could not fetch Geist and Geist Mono
+from fonts.googleapis.com. Two escalation-requested retries exited 1 with:
+```text
+Error [TurbopackInternalError]: [project]/app/globals.css.css [app-client] (css)
+Caused by:
+- creating new process
+- binding to a port
+- Operation not permitted (os error 1)
+```
+
+Blocker: the required production build cannot complete in this environment
+because the Turbopack worker's local port binding is denied even on escalation
+retries. Build success is NOT claimed; rerun `cd web && npm run build` in an
+environment permitting worker port binding and font downloads. `git diff --check`
+passes. Earlier live integration gates remain unchanged.
