@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PotState } from '@/lib/pot/chain';
 import { usePot, type PotStatusRow } from '@/lib/realtime/usePot';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button';
+import { linkButton } from '@/components/pot/linkButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { availableActions, verifiedReceipt } from './actions';
@@ -41,7 +41,7 @@ export function PotStatus({ potId }: { potId: string }) {
         <CardContent className="space-y-3 text-sm">
           <p className="font-medium">We couldn&apos;t find this pot.</p>
           <p className="text-muted-foreground">It may still be confirming on-chain, or you aren&apos;t a member.</p>
-          {!me && <Link href={`/sign-in?next=/pots/${potId}`} className={buttonVariants({ className: 'w-full' })}>Sign in</Link>}
+          {!me && <Link href={`/sign-in?next=/pots/${potId}`} className={linkButton({ className: 'w-full' })}>Sign in</Link>}
         </CardContent>
       </Card>
     );
