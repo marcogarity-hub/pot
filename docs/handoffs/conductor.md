@@ -24,3 +24,4 @@
 - **web/.env.local:** `NEXT_PUBLIC_POT_ADDRESS` and `POT_DEPLOY_BLOCK` set. **Marco must add both to Vercel.**
 - **Live smoke test (pot 0, 1 member, 0.01 USDC, 60 s windows):** createPot ✓ → pay ✓ (pot balance 1e16) → Locked → requestRelease ✓ (state 2) → finalize 17 s early correctly refused (WindowOpen).
 - **Revert data:** `eth_call` of `pay` on the locked pot returned `0xde4168ba` = `WrongState()`. Arc's RPC returns custom-error data, so Lane 2's pre-flight simulation works.
+- **Smoke test complete:** finalizeRelease at releaseEligibleAt succeeded → state 3 (Released), pot balance 0, payout to organizer. Full happy path verified on the live contract.
