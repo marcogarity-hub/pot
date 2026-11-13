@@ -353,7 +353,9 @@ below 5 USDC (also checked before finalize). No route changes or segment exports
 Verified the installed SDK dist/types/developer-controlled-wallets.d.ts:
 CreateTransferTransactionInput/createTransaction use amount: string[], walletId,
 and tokenAddress: '' for native tokens. With walletId, the submission blockchain
-field is excluded by the type; the wallet ID must identify the ARC-TESTNET treasury.
+field is excluded by the type, but the 2026-11-13 conductor spike verified that
+submission must include blockchain: 'ARC-TESTNET' with tokenAddress: ''. The
+review fix below uses a narrow cast to pass that field through to REST.
 EstimateTransferFeeInput accepts blockchain: 'ARC-TESTNET' alongside that native
 selector. Both funding paths use decimal USDC amounts, estimate absolute fees,
 and apply max(estimate.maxFee, 20) in gwei, matching callPot. Funding polls for
@@ -407,3 +409,48 @@ passes; grep -rn RELAYER_PRIVATE_KEY web --include='*.ts' --exclude-dir=node_mod
 returns no matches (exit 1). Pulled origin/main before edits: already up to date.
 No changes outside the five listed files, no merge, no push. Remaining live-spike,
 ABI setup, and provisioning-recovery gates from earlier handoffs are unchanged.
+
+## Treasury review — round 1 (2026-11-13)
+
+Done: addressed all four requested fixes, limited to the two libraries and this
+handoff. Native createTransaction now sends tokenAddress: '' and blockchain:
+'ARC-TESTNET' with walletId, using the requested narrow SDK-input cast and a
+comment citing the conductor's 2026-11-13 live spike. Corrected the A15 note above.
+Each transfer submission gets crypto.randomUUID() as idempotencyKey; polling
+timeouts include both the Circle transaction ID and that submitted key for
+reconciliation. Both transfer and contract waiters reject STUCK alongside
+FAILED/DENIED/CANCELLED and include errorReason/errorDetails. Contract failures
+retain PotRevertError codes, including decoded custom errors when data exists.
+Finalize catches advisory balance-read failures and logs a warning, then proceeds
+through callPot even with an unset TREASURY_ADDRESS or failed balance RPC.
+
+Files changed: web/lib/relayer/{index,index.test}.ts;
+web/lib/circle/{tx,tx.test}.ts; docs/handoffs/wallet.md.
+
+TDD: updated tests first and observed 14 failing tests, then implemented fixes.
+Coverage includes explicit native submission chain, unique UUID keys for concurrent
+funding, timeout key reconciliation, all four terminal states with diagnostics in
+both waiters, preservation of decoded revert codes, and successful finalize after
+missing-address/RPC balance failures. All service calls are mocked; no live
+transactions were submitted.
+
+Required validation (combined command exit 0):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+ Test Files  8 passed (8)
+      Tests  162 passed (162)
+(TypeScript: no diagnostics; exit 0)
+> web@0.1.0 lint
+> eslint
+(lint exit 0)
+```
+Existing Vite CommonJS/ESM configuration warning remains. git diff --check passed.
+Production build is left to the conductor as requested. No route files, segment
+config exports, or shared configuration changed. No merge or push.
+
+Before edits, fetched origin/main via git pull --ff-only origin main; the pull
+could not fast-forward because main and this lane have diverged. The local
+conductor handoff was still a heading only, so read the fetched
+origin/main:docs/handoffs/conductor.md for the 2026-11-13 verified spike results.
+No merge/rebase performed; conductor integrates this commit. No new blockers for
+the four review fixes. Other integration items remain with the conductor.

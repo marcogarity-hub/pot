@@ -26,12 +26,15 @@ afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.restoreAllMocks(); 
 it('prefunds one native USDC through Circle and confirms the receipt', async () => {
  await expect(prefund(to)).resolves.toBe('0x1234');
  expect(m.estimateTransferFee).toHaveBeenCalledWith({ walletId: 'treasury-wallet', tokenAddress: '', blockchain: 'ARC-TESTNET', destinationAddress: to, amount: ['1'] });
- expect(m.createTransaction).toHaveBeenCalledWith({ walletId: 'treasury-wallet', tokenAddress: '', destinationAddress: to, amount: ['1'], fee: { type: 'absolute', config: { gasLimit: '21000', maxFee: '20', priorityFee: '1' } } });
+ expect(m.createTransaction).toHaveBeenCalledWith({ walletId: 'treasury-wallet', tokenAddress: '', blockchain: 'ARC-TESTNET', idempotencyKey: expect.any(String), destinationAddress: to, amount: ['1'], fee: { type: 'absolute', config: { gasLimit: '21000', maxFee: '20', priorityFee: '1' } } });
  expect(m.receipt).toHaveBeenCalledWith({ hash: '0x1234' });
 });
 it('submits two concurrent prefunds through Circle without nonce errors', async () => {
  await expect(Promise.all([prefund(to), prefund(to)])).resolves.toEqual(['0x1234', '0x1234']);
  expect(m.createTransaction).toHaveBeenCalledTimes(2);
+ const keys = m.createTransaction.mock.calls.map(([request]) => request.idempotencyKey);
+ expect(keys.every(key => /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(key))).toBe(true);
+ expect(new Set(keys).size).toBe(2);
 });
 it('reserves the cap before concurrent submissions', async () => {
  const results = await Promise.allSettled([prefund(to), prefund(to), prefund(to)]);
@@ -80,19 +83,25 @@ it('warns on low balance when finalizing', async () => {
  m.getBalance.mockResolvedValue(unit); const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
  await relayerFinalize(BigInt(1)); expect(warn).toHaveBeenCalled();
 });
-it.each(['FAILED', 'DENIED', 'CANCELLED'])('rejects terminal transfer state %s', async state => {
- m.getTransaction.mockResolvedValue({ data: { transaction: { state } } });
- await expect(prefund(to)).rejects.toThrow(); expect(m.receipt).not.toHaveBeenCalled();
+it.each(['FAILED', 'DENIED', 'CANCELLED', 'STUCK'])('rejects terminal transfer state %s', async state => {
+ vi.useFakeTimers();
+ m.getTransaction.mockResolvedValue({ data: { transaction: { state, errorReason: 'ESTIMATION_ERROR', errorDetails: 'execution reverted' } } });
+ const assertion = expect(prefund(to)).rejects.toThrow(`Treasury funding ${state}: ESTIMATION_ERROR; execution reverted; reconcile transaction funding`);
+ await vi.advanceTimersByTimeAsync(120000); await assertion;
+ expect(m.receipt).not.toHaveBeenCalled();
 });
 it('waits past CONFIRMED until COMPLETE', async () => {
  vi.useFakeTimers(); m.getTransaction.mockResolvedValueOnce({ data: { transaction: { state: 'CONFIRMED', txHash: '0x1234' } } });
  const pending = prefund(to); await vi.advanceTimersByTimeAsync(500); await pending;
  expect(m.getTransaction).toHaveBeenCalledTimes(2); expect(m.receipt).toHaveBeenCalledTimes(1);
 });
-it('times out with a reconciliation transaction id', async () => {
+it('times out with the reconciliation transaction id and submitted idempotency key', async () => {
  vi.useFakeTimers(); m.getTransaction.mockResolvedValue({ data: { transaction: { state: 'SENT' } } });
- const assertion = expect(prefund(to)).rejects.toThrow('reconcile transaction funding');
+ const key = '12345678-1234-4234-8234-123456789abc';
+ vi.spyOn(crypto, 'randomUUID').mockReturnValue(key);
+ const assertion = expect(prefund(to)).rejects.toThrow(`reconcile transaction funding (idempotencyKey ${key})`);
  await vi.advanceTimersByTimeAsync(120000); await assertion;
+ expect(m.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: key }));
 });
 it.each(['missing id', 'missing hash', 'failed receipt', 'incomplete fee'])('rejects %s', async reason => {
  if (reason === 'missing id') m.createTransaction.mockResolvedValue({ data: {} });
@@ -122,4 +131,13 @@ it('does not consume the cap when the treasury wallet is missing', async () => {
  vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', ''); await expect(prefund(to)).rejects.toBeInstanceOf(PrefundRefusedError);
  vi.stubEnv('CIRCLE_TREASURY_WALLET_ID', 'treasury-wallet'); await prefund(to, unit * BigInt(2));
  expect(m.createTransaction).toHaveBeenCalledTimes(1);
+});
+
+it.each(['unset address', 'RPC failure'])('finalizes despite an advisory balance failure: %s', async reason => {
+ if (reason === 'unset address') vi.stubEnv('TREASURY_ADDRESS', undefined);
+ else m.getBalance.mockRejectedValue(new Error('RPC unavailable'));
+ const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+ await expect(relayerFinalize(BigInt(1))).resolves.toBe('0x1234');
+ expect(warn).toHaveBeenCalledWith('Unable to read advisory relayer balance', expect.any(Error));
+ expect(m.createContractExecutionTransaction).toHaveBeenCalledTimes(1);
 });
