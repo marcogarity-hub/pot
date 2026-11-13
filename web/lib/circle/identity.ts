@@ -1,7 +1,7 @@
 import type { Hex } from 'viem';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { createWallet } from './wallets';
-import { prefund } from '../relayer';
+import { prefund, PrefundRefusedError } from '../relayer';
 import { validAddress } from './contract';
 export function normalizeEmail(email: string): string { return email.trim().toLowerCase(); }
 export type WalletUser = { id: string; wallet_address: Hex; circle_wallet_id: string };
@@ -17,8 +17,16 @@ export async function ensureUser(input: string): Promise<WalletUser> {
   const inserted = await db.from('users').upsert({ email, claimed: false }, { onConflict: 'email', ignoreDuplicates: true }).select('id,email,circle_wallet_id,wallet_address').maybeSingle();
   if (inserted.error) throw new Error('Could not reserve wallet identity');
   if (inserted.data) {
-    const wallet = await createWallet(email);
-    await prefund(wallet.address);
+    const id = inserted.data.id;
+    const releaseReservation = () => db.from('users').delete().eq('id', id).is('circle_wallet_id', null);
+    let wallet: Awaited<ReturnType<typeof createWallet>>;
+    try { wallet = await createWallet(email); }
+    catch (error) { await releaseReservation(); throw error; }
+    try { await prefund(wallet.address); }
+    catch (error) {
+      if (error instanceof PrefundRefusedError) await releaseReservation();
+      throw error;
+    }
     const saved = await db.from('users').update({ circle_wallet_id: wallet.walletId, wallet_address: validAddress(wallet.address) }).eq('id', inserted.data.id).select('id,circle_wallet_id,wallet_address').maybeSingle();
     if (saved.error || !ready(saved.data)) throw new Error('Could not persist wallet mapping; operator recovery required');
     return saved.data;

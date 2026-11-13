@@ -1,3 +1,4 @@
+import "server-only";
 import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
 export function circleClient() {
   const apiKey = process.env.CIRCLE_API_KEY;

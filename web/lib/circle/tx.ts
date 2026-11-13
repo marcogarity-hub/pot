@@ -19,7 +19,7 @@ export async function callPot(walletId: string, fn: PotWriteFn, args: readonly u
   const callData = encodeFunctionData({ abi, functionName: fn, args });
   const client = circleClient();
   const request = { walletId, contractAddress, callData, amount: formatUnits(value,18) };
-  const estimate = (await client.estimateContractExecutionFee({ ...request, source: { walletId } })).data?.medium;
+  const estimate = (await client.estimateContractExecutionFee({ callData, contractAddress, amount: request.amount, source: { walletId } })).data?.medium;
   if (!estimate?.gasLimit || !estimate.maxFee || !estimate.priorityFee) throw new Error('Circle returned incomplete fee estimate');
   const maxFee = parseUnits(estimate.maxFee,9) < BigInt(20000000000) ? '20' : estimate.maxFee;
   const submitted = await client.createContractExecutionTransaction({ ...request, fee: { type: 'absolute', config: { gasLimit: estimate.gasLimit, maxFee, priorityFee: estimate.priorityFee } } });

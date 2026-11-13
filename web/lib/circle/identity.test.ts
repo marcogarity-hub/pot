@@ -1,7 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const m = vi.hoisted(() => ({ createWallet: vi.fn(), prefund: vi.fn(), admin: vi.fn(), server: vi.fn() }));
+const m = vi.hoisted(() => ({ createWallet: vi.fn(), prefund: vi.fn(), admin: vi.fn(), server: vi.fn(), deleteReserved: vi.fn() }));
 vi.mock('./wallets',()=>({createWallet:m.createWallet}));
-vi.mock('../relayer',()=>({prefund:m.prefund}));
+vi.mock('../relayer',()=>({prefund:m.prefund, PrefundRefusedError: class PrefundRefusedError extends Error {}}));
+import { PrefundRefusedError } from '../relayer';
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 import { ensureUser, claimUser, normalizeEmail } from './identity';
@@ -14,9 +15,9 @@ beforeEach(()=>{
  m.prefund.mockResolvedValue('0x1234');
  m.admin.mockImplementation(()=>({from:()=>{
   let action='select'; let value: Record<string,unknown>={}; const filters: Record<string,unknown>={};
-  const q = { upsert:(v:Record<string,unknown>)=>{action='insert';value=v;return q;},update:(v:Record<string,unknown>)=>{action='update';value=v;return q;},select:()=>q,eq:(k:string,v:unknown)=>{filters[k]=v;return q;},is:(k:string,v:unknown)=>{filters[k]=v;return q;},or:()=>q,
+  const q = { delete:()=>({eq:(idColumn:string,id:unknown)=>({is:async(column:string,value:unknown)=>{m.deleteReserved(idColumn,id,column,value); rows=rows.filter(row=>!(row[idColumn]===id && row[column]===value));return {error:null};}})}), upsert:(v:Record<string,unknown>)=>{action='insert';value=v;return q;},update:(v:Record<string,unknown>)=>{action='update';value=v;return q;},select:()=>q,eq:(k:string,v:unknown)=>{filters[k]=v;return q;},is:(k:string,v:unknown)=>{filters[k]=v;return q;},or:()=>q,
    maybeSingle:async()=>{
-    if(action==='insert'){if(rows.some(r=>r.email===value.email))return {data:null,error:null};const row={id:'internal-id',auth_user_id:null,...value};rows.push(row);return {data:row,error:null};}
+    if(action==='insert'){if(rows.some(r=>r.email===value.email))return {data:null,error:null};const row={id:'internal-id',auth_user_id:null,circle_wallet_id:null,...value};rows.push(row);return {data:row,error:null};}
     const row=rows.find(r=>Object.entries(filters).every(([k,v])=>r[k]===v));if(action==='update'&&row)Object.assign(row,value);return {data:row??null,error:null};
    }
   };return q;
@@ -44,9 +45,21 @@ it('times out waiting for an already-reserved identity without provisioning agai
  vi.useFakeTimers();
  try { rows.push({id:'pending',email:'a@x.com',auth_user_id:null});const pending=expect(ensureUser('a@x.com')).rejects.toThrow('provisioning pending');await vi.advanceTimersByTimeAsync(10000);await pending;expect(m.createWallet).not.toHaveBeenCalled();expect(m.prefund).not.toHaveBeenCalled(); } finally {vi.useRealTimers();}
 });
-it('does not return a usable mapping if prefunding fails',async()=>{
- m.prefund.mockRejectedValue(new Error('cap exceeded'));await expect(ensureUser('a@x.com')).rejects.toThrow('cap exceeded');expect(rows[0].wallet_address).toBeUndefined();
+it('keeps the reservation after an ambiguous prefunding failure',async()=>{
+ m.prefund.mockRejectedValue(new Error('connection lost after send'));await expect(ensureUser('a@x.com')).rejects.toThrow('connection lost after send');expect(rows[0].wallet_address).toBeUndefined();expect(m.deleteReserved).not.toHaveBeenCalled();
 });
 it('does not reassign a wallet linked to a different auth user',async()=>{
  rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'someone-else',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});await expect(claimUser('auth-id','a@x.com')).rejects.toThrow('already linked');expect(rows[0].auth_user_id).toBe('someone-else');
+});
+
+it.each(['createWallet', 'cap refusal'])('releases a reservation after %s failure and allows a later successful ensure', async (reason) => {
+ const failure = reason === 'createWallet' ? new Error('Circle unavailable') : new PrefundRefusedError('Daily prefund cap exceeded');
+ if (reason === 'createWallet') m.createWallet.mockRejectedValueOnce(failure);
+ else m.prefund.mockRejectedValueOnce(failure);
+ await expect(ensureUser(' A@x.com ')).rejects.toBe(failure);
+ expect(m.deleteReserved).toHaveBeenCalledWith('id','internal-id','circle_wallet_id',null);
+ expect(rows).toHaveLength(0);
+ const user = await ensureUser('a@x.com');
+ expect(user).toMatchObject({circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
+ expect(rows).toHaveLength(1);
 });

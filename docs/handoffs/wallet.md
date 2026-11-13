@@ -136,3 +136,66 @@ production import of the temporary __mocks__/pot.ts fixture. Until the real ABI
 is supplied, contract calls fail closed. Metadata recovery after an onchain
 success/database failure requires reconciling the returned potId/hash; no
 idempotent HTTP create/recovery API was part of Tasks 2.2–2.4.
+
+## Conductor review — round 1
+
+Addressed exactly the six review requests within Wallet lane ownership:
+- Verified installed viem _types/index.d.ts exports nonceManager and
+  accounts/privateKeyToAccount.d.ts accepts { nonceManager }. Every relayer
+  account uses that shared manager, including concurrent prefunds.
+- Exported PrefundRefusedError for zero/invalid address, non-positive funding,
+  exceeded daily cap, and missing relayer private key. ensureUser deletes only
+  its reserved internal id with circle_wallet_id IS NULL when createWallet fails
+  or prefund throws that refusal; it rethrows the original error. Ambiguous send
+  failures still retain the reservation. This supersedes the earlier handoff's
+  blanket statement that every provisioning failure leaves a pending row.
+- Circle fee estimation receives exactly callData, contractAddress, amount and
+  source; no extra walletId field.
+- Both relayer funding and finalize use max(estimated maxFeePerGas, 20 gwei).
+- Added server-only markers to circle/client.ts and relayer/index.ts. Tests mock
+  the marker. No marker was added to topup.ts. Since the CLI imports the relayer,
+  standalone execution must resolve the package's checked react-server export:
+  `NODE_OPTIONS=--conditions=react-server npx tsx lib/relayer/topup.ts <address> <usdc>`
+  from web, with its required environment variables exported.
+- Create-route test asserts the exact ordered lowercase member address list.
+
+Changed files: web/lib/relayer/{index,index.test}.ts;
+web/lib/circle/{client,identity,identity.test,tx,tx.test}.ts;
+web/app/api/pots/route.test.ts; docs/handoffs/wallet.md.
+
+Regression tests were written first and failed as expected (9 failures), then
+passed after implementation. Tests include two concurrent accounts using the
+nonce manager, fees above/below the floor for funding/finalize, each specified
+pre-send refusal, retry after reservation deletion for both Circle creation and
+cap failures, and reservation retention after an ambiguous send failure.
+All services and clients remain mocked; no live transactions or network tests.
+
+Final required command output (exit 0 for the entire chain):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /Users/marcogarity/code/pot-wallet/web
+
+ Test Files  4 passed (4)
+      Tests  58 passed (58)
+   Start at  23:22:49
+   Duration  1.53s (environment 51%, import 21%, tests 15%, setup 11%, transform 2%)
+
+> web@0.1.0 lint
+> eslint
+```
+TypeScript emitted no diagnostics. git diff --check also passes. Previous
+live-spike, real ABI, multi-instance limits, and ambiguous provisioning recovery
+integration items remain. No merge or push performed.
+
+Commit blocker: the requested git add/commit command failed before staging with:
+```text
+fatal: Unable to create '/Users/marcogarity/code/pot/.git/worktrees/pot-wallet/index.lock': Operation not permitted
+```
+This session's sandbox denies the shared worktree metadata write and its approval
+policy is never, so escalation is unavailable. The verified changes are left
+uncommitted. Once Git metadata is writable, stage the nine lane files listed
+above and commit with exactly `fix(wallet): review round 1`.

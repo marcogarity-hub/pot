@@ -32,7 +32,7 @@ it.each([
 it('allows organizer as a member',async()=>{expect((await post({...body(),memberEmails:[' ORGANIZER@x.com '],threshold:1})).status).toBe(201);});
 it('uses organizer wallet, exact bigint args, decodes id, and saves normalized metadata',async()=>{
  const input=body();const response=await post(input);expect(response.status).toBe(201);const result=await response.json();expect(result).toEqual({potId:'42',inviteToken:expect.any(String)});
- expect(m.callPot).toHaveBeenCalledWith('organizer-wallet','createPot',[parseUnits('2400',18),parseUnits('300',18),expect.any(Array),BigInt(Math.floor(Date.parse(input.deadline)/1000)),BigInt(5),BigInt(120),BigInt(120)]);
+ expect(m.callPot).toHaveBeenCalledWith('organizer-wallet','createPot',[parseUnits('2400',18),parseUnits('300',18),members.map((_,index)=>`0x${(index+2).toString(16).padStart(40,'0')}`),BigInt(Math.floor(Date.parse(input.deadline)/1000)),BigInt(5),BigInt(120),BigInt(120)]);
  expect(m.insert).toHaveBeenCalledWith({pot_id:'42',title:'Airbnb',invite_token:result.inviteToken});expect(m.insert).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({pot_id:'42',email:'friend0@x.com',address:`0x${'2'.padStart(40,'0')}`})]));
 });
 it('does not persist without a PotCreated log from the configured contract',async()=>{m.callPot.mockResolvedValue({logs:[{address:`0x${'9'.repeat(40)}`,topics:[],data:'0x'}]});expect((await post(body())).status).toBe(502);expect(m.insert).not.toHaveBeenCalled();});

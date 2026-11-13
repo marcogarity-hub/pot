@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import { encodeErrorResult, parseUnits } from 'viem';
 import { potAbi, arcTestnet } from './__mocks__/pot';
 const m = vi.hoisted(() => ({ createWallets: vi.fn(), createContractExecutionTransaction: vi.fn(), getTransaction: vi.fn(), estimateContractExecutionFee: vi.fn(), receipt: vi.fn() }));
@@ -34,4 +35,13 @@ it('uses a stable UUID for normalized email', async () => {
  await createWallet(' A@x.com'); await createWallet('a@x.com');
  expect(m.createWallets.mock.calls[0][0].idempotencyKey).toBe(m.createWallets.mock.calls[1][0].idempotencyKey);
  expect(m.createWallets.mock.calls[0][0].idempotencyKey).toMatch(/^[\da-f-]{14}4[\da-f-]{21}$/);
+});
+
+it('estimates using only the supported request fields', async () => {
+ await callPot('wallet','pay',[BigInt(1)],parseUnits('300',18));
+ expect(m.estimateContractExecutionFee).toHaveBeenCalledWith({
+  callData: expect.stringMatching(/^0x/),
+  contractAddress: process.env.NEXT_PUBLIC_POT_ADDRESS,
+  amount: '300', source: { walletId: 'wallet' },
+ });
 });
