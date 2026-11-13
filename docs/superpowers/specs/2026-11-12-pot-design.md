@@ -383,3 +383,9 @@ Source: [`docs/reviews/2026-11-12-codex-spec-plan-review.md`](../../reviews/2026
 | A11 | **Rebuildable projection.** Chain-derived rows (`pots` state/counters, `pot_members` flags) are recomputed by folding *all* stored events for a pot in `(block_number, log_index)` order, so retries, partial failures and out-of-order delivery self-heal. Offchain metadata (title, invite token, emails, receipt text) lives in separate tables written only by the API. | Review fix |
 | A12 | **Receipt text integrity.** `receipt_text` is saved only after `requestRelease` confirms, and the UI shows it only if `keccak256(receipt_text) == receipt_hash`. | Review fix |
 | A13 | **Custody wording.** The README states that the backend holds signing authority for every member wallet (developer-controlled), and that the contract guarantees the organizer can't take money early; it does not claim protection against the operator. | Review fix |
+
+## Amendment A14 (2026-11-13, approved by Marco)
+
+| # | Decision | Approved by |
+|---|---|---|
+| A14 | **Developer-controlled EOA wallets.** Member and organizer wallets are Circle developer-controlled wallets with `accountType: 'EOA'` on `ARC-TESTNET`. A treasury wallet tops up each member wallet with a small amount of USDC for gas (the pre-fund model above). Gas Station / Paymaster sponsorship is deferred. **Verification gate:** the Lane 2 spike (Task 2.1) must confirm that EOA wallets can be created on `ARC-TESTNET` and can send a payable contract call. If they can't, Lane 2 switches to `accountType: 'SCA'` and the conductor tells Marco. | Marco |
