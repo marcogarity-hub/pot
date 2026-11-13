@@ -50,6 +50,14 @@ contract PotFunding is Base {
 
     // --------------------------------------------------------------- tests
 
+    function test_create_ShareOverflow_Reverts() public {
+        address[] memory a = _members(2);
+        vm.expectRevert(IPot.InvalidParams.selector);
+        _createWith(type(uint256).max, type(uint256).max / 2 + 1, a, deadline, 1, WINDOW, REQ_WINDOW);
+        vm.expectRevert(IPot.InvalidParams.selector);
+        _createWith(0, type(uint256).max, a, deadline, 1, WINDOW, REQ_WINDOW);
+    }
+
     function test_00_Decimals() public {
         // Local half: native USDC, 18 decimals.
         uint256 id = _create();

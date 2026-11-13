@@ -19,12 +19,13 @@ import {IPot} from "src/IPot.sol";
 ///         finalize. Forge's default gas price is 0, so balance deltas are exact.
 contract PotHandler is CommonBase, StdCheats, StdUtils {
     uint256 public constant MAX_POTS = 3;
-    uint256 internal constant MAX_POT_MEMBERS = 4; // of a 12-actor pool, so outsiders exist
+    uint256 internal constant MAX_POT_MEMBERS = 4; // of a 13-actor pool, so outsiders exist
 
     Pot public immutable pot;
     address public immutable org;
 
-    /// @dev Pool = the fixture's m[0..7] plus four outsiders/replacements.
+    /// @dev Pool = the fixture's m[0..7], the organizer (so it is sometimes also a member), plus
+    ///      four outsiders/replacements.
     address[] internal actors;
 
     // ------------------------------------------------------------- ghosts
@@ -52,6 +53,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         for (uint256 i; i < fixtureMembers.length; ++i) {
             actors.push(fixtureMembers[i]);
         }
+        actors.push(org_);
         actors.push(makeAddr("outsider0"));
         actors.push(makeAddr("outsider1"));
         actors.push(makeAddr("outsider2"));
@@ -138,6 +140,9 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         uint256 id = _pickPot(potSeed);
         address who = _pickMemberBiased(id, actorSeed);
         uint256 before = who.balance;
+        // A Frozen pot must refund every current member with an open payment. If Pot says
+        // otherwise (NotRefundable, WrongState, ...) that is a bug: re-raise instead of swallowing.
+        bool mustSucceed = pot.getPot(id).state == IPot.State.Frozen && pot.isMember(id, who) && _paidOpen[id][who];
 
         vm.prank(who);
         try pot.refund(id) {
@@ -151,6 +156,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
                 IPot.NotRefundable.selector,
                 IPot.AlreadyRefunded.selector
             ];
+            if (mustSucceed) _reraise(reason);
             _swallowOr(reason, _list(ok));
         }
     }
@@ -233,6 +239,10 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         uint256 id = _pickPotIn(potSeed, IPot.State.PayoutRequested);
         address caller = _pickActor(callerSeed);
         uint256 before = org.balance;
+        // An eligible finalize (PayoutRequested and the window elapsed) must succeed.
+        IPot.PotView memory pv = pot.getPot(id);
+        // forge-lint: disable-next-line(block-timestamp)
+        bool mustSucceed = pv.state == IPot.State.PayoutRequested && block.timestamp >= pv.releaseEligibleAt;
 
         vm.prank(caller);
         try pot.finalizeRelease(id) {
@@ -242,6 +252,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
             outOf[id] += paid;
         } catch (bytes memory reason) {
             bytes4[2] memory ok = [IPot.WrongState.selector, IPot.WindowOpen.selector];
+            if (mustSucceed) _reraise(reason);
             _swallowOr(reason, _list(ok));
         }
     }

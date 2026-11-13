@@ -16,7 +16,10 @@ export const arcTestnet = defineChain({
   testnet: true,
 });
 
-/** Deployed Pot address. Unset (undefined at runtime) until Task 1.5 deploys. */
+/**
+ * Deployed Pot address. Undefined at runtime until NEXT_PUBLIC_POT_ADDRESS is set (Task 1.6
+ * deploys). The cast only satisfies the type; callers must check it before use.
+ */
 export const POT_ADDRESS = process.env.NEXT_PUBLIC_POT_ADDRESS as `0x${string}`;
 
 /** Block the Pot was deployed in; the earliest block worth scanning for logs. */

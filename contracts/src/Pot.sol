@@ -50,7 +50,7 @@ contract Pot is IPot, ReentrancyGuard {
     {
         uint256 n = members.length;
         if (
-            n == 0 || n > MAX_MEMBERS || share == 0 || total != share * n
+            n == 0 || n > MAX_MEMBERS || share == 0 || share > type(uint256).max / n || total != share * n
                 || threshold == 0 || threshold > n || objectionWindow < 60 || objectionWindow > 7 days
                 || requestWindow < 60 || requestWindow > 30 days
         ) revert InvalidParams();
