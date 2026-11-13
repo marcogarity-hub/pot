@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {IPot} from "./IPot.sol";
+import {IPot, MAX_MEMBERS} from "./IPot.sol";
 
 /// @title Pot
 /// @notice Skeleton (Task 1.2). Every function reverts NotImplemented; Tasks 1.3-1.5 fill it in.
@@ -49,14 +49,55 @@ contract Pot is IPot, ReentrancyGuard {
         nonReentrant
         returns (uint256 potId)
     {
-        (total, share, members, deadline, threshold, objectionWindow, requestWindow); // skeleton: unused
-        _notImplemented();
-        return 0;
+        uint256 n = members.length;
+        if (
+            n == 0 || n > MAX_MEMBERS || share == 0 || total != share * n
+                || threshold == 0 || threshold > n || objectionWindow < 60 || objectionWindow > 7 days
+                || requestWindow < 60 || requestWindow > 30 days
+        ) revert InvalidParams();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (deadline <= block.timestamp) revert InvalidParams();
+
+        potId = _nextPotId++;
+        PotData storage p = _pots[potId];
+        p.organizer = msg.sender;
+        p.total = total;
+        p.share = share;
+        p.deadline = deadline;
+        p.threshold = threshold;
+        p.objectionWindow = objectionWindow;
+        p.requestWindow = requestWindow;
+
+        for (uint256 i; i < n; ++i) {
+            address member = members[i];
+            if (member == address(0)) revert ZeroAddress();
+            if (p.isMember[member]) revert DuplicateMember();
+            p.isMember[member] = true;
+            p.wasMember[member] = true;
+            p.members.push(member);
+        }
+
+        emit PotCreated(potId, msg.sender, members, total, share, deadline, threshold, objectionWindow, requestWindow);
     }
 
     function pay(uint256 potId) external payable nonReentrant {
-        potId; // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        if (p.state != State.Funding) revert WrongState();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= p.deadline) revert DeadlinePassed();
+        if (!p.isMember[msg.sender]) revert NotMember();
+        if (p.hasPaid[msg.sender]) revert AlreadyPaid();
+        if (msg.value != p.share) revert WrongAmount();
+
+        p.hasPaid[msg.sender] = true;
+        uint256 count = ++p.paymentsCount;
+        emit Paid(potId, msg.sender, msg.value);
+
+        if (count == p.members.length) {
+            p.state = State.Locked;
+            p.lockedAt = block.timestamp;
+            emit Locked(potId, block.timestamp);
+        }
     }
 
     function swapSeat(uint256 potId, address leaver, address replacement) external nonReentrant {
@@ -91,46 +132,46 @@ contract Pot is IPot, ReentrancyGuard {
 
     // ---------------------------------------------------------------- views
 
-    function getPot(uint256 potId) external view returns (PotView memory) {
-        potId; // skeleton: unused
-        PotView memory empty;
-        _notImplemented();
-        return empty;
+    function getPot(uint256 potId) external view returns (PotView memory v) {
+        PotData storage p = _pots[potId];
+        v.organizer = p.organizer;
+        v.total = p.total;
+        v.share = p.share;
+        v.deadline = p.deadline;
+        v.threshold = p.threshold;
+        v.objectionWindow = p.objectionWindow;
+        v.requestWindow = p.requestWindow;
+        v.lockedAt = p.lockedAt;
+        v.state = p.state;
+        v.paymentsCount = p.paymentsCount;
+        v.objectionsCount = p.objectionsCount;
+        v.receiptHash = p.receiptHash;
+        v.releaseEligibleAt = p.releaseEligibleAt;
+        v.members = p.members;
     }
 
     function nextPotId() external view returns (uint256) {
-        _notImplemented();
-        return 0;
+        return _nextPotId;
     }
 
     function hasPaid(uint256 potId, address account) external view returns (bool) {
-        (potId, account); // skeleton: unused
-        _notImplemented();
-        return false;
+        return _pots[potId].hasPaid[account];
     }
 
     function hasObjected(uint256 potId, address account) external view returns (bool) {
-        (potId, account); // skeleton: unused
-        _notImplemented();
-        return false;
+        return _pots[potId].hasObjected[account];
     }
 
     function hasRefunded(uint256 potId, address account) external view returns (bool) {
-        (potId, account); // skeleton: unused
-        _notImplemented();
-        return false;
+        return _pots[potId].hasRefunded[account];
     }
 
     function isMember(uint256 potId, address account) external view returns (bool) {
-        (potId, account); // skeleton: unused
-        _notImplemented();
-        return false;
+        return _pots[potId].isMember[account];
     }
 
     function wasMember(uint256 potId, address account) external view returns (bool) {
-        (potId, account); // skeleton: unused
-        _notImplemented();
-        return false;
+        return _pots[potId].wasMember[account];
     }
 
     // -------------------------------------------------------------- internal
