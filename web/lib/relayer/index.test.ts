@@ -1,0 +1,12 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+const m = vi.hoisted(() => ({ sendTransaction: vi.fn(), writeContract: vi.fn(), getBalance: vi.fn(), receipt: vi.fn() }));
+vi.mock('viem', async (original) => ({ ...await original<typeof import('viem')>(), createWalletClient: () => m, createPublicClient: () => ({ getBalance: m.getBalance, waitForTransactionReceipt: m.receipt }) }));
+import { prefund, relayerFinalize, resetPrefundBudget } from './index';
+import { configurePotInterface } from '../circle/contract';
+import { potAbi, arcTestnet } from '../circle/__mocks__/pot';
+const to = '0x1111111111111111111111111111111111111111';
+beforeEach(() => { vi.clearAllMocks(); resetPrefundBudget(); configurePotInterface({ abi: potAbi, chain: arcTestnet }); process.env.RELAYER_PRIVATE_KEY = `0x${'11'.repeat(32)}`; process.env.PREFUND_DAILY_CAP = '2'; process.env.NEXT_PUBLIC_POT_ADDRESS = to; m.sendTransaction.mockResolvedValue('0x1234'); m.receipt.mockResolvedValue({ status: 'success' }); m.getBalance.mockResolvedValue(BigInt(10) ** BigInt(18)); });
+it('prefunds one USDC by default, confirms, and meets fee floor', async () => { await prefund(to); expect(m.sendTransaction).toHaveBeenCalledWith(expect.objectContaining({ to, value: BigInt(10) ** BigInt(18), maxFeePerGas: BigInt(20000000000) })); expect(m.receipt).toHaveBeenCalled(); });
+it('rejects zero address without sending', async () => { await expect(prefund(`0x${'0'.repeat(40)}`)).rejects.toThrow(); expect(m.sendTransaction).not.toHaveBeenCalled(); });
+it('reserves the cap before concurrent sends', async () => { const results = await Promise.allSettled([prefund(to),prefund(to),prefund(to)]); expect(results.filter(x=>x.status==='rejected')).toHaveLength(1); expect(m.sendTransaction).toHaveBeenCalledTimes(2); });
+it('warns below five USDC when finalizing', async () => { const warn = vi.spyOn(console,'warn').mockImplementation(()=>{}); m.writeContract.mockResolvedValue('0x1234'); await relayerFinalize(BigInt(1)); expect(warn).toHaveBeenCalled(); warn.mockRestore(); });
