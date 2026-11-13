@@ -18,8 +18,8 @@ import {IPot} from "src/IPot.sol";
 ///         outOf += the recipient's balance increase across a successful refund / swap /
 ///         finalize. Forge's default gas price is 0, so balance deltas are exact.
 contract PotHandler is CommonBase, StdCheats, StdUtils {
-    uint256 public constant MAX_POTS = 10;
-    uint256 internal constant MAX_POT_MEMBERS = 8; // of a 12-actor pool, so outsiders exist
+    uint256 public constant MAX_POTS = 3;
+    uint256 internal constant MAX_POT_MEMBERS = 4; // of a 12-actor pool, so outsiders exist
 
     Pot public immutable pot;
     address public immutable org;
@@ -80,11 +80,11 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         uint256 share = bound(shareSeed, 1, 500 ether);
         uint256 total = share * n;
         // Narrower than the contract allows so that deadlines and windows actually elapse
-        // within a run; still inside the valid ranges (60s..7d, 60s..30d).
-        uint256 dl = block.timestamp + bound(deadlineSeed, 1, 2 days);
+        // within a depth-100 run (warps are 1s..6h); still inside the valid ranges.
+        uint256 dl = block.timestamp + bound(deadlineSeed, 2 hours, 24 hours);
         uint256 threshold = bound(thresholdSeed, 1, n);
-        uint256 objectionWindow = bound(objectionSeed, 60, 2 days);
-        uint256 requestWindow = bound(requestSeed, 60, 4 days);
+        uint256 objectionWindow = bound(objectionSeed, 60, 6 hours);
+        uint256 requestWindow = bound(requestSeed, 60, 6 hours);
 
         vm.prank(org);
         try pot.createPot(total, share, members, dl, threshold, objectionWindow, requestWindow) returns (
@@ -103,8 +103,8 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Someone pays into a pot. Mostly a current member, mostly the exact share.
     function pay(uint256 potSeed, uint256 actorSeed, uint256 amountSeed) external {
         if (_ids.length == 0) return;
-        uint256 id = _pickPot(potSeed);
-        address who = _pickMemberBiased(id, actorSeed);
+        uint256 id = _pickPotIn(potSeed, IPot.State.Funding);
+        address who = _pickUnpaidBiased(id, actorSeed);
         uint256 share = shareOf[id];
         uint256 amount = share;
         if (amountSeed % 16 == 0) amount = share + 1;
@@ -114,6 +114,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(who);
         try pot.pay{value: amount}(id) {
             calls["pay"]++;
+            if (pot.getPot(id).state == IPot.State.Locked) calls["lock"]++;
             inOf[id] += amount;
             if (!_paidOpen[id][who]) {
                 _paidOpen[id][who] = true;
@@ -192,7 +193,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Organizer (usually) requests the payout.
     function requestRelease(uint256 potSeed, uint256 callerSeed, bytes32 receipt) external {
         if (_ids.length == 0) return;
-        uint256 id = _pickPot(potSeed);
+        uint256 id = _pickPotIn(potSeed, IPot.State.Locked);
         address caller = callerSeed % 8 == 0 ? _pickActor(callerSeed >> 8) : org;
         if (receipt == bytes32(0)) receipt = keccak256("receipt");
 
@@ -208,12 +209,13 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
     /// @notice A member (usually) objects to the payout.
     function object(uint256 potSeed, uint256 actorSeed) external {
         if (_ids.length == 0) return;
-        uint256 id = _pickPot(potSeed);
+        uint256 id = _pickPotIn(potSeed, IPot.State.PayoutRequested);
         address who = _pickMemberBiased(id, actorSeed);
 
         vm.prank(who);
         try pot.object(id) {
             calls["object"]++;
+            if (pot.getPot(id).state == IPot.State.Frozen) calls["frozen"]++;
         } catch (bytes memory reason) {
             bytes4[4] memory ok = [
                 IPot.WrongState.selector,
@@ -228,7 +230,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Anyone finalizes the payout; the organizer receives it.
     function finalize(uint256 potSeed, uint256 callerSeed) external {
         if (_ids.length == 0) return;
-        uint256 id = _pickPot(potSeed);
+        uint256 id = _pickPotIn(potSeed, IPot.State.PayoutRequested);
         address caller = _pickActor(callerSeed);
         uint256 before = org.balance;
 
@@ -247,12 +249,13 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Anyone expires a pot whose organizer never requested the payout.
     function expire(uint256 potSeed, uint256 callerSeed) external {
         if (_ids.length == 0) return;
-        uint256 id = _pickPot(potSeed);
+        uint256 id = _pickPotIn(potSeed, IPot.State.Locked);
         address caller = _pickActor(callerSeed);
 
         vm.prank(caller);
         try pot.expire(id) {
             calls["expire"]++;
+            calls["frozen"]++;
         } catch (bytes memory reason) {
             bytes4[2] memory ok = [IPot.WrongState.selector, IPot.RequestWindowOpen.selector];
             _swallowOr(reason, _list(ok));
@@ -261,7 +264,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
 
     /// @notice Time passes.
     function warp(uint256 secondsSeed) external {
-        vm.warp(block.timestamp + bound(secondsSeed, 1, 1 days));
+        vm.warp(block.timestamp + bound(secondsSeed, 1, 6 hours));
         calls["warp"]++;
     }
 
@@ -287,6 +290,34 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
 
     function _pickPot(uint256 seed) internal view returns (uint256) {
         return _ids[seed % _ids.length];
+    }
+
+    /// @dev 3 in 4: a pot currently in `want` (scanning from the seeded index); otherwise,
+    ///      or if none is in that state, any pot. Keeps the money paths reachable.
+    function _pickPotIn(uint256 seed, IPot.State want) internal view returns (uint256) {
+        uint256 n = _ids.length;
+        if (seed % 4 != 0) {
+            uint256 start = (seed >> 8) % n;
+            for (uint256 i; i < n; ++i) {
+                uint256 id = _ids[(start + i) % n];
+                if (pot.getPot(id).state == want) return id;
+            }
+        }
+        return _ids[(seed >> 8) % n];
+    }
+
+    /// @dev 3 in 4: a current member of the pot that has not paid yet; otherwise as
+    ///      _pickMemberBiased.
+    function _pickUnpaidBiased(uint256 id, uint256 seed) internal view returns (address) {
+        address[] storage cur = _membersOf[id];
+        if (seed % 4 != 0) {
+            uint256 start = (seed >> 8) % cur.length;
+            for (uint256 i; i < cur.length; ++i) {
+                address a = cur[(start + i) % cur.length];
+                if (!pot.hasPaid(id, a)) return a;
+            }
+        }
+        return _pickMemberBiased(id, seed);
     }
 
     function _pickActor(uint256 seed) internal view returns (address) {

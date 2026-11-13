@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {Vm} from "forge-std/Vm.sol";
 import {Base} from "./Base.t.sol";
 import {IPot} from "src/IPot.sol";
 
@@ -192,8 +193,14 @@ contract PotReleaseTest is Base {
         _lockAndRequest(id);
         vm.expectEmit(true, true, false, true, address(pot));
         emit IPot.Objected(id, m[0], 1);
+        vm.recordLogs();
         vm.prank(m[0]);
         pot.object(id);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 1, "only Objected expected");
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != IPot.Frozen.selector, "Frozen must not be emitted");
+        }
         assertTrue(pot.hasObjected(id, m[0]));
         assertEq(pot.getPot(id).objectionsCount, 1);
         assertEq(uint8(_state(id)), uint8(IPot.State.PayoutRequested));
