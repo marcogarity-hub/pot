@@ -80,3 +80,7 @@
 - Landed: POT_ADDRESS export trimmed (undefined when blank) + 2 tests. Web-only; Pot.sol untouched.
 - Gates: lib/pot 9/9, tsc, lint, build OK; reviewed by the conductor (Opus) — APPROVE. Worker: Codex gpt-6-luna.
 - In review: Lane 2 round 1 (shared Response in finalize single-flight; first-time organizer sign-in/claim broken) and Lane 4 round 1 (invite "left" state fired before Stream projection).
+
+## 2026-11-13 — lane/ui (full-review fixes)
+- Landed: non-interactive sign-in fallback; invite outcomes (left only for an inactive pot_members row; no row = still invited); custom window input latches; auto-finalize with deterministic 0–3 s jitter and one shared in-flight finalize per pot (button + auto tick).
+- Gates: vitest/tsc/lint/build OK; conductor (Opus) review round 1 CHANGES (left-state fired before Stream projection) → fixed → APPROVE. Worker: Claude Haiku.
