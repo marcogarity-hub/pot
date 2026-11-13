@@ -101,13 +101,52 @@ contract Pot is IPot, ReentrancyGuard {
     }
 
     function swapSeat(uint256 potId, address leaver, address replacement) external nonReentrant {
-        (potId, leaver, replacement); // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        if (msg.sender != p.organizer) revert NotOrganizer();
+        if (p.state != State.Funding) revert WrongState();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= p.deadline) revert DeadlinePassed();
+        if (!p.isMember[leaver]) revert NotMember();
+        if (replacement == address(0)) revert ZeroAddress();
+        if (p.isMember[replacement]) revert DuplicateMember();
+        if (p.wasMember[replacement]) revert FormerMember();
+
+        // Replacement takes the leaver's slot in members[].
+        uint256 n = p.members.length;
+        for (uint256 i; i < n; ++i) {
+            if (p.members[i] == leaver) {
+                p.members[i] = replacement;
+                break;
+            }
+        }
+        p.isMember[leaver] = false;
+        p.isMember[replacement] = true;
+        p.wasMember[replacement] = true;
+
+        uint256 refunded;
+        if (p.hasPaid[leaver]) {
+            // Paid leaver is refunded; has_paid itself is never cleared.
+            p.hasRefunded[leaver] = true;
+            --p.paymentsCount;
+            refunded = p.share;
+        }
+        emit SeatSwapped(potId, leaver, replacement, refunded);
+        if (refunded != 0) _send(leaver, refunded);
     }
 
     function refund(uint256 potId) external nonReentrant {
-        potId; // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        State s = p.state;
+        if (s != State.Funding && s != State.Frozen) revert WrongState();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (s == State.Funding && block.timestamp < p.deadline) revert DeadlineNotPassed();
+        if (!p.isMember[msg.sender] || !p.hasPaid[msg.sender]) revert NotRefundable();
+        if (p.hasRefunded[msg.sender]) revert AlreadyRefunded();
+
+        p.hasRefunded[msg.sender] = true;
+        uint256 amount = p.share;
+        emit Refunded(potId, msg.sender, amount);
+        _send(msg.sender, amount);
     }
 
     function requestRelease(uint256 potId, bytes32 receiptHash) external nonReentrant {
@@ -175,6 +214,11 @@ contract Pot is IPot, ReentrancyGuard {
     }
 
     // -------------------------------------------------------------- internal
+
+    function _send(address to, uint256 amount) internal {
+        (bool ok,) = to.call{value: amount}("");
+        if (!ok) revert TransferFailed();
+    }
 
     /// @dev Skeleton only. A conditional revert that reads storage keeps the declared
     ///      mutability warning-free (no "restrict to pure", no unreachable code after
