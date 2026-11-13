@@ -128,3 +128,55 @@ Behaviour the fold and UI must match:
 - Task 1.6: deploy `Pot` (no constructor args), verify on Blockscout, re-run `ExportAbi.sh`, and set `NEXT_PUBLIC_POT_ADDRESS` and `POT_DEPLOY_BLOCK`.
 - `cd web && npx tsc --noEmit` currently needs `npx next typegen` first, because of a pre-existing `LayoutProps` error in `app/layout.tsx`. That's shared, not Lane 1. Consider adding typegen to the scripts.
 - `arc-forge fmt --check` would reformat some files. I left them unformatted because there's no formatter gate in the plan.
+
+## Liveness hardening + chain env guards (2026-11-13)
+
+Done (tests and web/lib/pot only; Pot.sol, the interface, events, errors and the plan's test list are unchanged):
+- `PotHandler.refund`: must succeed (any revert is re-raised, failing the run) when the pot is Frozen **or Funding with `now >= deadline`**, and the caller is a current member with an open payment.
+- `PotHandler.expire`: must succeed when the pot is Locked and `now >= lockedAt + requestWindow`.
+- `test_22_Expire_AfterRequestWindow`: records logs and asserts that expire emits exactly one log (Expired) and no Frozen.
+- `web/lib/pot/chain.ts`: `POT_DEPLOY_BLOCK` uses `|| "0"`, so an empty env value is safe. New export `assertPotAddress()` returns the address or throws `NEXT_PUBLIC_POT_ADDRESS is not set: ...`. The `POT_ADDRESS` export is unchanged.
+
+Mutation check: Pot.sol was edited temporarily and then restored, with no diff. Each run used 300 invariant runs. Delaying `expire` by 1 hour failed all 3 invariants with `RequestWindowOpen`. Delaying the Funding refund by 1 hour failed all 3 with `DeadlineNotPassed`.
+
+Files: `contracts/test/handlers/PotHandler.sol`, `contracts/test/PotRelease.t.sol`, `web/lib/pot/chain.ts`.
+
+```
+$ cd contracts && arc-forge test
+Ran 15 tests for test/PotRefundSwap.t.sol:PotRefundSwap   ok. 15 passed
+Ran 27 tests for test/PotFunding.t.sol:PotFunding         ok. 27 passed  ([PASS] test_00_Decimals)
+Ran 5 tests for test/PotReceivers.t.sol:PotReceivers      ok. 5 passed
+Ran 25 tests for test/PotRelease.t.sol:PotReleaseTest     ok. 25 passed
+[PASS] invariant_13_PerPotConservation() (runs: 10000, calls: 1000000, reverts: 0)
+[PASS] invariant_ReleasedPaysExactlyTotal() (runs: 10000, calls: 1000000, reverts: 0)
+[PASS] invariant_Solvency() (runs: 10000, calls: 1000000, reverts: 0)
+Ran 5 test suites in 316.72s: 75 tests passed, 0 failed, 0 skipped (75 total tests)
+
+$ arc-forge build --force   -> Compiler run successful! (no warnings)
+$ cd web && npx tsc --noEmit -> exit 0
+```
+
+Blockers: none. Lanes 2/3 can use `assertPotAddress()` instead of checking `POT_ADDRESS` themselves.
+
+## Strict assertPotAddress (2026-11-13, conductor review round 1)
+
+Done:
+- `assertPotAddress()` in `web/lib/pot/chain.ts` trims `NEXT_PUBLIC_POT_ADDRESS` and returns the trimmed address. It throws in three cases:
+  - unset, empty or whitespace-only value: `NEXT_PUBLIC_POT_ADDRESS is not set: ...`
+  - value fails viem `isAddress(v, { strict: true })`, which also rejects mixed case with a bad EIP-55 checksum: `NEXT_PUBLIC_POT_ADDRESS is not a valid address: "<value>"`
+  - the zero address: `NEXT_PUBLIC_POT_ADDRESS is the zero address: "<value>"`
+
+  It is never called at module load. The `POT_ADDRESS` export is unchanged.
+- `assertPotAddress` is re-exported from `web/lib/pot/index.ts`, so `import { assertPotAddress } from "@/lib/pot"` works.
+- New `web/lib/pot/chain.test.ts` (7 tests) covers unset, empty and whitespace-only, whitespace-padded valid, invalid (`0x123`), bad checksum, zero address, and the re-export.
+
+TDD: RED was 6/7 failing (only "unset" passed with the old implementation). GREEN:
+```
+$ cd web && npx vitest run lib/pot
+      Tests  7 passed (7)
+$ npx tsc --noEmit        -> exit 0
+$ npm run lint            -> exit 0
+```
+No contract changes. I did not re-run the forge suite, per the conductor.
+
+Files: `web/lib/pot/chain.ts`, `web/lib/pot/index.ts`, `web/lib/pot/chain.test.ts`.

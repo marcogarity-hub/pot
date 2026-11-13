@@ -140,9 +140,14 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         uint256 id = _pickPot(potSeed);
         address who = _pickMemberBiased(id, actorSeed);
         uint256 before = who.balance;
-        // A Frozen pot must refund every current member with an open payment. If Pot says
-        // otherwise (NotRefundable, WrongState, ...) that is a bug: re-raise instead of swallowing.
-        bool mustSucceed = pot.getPot(id).state == IPot.State.Frozen && pot.isMember(id, who) && _paidOpen[id][who];
+        // A Frozen pot, or a Funding pot at/after its deadline, must refund every current member
+        // with an open payment. If Pot says otherwise (NotRefundable, WrongState,
+        // DeadlineNotPassed, ...) that is a bug: re-raise instead of swallowing.
+        IPot.PotView memory pv = pot.getPot(id);
+        bool refundable = pv.state == IPot.State.Frozen
+            // forge-lint: disable-next-line(block-timestamp)
+            || (pv.state == IPot.State.Funding && block.timestamp >= pv.deadline);
+        bool mustSucceed = refundable && pot.isMember(id, who) && _paidOpen[id][who];
 
         vm.prank(who);
         try pot.refund(id) {
@@ -262,6 +267,12 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
         if (_ids.length == 0) return;
         uint256 id = _pickPotIn(potSeed, IPot.State.Locked);
         address caller = _pickActor(callerSeed);
+        // A Locked pot whose request window has elapsed must be expirable by anyone. If Pot
+        // reverts here that is a bug: re-raise instead of swallowing.
+        IPot.PotView memory pv = pot.getPot(id);
+        bool mustSucceed = pv.state == IPot.State.Locked
+            // forge-lint: disable-next-line(block-timestamp)
+            && block.timestamp >= pv.lockedAt + pv.requestWindow;
 
         vm.prank(caller);
         try pot.expire(id) {
@@ -269,6 +280,7 @@ contract PotHandler is CommonBase, StdCheats, StdUtils {
             calls["frozen"]++;
         } catch (bytes memory reason) {
             bytes4[2] memory ok = [IPot.WrongState.selector, IPot.RequestWindowOpen.selector];
+            if (mustSucceed) _reraise(reason);
             _swallowOr(reason, _list(ok));
         }
     }
