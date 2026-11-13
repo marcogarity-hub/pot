@@ -2,7 +2,7 @@ import { keccak256, toBytes } from 'viem';
 import { z } from 'zod';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import { ensureUser } from '@/lib/circle/identity';
+import { ensureUser, getWalletUser } from '@/lib/circle/identity';
 import { callPot, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, validAddress } from '@/lib/circle/contract';
 import { readPot, chainTimestamp } from '@/lib/circle/read';
@@ -62,7 +62,8 @@ export function actionHandler(action: Action) {
       const supabase = await createServerSupabase();
       const session = await supabase.auth.getUser();
       if (session.error || !session.data.user?.email) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      const caller = await ensureUser(session.data.user.email.trim().toLowerCase());
+      const caller = await getWalletUser(session.data.user.email);
+      if (!caller) return Response.json({ error: 'NotAMember', message: "You're not part of this pot." }, { status: 403 });
       let callerAddress: string;
       try { callerAddress = validAddress(caller.wallet_address); }
       catch { return Response.json({ error: 'InvalidWalletAddress' }, { status: 400 }); }

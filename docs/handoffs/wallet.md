@@ -670,3 +670,28 @@ No live Circle operation was run. The create route still has its documented
 single-process rate limiter. Reconciliation of a pot whose Circle transaction
 confirms after timeout is a follow-up; this response prevents duplicate resubmits
 while metadata is pending.
+
+## Conductor review — round 1 (2026-11-13)
+
+Done: `ensureUser` now checks an existing wallet's native Arc balance and retries
+the deterministic-key prefund only when the balance is exactly zero. A balance
+read failure logs a warning and skips the retry; it does not block the caller.
+Added `getWalletUser`, a normalized-email read-only lookup that returns a wallet
+row or null. Pot action handlers use it for caller identity, return 403
+`NotAMember` when no wallet exists, and never provision/prefund the caller.
+`ensureUser` remains in the intended provisioning paths, including replacement
+wallet setup.
+
+Files changed: `web/lib/circle/{identity,identity.test}.ts`,
+`web/app/api/pots/{actions,actions.test}.ts`, and this handoff.
+
+Coverage: funded existing wallet skips prefund; zero-balance wallet retries with
+the stable key; balance-read failure skips prefund; read-only lookup normalizes
+email; pay/object and other simple actions do not provision; absent caller wallet
+returns the specified 403.
+
+Validation: `cd web && npx vitest run && npx tsc --noEmit && npm run lint` passed
+(19 files, 282 tests; no TypeScript diagnostics; ESLint exit 0). No live Circle
+or chain calls were made. `git pull --ff-only origin main` could not access the
+shared worktree's `FETCH_HEAD` due to sandbox metadata permissions; no merge or
+push performed.

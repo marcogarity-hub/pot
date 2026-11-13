@@ -1,4 +1,6 @@
 import type { Hex } from 'viem';
+import { createPublicClient, http } from 'viem';
+import { arcTestnet } from '@/lib/pot';
 import { createHash } from 'node:crypto';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { createWallet } from './wallets';
@@ -32,9 +34,16 @@ export async function ensureUser(input: string): Promise<WalletUser> {
   const existing = await db.from('users').select('id,email,created_at,circle_wallet_id,wallet_address').eq('email', email).maybeSingle();
   if (existing.error) throw new Error('Could not read wallet mapping');
   if (ready(existing.data)) {
-    // Re-submit with the same key so a crash after wallet persistence can recover
-    // the original Circle transfer without creating another prefund.
-    await prefund(existing.data.wallet_address, undefined, deterministicPrefundKey(existing.data.id));
+    // Only recover a crash between wallet persistence and its first prefund.
+    // A funded wallet must not consume another daily-cap reservation.
+    let balance: bigint | undefined;
+    try {
+      const client = createPublicClient({ chain: arcTestnet, transport: http() });
+      balance = await client.getBalance({ address: existing.data.wallet_address });
+    } catch (error) {
+      console.warn('Could not check existing wallet balance; skipping prefund retry', error);
+    }
+    if (balance === BigInt(0)) await prefund(existing.data.wallet_address, undefined, deterministicPrefundKey(existing.data.id));
     return existing.data;
   }
   const end = Date.now() + 10000;
@@ -45,6 +54,13 @@ export async function ensureUser(input: string): Promise<WalletUser> {
     await new Promise(resolve => setTimeout(resolve,100));
   }
   throw new Error('Wallet provisioning pending; retry later or contact the organizer');
+}
+export async function getWalletUser(input: string): Promise<WalletUser | null> {
+  const email = normalizeEmail(input);
+  const db = createAdminSupabase();
+  const result = await db.from('users').select('id,circle_wallet_id,wallet_address').eq('email', email).maybeSingle();
+  if (result.error) throw new Error('Could not read wallet mapping');
+  return ready(result.data) ? result.data : null;
 }
 function deterministicPrefundKey(userId: string): string {
   const bytes = createHash('sha256').update(`pot-prefund:${userId}`).digest().subarray(0, 16);
