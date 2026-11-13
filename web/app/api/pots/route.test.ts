@@ -49,6 +49,11 @@ it('maps create contract reverts to 409 with code',async()=>{
  m.callPot.mockRejectedValue(new PotRevertError('InvalidParams'));
  const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'InvalidParams',message:'InvalidParams'});
 });
+it('maps a Circle timeout to a pending response with reconciliation id',async()=>{
+ const {CircleTimeoutError}=await import('@/lib/circle/tx');m.callPot.mockRejectedValue(new CircleTimeoutError('circle-id'));
+ const response=await post(body());expect(response.status).toBe(502);
+ expect(await response.json()).toEqual({error:'TransactionPending',message:'Your transaction is still processing. Refresh in a minute before retrying.',circleTransactionId:'circle-id'});
+});
 
 it('returns a clear 503 before provisioning when the deployed address is unset', async () => {
  delete process.env.NEXT_PUBLIC_POT_ADDRESS;

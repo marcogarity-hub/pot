@@ -17,7 +17,7 @@ beforeEach(()=>{
   let action='select'; let value: Record<string,unknown>={}; const filters: Record<string,unknown>={};
   const q = { delete:()=>({eq:(idColumn:string,id:unknown)=>({is:async(column:string,value:unknown)=>{m.deleteReserved(idColumn,id,column,value); rows=rows.filter(row=>!(row[idColumn]===id && row[column]===value));return {error:null};}})}), upsert:(v:Record<string,unknown>)=>{action='insert';value=v;return q;},update:(v:Record<string,unknown>)=>{action='update';value=v;return q;},select:()=>q,eq:(k:string,v:unknown)=>{filters[k]=v;return q;},is:(k:string,v:unknown)=>{filters[k]=v;return q;},or:()=>q,
    maybeSingle:async()=>{
-    if(action==='insert'){if(rows.some(r=>r.email===value.email))return {data:null,error:null};const row={id:'internal-id',auth_user_id:null,circle_wallet_id:null,...value};rows.push(row);return {data:row,error:null};}
+    if(action==='insert'){if(rows.some(r=>r.email===value.email))return {data:null,error:null};const row={id:'internal-id',auth_user_id:null,circle_wallet_id:null,created_at:new Date().toISOString(),...value};rows.push(row);return {data:row,error:null};}
     const row=rows.find(r=>Object.entries(filters).every(([k,v])=>r[k]===v));if(action==='update'&&row)Object.assign(row,value);return {data:row??null,error:null};
    }
   };return q;
@@ -34,12 +34,15 @@ it('claim links internal row without replacing its id or creating a wallet',asyn
  await claimUser('auth-id',' A@x.com');expect(m.createWallet).not.toHaveBeenCalled();expect(rows[0]).toMatchObject({id:'internal-id',auth_user_id:'auth-id',claimed:true});
 });
 it.each(['https://evil.com','//evil.com','/\\evil.com','/%2f%2fevil.com'])('callback rejects unsafe next %s',async(next)=>{
+ rows.push({id:'internal-id',email:'a@x.com',auth_user_id:null,circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
  const response=await callback(new Request(`https://pot.test/api/wallet/callback?code=ok&next=${encodeURIComponent(next)}`));expect(response.headers.get('location')).toBe('https://pot.test/');
 });
 it('callback preserves a join invite path',async()=>{
+ rows.push({id:'internal-id',email:'a@x.com',auth_user_id:null,circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});
  const response=await callback(new Request('https://pot.test/api/wallet/callback?code=ok&next=/join/token'));expect(response.headers.get('location')).toBe('https://pot.test/join/token');
 });
-it('me returns normalized identity',async()=>{const response=await me();expect(await response.json()).toEqual({email:'a@x.com',wallet_address:'0x1111111111111111111111111111111111111111'});});
+it('me returns normalized identity',async()=>{rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'auth-id',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});const response=await me();expect(await response.json()).toEqual({email:'a@x.com',wallet_address:'0x1111111111111111111111111111111111111111'});expect(m.createWallet).not.toHaveBeenCalled();});
+it('me returns NoWallet without provisioning a signed-in email',async()=>{const response=await me();expect(response.status).toBe(404);expect(await response.json()).toEqual({error:'NoWallet'});expect(m.createWallet).not.toHaveBeenCalled();expect(m.prefund).not.toHaveBeenCalled();});
 it('me rejects unauthenticated callers',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await me()).status).toBe(401);});
 it('times out waiting for an already-reserved identity without provisioning again',async()=>{
  vi.useFakeTimers();
@@ -50,6 +53,16 @@ it('keeps the reservation after an ambiguous prefunding failure',async()=>{
 });
 it('does not reassign a wallet linked to a different auth user',async()=>{
  rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'someone-else',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});await expect(claimUser('auth-id','a@x.com')).rejects.toThrow('already linked');expect(rows[0].auth_user_id).toBe('someone-else');
+});
+it('claim does not provision an uninvited identity',async()=>{
+ await expect(claimUser('auth-id','new@x.com')).rejects.toThrow();
+ expect(m.createWallet).not.toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled(); expect(rows).toHaveLength(0);
+});
+it('takes over an incomplete reservation older than 120 seconds',async()=>{
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-13T00:02:01Z'));
+ rows.push({id:'stale',email:'a@x.com',auth_user_id:null,circle_wallet_id:null,created_at:'2026-11-13T00:00:00.000Z'});
+ try { const user=await ensureUser('a@x.com'); expect(user.circle_wallet_id).toBe('wallet'); expect(m.createWallet).toHaveBeenCalledTimes(1); expect(m.prefund).toHaveBeenCalledTimes(1); }
+ finally { vi.useRealTimers(); }
 });
 
 it.each(['createWallet', 'cap refusal'])('releases a reservation after %s failure and allows a later successful ensure', async (reason) => {

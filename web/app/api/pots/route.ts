@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     if (typeof args?.potId !== 'bigint' || args.organizer?.toLowerCase() !== organizer.wallet_address.toLowerCase()) throw new Error('Missing PotCreated event');
     potId = args.potId.toString();
   } catch (error) {
+    if (error instanceof Error && error.name === 'CircleTimeoutError') return toHttp(error);
     if (error instanceof PotRevertError) return toHttp(error);
     return Response.json({message:'Pot creation could not be confirmed. Reconcile the transaction before retrying.',...(transactionHash?{transactionHash}:{})},{status:502}); }
   const inviteToken = randomBytes(32).toString('base64url');

@@ -556,3 +556,47 @@ No route segment config exports, shared config edits, merge, or push.
 
 Blockers: none for this wiring task. Set NEXT_PUBLIC_POT_ADDRESS to the deployed
 address before building; no deployment environment files were changed here.
+
+## 2026-11-13 — Adversarial review fixes
+
+Done: Circle confirmation timeouts now throw `CircleTimeoutError` with the Circle
+transaction ID, mapped by action and create routes to 502 `TransactionPending`
+with the refresh guidance and reconciliation ID. Finalize now re-reads chain
+state inside an in-process per-pot single-flight, so concurrent requests share
+one relayer promise. `/api/wallet/me` is read-only and returns 404 `{ error:
+"NoWallet" }`; callback claiming links only an existing email row. The create
+route lazily provisions its organizer after the existing per-user rate limiter.
+Stale null-wallet reservations older than 120 seconds are claimed with a
+conditional timestamp update before retrying idempotent Circle wallet creation.
+Prefund daily capacity now reserves/releases through the service-role Supabase
+RPC interface; the existing five-pots/hour creation limiter remains in-process.
+
+Files changed: `web/lib/circle/{tx,tx.test,identity,identity.test}.ts`,
+`web/lib/relayer/{index,index.test}.ts`, `web/app/api/pots/{actions,actions.test,
+errors,route,route.test}.ts`, `web/app/api/wallet/me/route.ts`, this handoff.
+
+TDD: added regressions and observed expected failures for timeout mapping,
+concurrent finalize duplication, `/me` provisioning, missing-user claims, and
+stale reservation takeover before implementing fixes. All external services are
+mocked. No live wallet or chain operations were run.
+
+Validation:
+```text
+$ cd web && npx vitest run
+ Test Files  14 passed (14)
+      Tests  242 passed (242)
+$ cd web && npx tsc --noEmit
+Failed on Lane 4 page route types only: app/(screens)/join/[inviteToken]/page.tsx,
+app/(screens)/pots/[potId]/page.tsx, app/(screens)/sign-in/page.tsx. The generated
+route type constraint currently accepts only "/". No wallet-lane diagnostics.
+$ cd web && npm run lint
+eslint (exit 0; no diagnostics)
+```
+
+Integration: Lane 3 must provide `public.reserve_prefund(p_amount numeric,
+p_cap numeric)` and `public.release_prefund(p_amount numeric)` with service-role
+execution as specified in the task. The HTTP create limiter remains an
+in-process five pots/hour/auth user limiter; distribute it before multi-instance
+abuse enforcement is required. `git pull --ff-only origin main` was blocked
+because worktree metadata at `/Users/marcogarity/code/pot/.git/worktrees/pot-wallet`
+is not writable in this sandbox. No merge or push.
