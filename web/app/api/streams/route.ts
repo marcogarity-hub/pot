@@ -2,7 +2,6 @@ import { isAddress } from 'viem';
 import { potAbi } from './abi-placeholder';
 import { createStreamsHandler } from './handler';
 import { supabaseStore } from './store';
-export const runtime = 'nodejs';
 
 export async function POST(request: Request): Promise<Response> {
   const secret = process.env.QUICKNODE_STREAM_TOKEN;
