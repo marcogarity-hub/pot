@@ -90,3 +90,7 @@
 - Gates: vitest 267/267, tsc, lint, build OK on main; conductor (Opus) review round 1 CHANGES (shared Response body; first-time organizer sign-in + RLS link) → fixed → APPROVE. Worker: Codex gpt-6-luna (conductor committed; sandbox git lock).
 
 ## STATE — 2026-11-13: all full-review fixes merged. Open: contested seat-swap dilution (Marco), in-memory 5 pots/hour limiter (documented), Marco's account/env items.
+
+## 2026-11-13 — lane/ui (/code-review high fix)
+- Landed: useMe returns signed-out / no-wallet / error / ready; only ready gets actions; no-wallet and error get their own messages (error has Try again) instead of a Sign in loop.
+- Gates: vitest/tsc/lint/build OK; conductor (Opus) review APPROVE. Worker: Claude Haiku.
