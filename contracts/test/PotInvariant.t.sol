@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {StdInvariant} from "forge-std/StdInvariant.sol";
+import {console} from "forge-std/console.sol";
 import {Base} from "./Base.t.sol";
 import {PotHandler} from "./handlers/PotHandler.sol";
 import {IPot} from "src/IPot.sol";
@@ -31,7 +32,17 @@ contract PotInvariant is Base {
         selectors[7] = PotHandler.expire.selector;
         selectors[8] = PotHandler.warp.selector;
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));
+        // Required: without it Foundry also fuzzes the Pot itself (deployed in setUp) directly.
         targetContract(address(handler));
+    }
+
+    /// @notice Coverage readout (visible with -vv): how often each action succeeded.
+    function afterInvariant() public view {
+        string[9] memory names =
+            ["create", "pay", "refund", "swap", "requestRelease", "object", "finalize", "expire", "warp"];
+        for (uint256 i; i < names.length; ++i) {
+            console.log(names[i], handler.calls(bytes32(bytes(names[i]))));
+        }
     }
 
     /// @notice For every pot, money out never exceeds money in; once the pot is Released or

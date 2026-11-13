@@ -5,8 +5,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {IPot, MAX_MEMBERS} from "./IPot.sol";
 
 /// @title Pot
-/// @notice Skeleton (Task 1.2). Every function reverts NotImplemented; Tasks 1.3-1.5 fill it in.
-///         Storage layout below is the intended final layout.
+/// @notice Holds every pot by potId. See IPot for the lifecycle and events.
 contract Pot is IPot, ReentrancyGuard {
     /// @dev Per-pot storage. Mirrors PotView plus the per-address flags.
     struct PotData {
@@ -150,29 +149,63 @@ contract Pot is IPot, ReentrancyGuard {
     }
 
     function requestRelease(uint256 potId, bytes32 receiptHash) external nonReentrant {
-        (potId, receiptHash); // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        if (msg.sender != p.organizer) revert NotOrganizer();
+        if (p.state != State.Locked) revert WrongState();
+
+        p.receiptHash = receiptHash;
+        uint256 eligibleAt = block.timestamp + p.objectionWindow;
+        p.releaseEligibleAt = eligibleAt;
+        p.state = State.PayoutRequested;
+        emit PayoutRequested(potId, receiptHash, eligibleAt);
     }
 
     function object(uint256 potId) external nonReentrant {
-        potId; // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        if (p.state != State.PayoutRequested) revert WrongState();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= p.releaseEligibleAt) revert WindowClosed();
+        if (!p.isMember[msg.sender]) revert NotMember();
+        if (p.hasObjected[msg.sender]) revert AlreadyObjected();
+
+        p.hasObjected[msg.sender] = true;
+        uint256 count = ++p.objectionsCount;
+        emit Objected(potId, msg.sender, count);
+
+        if (count >= p.threshold) {
+            p.state = State.Frozen;
+            emit Frozen(potId);
+        }
     }
 
     function finalizeRelease(uint256 potId) external nonReentrant {
-        potId; // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        if (p.state != State.PayoutRequested) revert WrongState();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp < p.releaseEligibleAt) revert WindowOpen();
+
+        p.state = State.Released;
+        address organizer = p.organizer;
+        uint256 amount = p.total;
+        emit Released(potId, organizer, amount);
+        _send(organizer, amount);
     }
 
     function expire(uint256 potId) external nonReentrant {
-        potId; // skeleton: unused
-        _notImplemented();
+        PotData storage p = _pots[potId];
+        if (p.state != State.Locked) revert WrongState();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp < p.lockedAt + p.requestWindow) revert RequestWindowOpen();
+
+        p.state = State.Frozen;
+        emit Expired(potId);
     }
 
     // ---------------------------------------------------------------- views
 
-    function getPot(uint256 potId) external view returns (PotView memory v) {
+    function getPot(uint256 potId) external view returns (PotView memory) {
         PotData storage p = _pots[potId];
+        PotView memory v;
         v.organizer = p.organizer;
         v.total = p.total;
         v.share = p.share;
@@ -187,6 +220,7 @@ contract Pot is IPot, ReentrancyGuard {
         v.receiptHash = p.receiptHash;
         v.releaseEligibleAt = p.releaseEligibleAt;
         v.members = p.members;
+        return v;
     }
 
     function nextPotId() external view returns (uint256) {
@@ -218,12 +252,5 @@ contract Pot is IPot, ReentrancyGuard {
     function _send(address to, uint256 amount) internal {
         (bool ok,) = to.call{value: amount}("");
         if (!ok) revert TransferFailed();
-    }
-
-    /// @dev Skeleton only. A conditional revert that reads storage keeps the declared
-    ///      mutability warning-free (no "restrict to pure", no unreachable code after
-    ///      `nonReentrant`). Remove once every function is implemented.
-    function _notImplemented() private view {
-        if (_nextPotId == _nextPotId) revert NotImplemented();
     }
 }
