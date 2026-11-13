@@ -157,3 +157,26 @@ $ cd web && npx tsc --noEmit -> exit 0
 ```
 
 Blockers: none. Lanes 2/3 can use `assertPotAddress()` instead of checking `POT_ADDRESS` themselves.
+
+## Strict assertPotAddress (2026-11-13, conductor review round 1)
+
+Done:
+- `assertPotAddress()` in `web/lib/pot/chain.ts` trims `NEXT_PUBLIC_POT_ADDRESS` and returns the trimmed address. It throws in three cases:
+  - unset, empty or whitespace-only value: `NEXT_PUBLIC_POT_ADDRESS is not set: ...`
+  - value fails viem `isAddress(v, { strict: true })`, which also rejects mixed case with a bad EIP-55 checksum: `NEXT_PUBLIC_POT_ADDRESS is not a valid address: "<value>"`
+  - the zero address: `NEXT_PUBLIC_POT_ADDRESS is the zero address: "<value>"`
+
+  It is never called at module load. The `POT_ADDRESS` export is unchanged.
+- `assertPotAddress` is re-exported from `web/lib/pot/index.ts`, so `import { assertPotAddress } from "@/lib/pot"` works.
+- New `web/lib/pot/chain.test.ts` (7 tests) covers unset, empty and whitespace-only, whitespace-padded valid, invalid (`0x123`), bad checksum, zero address, and the re-export.
+
+TDD: RED was 6/7 failing (only "unset" passed with the old implementation). GREEN:
+```
+$ cd web && npx vitest run lib/pot
+      Tests  7 passed (7)
+$ npx tsc --noEmit        -> exit 0
+$ npm run lint            -> exit 0
+```
+No contract changes. I did not re-run the forge suite, per the conductor.
+
+Files: `web/lib/pot/chain.ts`, `web/lib/pot/index.ts`, `web/lib/pot/chain.test.ts`.
