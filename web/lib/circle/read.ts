@@ -11,6 +11,7 @@ export type ActionPot = {
   threshold: bigint;
   objectionsCount: bigint;
   releaseEligibleAt: bigint;
+  members?: readonly string[];
 };
 export class PotNotFoundError extends Error {
   constructor() { super('PotNotFound'); }

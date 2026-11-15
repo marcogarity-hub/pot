@@ -20,3 +20,12 @@ export const createPotSchema = z.object({
   if (body.memberEmails.length > 0 && /^\d+(\.\d{1,18})?$/.test(body.total) && parseUnits(body.total,18) % BigInt(body.memberEmails.length) !== BigInt(0)) ctx.addIssue({code:'custom',path:['total'],message:'Total must divide evenly by the number of members'});
 });
 export type CreatePotBody = z.infer<typeof createPotSchema>;
+
+export const reconcilePotSchema = z.object({
+  title: createPotSchema.shape.title,
+  memberEmails: createPotSchema.shape.memberEmails,
+  circleTransactionId: z.string().trim().min(1).optional(),
+  transactionHash: z.string().regex(/^0x[\da-fA-F]{64}$/, 'Transaction hash must be 32-byte hex').optional(),
+}).superRefine((body, ctx) => {
+  if (!!body.circleTransactionId === !!body.transactionHash) ctx.addIssue({ code: 'custom', message: 'Provide exactly one of circleTransactionId or transactionHash' });
+});
