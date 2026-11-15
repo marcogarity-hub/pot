@@ -99,3 +99,7 @@
 - Landed: time-based reservation takeover removed; wallet persisted right after createWallet; prefund uses a deterministic per-user Circle idempotency key; existing users re-prefunded only at zero balance; actions resolve the caller read-only (403 NotAMember); ledger RPC errors ≠ cap refusal; pre-submit failures release the cap; createPot timeout → 502 CreatePending (don't resubmit); identity conflict → 409; finalize single-flight caches {status, body}.
 - Gates: vitest/tsc/lint/build OK; conductor (Opus) review round 1 CHANGES (prefund + cap charge on every action via ensureUser) → fixed → APPROVE. Worker: Codex gpt-6-luna.
 - Follow-up noted: createPot reconcile endpoint for CreatePending.
+
+## 2026-11-15 — lane/wallet (createPot reconcile endpoint)
+- Landed: POST /api/pots/reconcile {title, memberEmails, circleTransactionId | transactionHash}. Read-only caller lookup; Circle tx must belong to the caller's wallet; COMPLETE → receipt → PotCreated organizer = caller; invite emails' wallets must equal on-chain members; idempotent pot_meta/pot_invites write (200 existing, 201 new, 23505 race re-read). 202 StillPending, 409 CreateFailed, 422 MembersMismatch, 503 transient.
+- Gates: vitest 318/318, tsc, lint, build OK on main. Conductor (Opus) review round 1 CHANGES (transient lookup/RPC errors mapped to 422) → fixed → APPROVE. Worker: Codex gpt-6-luna.
