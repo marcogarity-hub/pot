@@ -395,3 +395,9 @@ Source: [`docs/reviews/2026-11-12-codex-spec-plan-review.md`](../../reviews/2026
 | # | Decision | Approved by |
 |---|---|---|
 | A15 | **Treasury is a Circle developer-controlled wallet, not a raw key.** The relayer/treasury (gas top-ups, demo principal top-ups, `finalizeRelease`) is a Circle developer-controlled EOA wallet in the project wallet set (`CIRCLE_TREASURY_WALLET_ID`, `TREASURY_ADDRESS`), signed through Circle like member wallets. No raw relayer private key exists; `RELAYER_PRIVATE_KEY` is removed. Vercel holds only Circle API credentials. The **deploy key** (`DEPLOYER_PRIVATE_KEY`) is local-only in `contracts/.env`, used by Arc Foundry for deploys, and is never added to Vercel. Created 2026-11-13: treasury `0x9f7402e58eb01dcaa221e0bdb413984595830c07` (ARC-TESTNET, EOA, LIVE), deployer `0xe38Ef5Ba6766371C7a783D8bb298bA8aa291862A`. | Marco |
+
+## Amendment A16 (2026-11-15, approved by Marco)
+
+| # | Decision | Approved by |
+|---|---|---|
+| A16 | **Known limitations accepted for the hackathon build (no contract redeploy).** (1) *Stuck-organizer payout:* if the organizer address rejects the payout transfer, a `PayoutRequested` pot can't be finalized. Not reachable in the app, because organizers are always Circle EOA wallets (A1, A14), so it is documented, not fixed. (2) *Seat swaps after payment:* the organizer can still `swapSeat` an unpaid seat after other members have paid, which changes who can object. Left as is. (3) *Demo amounts:* the live demo uses 3 members × 2 USDC (total 6 USDC), funded from the treasury per A10. All three are listed in `docs/known-limitations.md` and must appear in the submission README. | Marco |
