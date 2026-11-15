@@ -695,3 +695,61 @@ Validation: `cd web && npx vitest run && npx tsc --noEmit && npm run lint` passe
 or chain calls were made. `git pull --ff-only origin main` could not access the
 shared worktree's `FETCH_HEAD` due to sandbox metadata permissions; no merge or
 push performed.
+
+## 2026-11-15 — Pot metadata reconciliation endpoint
+
+Done: added `POST /api/pots/reconcile`. It validates the shared title/member-email
+rules plus exactly one recovery identifier, resolves the signed-in wallet through
+read-only `getWalletUser`, checks Circle transaction ownership/state when given a
+Circle ID, fetches the Arc receipt, verifies `PotCreated` organizer and the exact
+on-chain member-address set, then persists metadata/invites. Existing metadata is
+returned idempotently; a unique insert race re-reads the winning invite token.
+The existing create route's `CreatePending` 502 and metadata-failure 503 response
+bodies were left unchanged.
+
+Files changed: `web/app/api/pots/{schema.ts,reconcile/route.ts,reconcile.test.ts}`,
+`web/lib/circle/{read.ts,transactions.ts,receipt.ts}`, this handoff.
+
+TDD: the new route suite first failed to resolve the absent route (14 tests), then
+passed after implementation. Tests exercise 401, neither/both IDs, Circle wallet
+ownership, nonterminal/terminal Circle state, missing receipt, organizer mismatch,
+member mismatch, first write, existing row, unique-violation race, DB failure, and
+transactionHash input. Full suite includes those 14 tests.
+
+### Lane 4 contract
+
+| Request | Response | Meaning |
+|---|---|---|
+| `POST {title, memberEmails, circleTransactionId}` | `202 {error:"StillPending", message:"Still confirming. Checking again shortly."}` | Circle is not `COMPLETE`, or the receipt is not available yet. |
+| Same, Circle terminal failure | `409 {error:"CreateFailed", message:"The pot was not created. It is safe to try again."}` | Circle state is `FAILED`, `CANCELLED`, `DENIED`, or `STUCK`, or receipt reverted. |
+| `POST {title, memberEmails, transactionHash}` | `201 {potId, inviteToken}` | First successful metadata and invite persistence. |
+| Either valid request for a pot already in `pot_meta` | `200 {potId, inviteToken}` | Existing token returned; metadata not inserted again. |
+| Invalid body / neither or both identifiers | `400 {message}` | Zod validation failed. |
+| No session email | `401 {error:"Unauthorized"}` | Authentication required. |
+| Caller has no wallet, Circle transaction belongs to another wallet, or chain organizer differs | `403 {error:"NoWallet"}` or `{error:"Forbidden"}` | Caller cannot reconcile this pot. |
+| Email has no wallet or requested wallet set differs from chain | `422 {error:"MembersMismatch"}` | Invite list does not match on-chain members. |
+| Database write fails | `503 {message:"Could not save the pot yet. Try again."}` | Retry reconciliation; do not create another pot. |
+
+The hash form requires `0x` plus exactly 32 bytes of hex. `memberEmails` follows
+`createPotSchema`: 1–20 normalized, valid, unique emails.
+
+Gates:
+```text
+$ cd web && npx vitest run
+ Test Files  23 passed (23)
+      Tests  316 passed (316)
+
+$ cd web && npx tsc --noEmit
+(no output; exit 0)
+
+$ cd web && npm run lint
+> web@0.1.0 lint
+> eslint
+(exit 0)
+
+$ cd web && npm run build
+Failed: next/font could not fetch Geist and Geist Mono from Google Fonts in the
+sandbox. Retried with network access; Turbopack then failed creating a process
+because binding to a port is not permitted (os error 1). Build remains blocked by
+the environment, not by a reported application diagnostic.
+```
