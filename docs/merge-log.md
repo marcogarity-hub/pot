@@ -103,3 +103,8 @@
 ## 2026-11-15 — lane/wallet (createPot reconcile endpoint)
 - Landed: POST /api/pots/reconcile {title, memberEmails, circleTransactionId | transactionHash}. Read-only caller lookup; Circle tx must belong to the caller's wallet; COMPLETE → receipt → PotCreated organizer = caller; invite emails' wallets must equal on-chain members; idempotent pot_meta/pot_invites write (200 existing, 201 new, 23505 race re-read). 202 StillPending, 409 CreateFailed, 422 MembersMismatch, 503 transient.
 - Gates: vitest 318/318, tsc, lint, build OK on main. Conductor (Opus) review round 1 CHANGES (transient lookup/RPC errors mapped to 422) → fixed → APPROVE. Worker: Codex gpt-6-luna.
+
+## 2026-11-15 — lane/ui (design pass 4.1 + create-pot recovery client)
+- Landed: theme (warm off-white, deep green primary, success/warning tokens, AA), Bricolage Grotesque headings + Geist body, tabular money; status screen header/bar/member chips/state sentence; join preview ("You'll join as…", client-only "You're in", no on-chain effect); receipt card with explorer link; CreatePotForm polls /api/pots/reconcile on 502 CreatePending or 503 {potId, transactionHash}, locks on stop/timeout.
+- Gates: vitest 347/347, tsc, lint, build OK on main. Conductor (Opus) review APPROVE (Expired label = Frozen without receipt_hash, verified against Pot.expire). Worker: Claude Haiku.
+- Follow-ups: create's generic 502 {transactionHash} (receipt parse failure) isn't auto-recovered; real 375px check and signed-in screens need the e2e run; dark mode not reviewed.
