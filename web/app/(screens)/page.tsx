@@ -31,7 +31,7 @@ async function HomeContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Your pots</h1>
+        <h1 className="font-heading text-3xl font-semibold tracking-tight">Your pots</h1>
         <Link href="/new" className={linkButton({ size: 'sm' })}><Plus /> New pot</Link>
       </div>
       <PotList pots={(rows ?? []) as unknown as PotSummary[]} />
@@ -45,17 +45,18 @@ async function HomeContent() {
 
 function SignedOut() {
   return (
-    <div className="space-y-6 py-8">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Chip in together. Nobody is in until their money is locked in.</h1>
+    <div className="space-y-8 py-6">
+      <div className="space-y-4">
+        <p className="inline-flex rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">Group payments, locked in USDC</p>
+        <h1 className="font-heading text-4xl font-semibold leading-[1.05] tracking-tight">Chip in together. Nobody is in until their money is locked in.</h1>
         <p className="text-muted-foreground">
           Pot collects an equal share from everyone in USDC. The money stays locked until the organizer asks for it,
           and members can object before it&apos;s released. If the pot doesn&apos;t fill by the deadline, everyone gets their money back.
         </p>
       </div>
-      <div className="flex flex-col gap-2">
-        <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg' })}>Start a pot</Link>
-        <Link href="/sign-in" className={linkButton({ size: 'lg', variant: 'outline' })}>Sign in</Link>
+      <div className="flex flex-col gap-3">
+        <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg', className: 'h-12 rounded-xl text-base' })}>Start a pot</Link>
+        <Link href="/sign-in" className={linkButton({ size: 'lg', variant: 'outline', className: 'h-12 rounded-xl text-base' })}>Sign in</Link>
       </div>
     </div>
   );

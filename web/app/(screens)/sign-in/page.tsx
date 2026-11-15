@@ -10,7 +10,7 @@ export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
     <Screen>
       <Card>
         <CardHeader>
-          <CardTitle>Sign in to Pot</CardTitle>
+          <CardTitle className="font-heading text-xl">Sign in to Pot</CardTitle>
           <CardDescription>We&apos;ll email you a link. Use the address your organizer invited.</CardDescription>
         </CardHeader>
         <CardContent>

@@ -133,3 +133,54 @@ $ npm run lint                     # exit 0
 ### Notes for the conductor
 - The server still sends no `email` in the 404 body, so `no-wallet` carries no email. The client handles one if it arrives. Adding it is a route change in `web/app/api/`, which is outside this lane.
 - The no-pot signed-out sign-in button is now `linkButton({ size: 'sm' })` and no longer full width. This is a small visual change.
+
+## Task 4.1 design pass and Task B create-pot recovery (2026-11-15)
+
+Branch `lane/ui`, from main `1eefee0`. Not merged or pushed.
+
+### Done
+- **Theme (globals.css):** the neutral greyscale is replaced with one palette. Token names are unchanged, and `success` and `warning` (with `-foreground` and `-soft`) are added.
+  - Light: background `#faf8f4` (warm off-white), foreground `#17201c`, card `#ffffff`, primary `#0d5c47` (deep "money" green), accent `#e2f2ea`, muted `#f1eee8` / muted-foreground `#5a6661`, destructive `#b42318`, success `#17724a` on `#e0f3e8`, warning `#8a5300` on `#fcf0d9`, ring `#1f8a67`, input border `#8f887b`, radius 0.875rem.
+  - Contrast (WCAG, computed): body text 15.7:1, muted text 5.6:1, primary button text 8.0:1, success/warning/destructive text 5.1 to 6.6:1, focus ring 4.1:1, input border 3.2:1 (UI boundary).
+  - Dark: opt-in only, via `.dark` or `data-theme="dark"`. It does **not** follow the OS setting, because the app has no dark-mode testing yet.
+- **Fonts (layout.tsx):** headings and big money numbers use Bricolage Grotesque (`--font-display`, via `next/font/google`). Body stays Geist. Money figures use the `.money` class (tabular-nums). Metadata title is now "Pot". The build loads both fonts.
+- **Status screen (`/pots/[potId]`):** a state chip with one plain sentence about what happens next. A big "X USDC of Y USDC" header, a 16px-tall rounded bar, "N of M paid", and time left. Members list with initials avatars, email, and a Paid / Not paid / Refunded chip. Actions sit at the bottom as full-width buttons. The status labels changed: Collecting is now **Funding**, and Paid out is now **Released** (both on the status screen and in the home list).
+- **Expired:** the contract has no Expired state. `expire` sets Frozen and emits a separate event. The UI shows **Expired** for a Frozen pot with no receipt hash (only `requestRelease` writes one; an all-zero hash counts as none). A frozen pot after an objection keeps the Frozen label.
+- **Join (`/join/[token]`):** a signed-in invitee now sees a preview (pot name, your share, organizer email when known, "You'll join as <email>", one "Join pot" button). The old immediate redirect is gone. Joining writes nothing on-chain. The "You're in!" state is client-only and links to "Go to pot". The organizer line is omitted when the email is unknown. `potSummary` in `invite.server.ts` reads the share and organizer email with the admin client.
+- **Confirmation (PotActions):** after any settled action, a receipt card shows a check, the amount (pay and refund only), "to <pot>" or "from <pot>", the date and time the page received the result, and the transaction hash shortened as the confirmation code. The code links to `https://explorer.testnet.arc.io/tx/<hash>` (the same URL as `chain.ts`). It is omitted when no hash came back. The time is the browser's clock at the moment of success. It is not on-chain time.
+- **/new and home:** sections are labeled "Step n of 3". Every field, validation message and submit path is unchanged. Home has a larger landing headline. The list uses the new progress bar and card surfaces.
+- **Sign-in:** same system (heading font and card title only).
+- **Task B: create-pot recovery.** `CreatePotForm` handles `502 CreatePending` (with `circleTransactionId`) and `503` with both `potId` and `transactionHash`. Both go to `reconcile.ts`, which posts to `/api/pots/reconcile` with exactly one id and polls every 5 s on 202/503/network errors, for up to 120 s.
+  - 201/200 → `router.push(/pots/<id>)`. 409 → form re-enabled with "The pot wasn't created. You can try again." 422/403/401 → locked, with a do-not-resubmit message. Timeout → locked, with a do-not-resubmit message and "refresh your pot list" advice.
+  - No double submit: a ref blocks repeat submits while finishing, and the button is disabled. The form stays locked after an unrecoverable outcome.
+  - `api.ts`: `postJson` failures now include `body`, so the other fields (`circleTransactionId`, `potId`, `transactionHash`) are readable. Existing callers are unaffected.
+  - Until Lane 2 ships `/api/pots/reconcile`, a 404 is treated as retryable, so recovery will poll for 2 minutes and then show the timeout message.
+
+### Files changed
+- `web/app/globals.css`, `web/app/layout.tsx`
+- `web/app/(screens)/page.tsx`, `sign-in/page.tsx`, `join/[inviteToken]/page.tsx`
+- `web/components/pot/`: `api.ts` (+ `api.test.ts` new), `reconcile.ts` (new) + `reconcile.test.ts` (new), `CreatePotForm.tsx` + `CreatePotForm.test.tsx` (new), `PotStatus.tsx`, `ProgressBar.tsx`, `MemberList.tsx` (+ `MemberList.test.tsx` new), `potState.ts` (new) + `potState.test.ts` (new), `PotActions.tsx` + `PotActions.test.tsx` (3 confirmation tests added), `JoinPreview.tsx` (new) + `JoinPreview.test.tsx` (new), `invite.server.ts` (`potSummary`), `PotList.tsx`, `Screen.tsx`
+- `docs/handoffs/ui-screenshots/*.png` (overwritten, see below)
+
+### Tests (TDD: each new test failed first for the expected reason, then passed)
+```
+$ cd web && npx vitest run
+ Test Files  28 passed (28)
+      Tests  331 passed (331)      # baseline 22 files / 302 tests
+$ npx tsc --noEmit                 # exit 0
+$ npm run lint                     # exit 0
+$ npm run build                    # exit 0 (Compiled successfully; 12/12 static pages)
+```
+Raw output is in `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/gate-*.txt`. Also covered: the CreatePending → poll → redirect path, the 503 path, 409, 422, the 2-minute timeout, no double submit, and the reconcile loop's cancel-on-unmount.
+
+### Screenshots
+- Overwrote `home-signed-out.png`, `new.png`, `sign-in.png`, `pot-0-signed-out-390.png`, `join-bad-token.png`. These are signed-out views.
+- **Not 375px.** Headless Chrome here (both `--headless=new` and `old`) lays out at about 500px whatever `--window-size` says. A 375px crop shows a cut-off 500px layout, so I didn't use one. The files are 500px-wide renders of the real layout. Playwright isn't installed, and I did not install it.
+
+### Not done / blockers
+- **Status, join preview, "You're in", and the receipt card were not checked with real data.** That needs a session plus a real pot, which is the conductor's end-to-end step. The screenshots only cover signed-out screens.
+- **Real 375px phone-width check** still needs a browser that honors small windows (Playwright or a device emulator). The layout is `max-w-md` with `px-4` and `w-full`, so it should degrade to 375px, but I have not seen that.
+- **Lane 2:** `/api/pots/reconcile` does not exist in this worktree yet. The client codes against the contract. Until it lands, recovery times out.
+- **Lane 2 (for the conductor):** the expired-vs-frozen split uses `receipt_hash`. If the projection writes a receipt for an expired pot, the label will be wrong.
+- **Dark mode:** opt-in only. Needs a visual pass before it is used.
+- `Countdown.tsx` still exports the old `Countdown` component, which nothing imports now. Left in place to keep the change small.

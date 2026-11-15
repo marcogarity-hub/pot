@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { linkButton } from '@/components/pot/linkButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { resolveInvite } from '@/components/pot/auth';
-import { inviteTitle, lookupInvite } from '@/components/pot/invite.server';
+import { inviteTitle, lookupInvite, potSummary } from '@/components/pot/invite.server';
+import { JoinPreview } from '@/components/pot/JoinPreview';
 import { Screen } from '@/components/pot/Screen';
 import { SignInForm } from '@/components/pot/SignInForm';
 import { SignOutButton } from '@/components/pot/SignOutButton';
@@ -40,7 +40,13 @@ async function JoinGate({ token }: { token: string }) {
   }
 
   const outcome = resolveInvite(await lookupInvite(token, data.user.email));
-  if (outcome.kind === 'pot') redirect(`/pots/${outcome.potId}`);
+  if (outcome.kind === 'pot') {
+    const summary = await potSummary(outcome.potId);
+    return (
+      <JoinPreview potId={outcome.potId} title={summary.title ?? 'a pot'} amount={summary.amount}
+        organizerEmail={summary.organizerEmail} email={data.user.email} />
+    );
+  }
   if (outcome.kind === 'not-found') return <NotFound />;
   if (outcome.kind === 'left') return <NoLongerMember />;
   return (

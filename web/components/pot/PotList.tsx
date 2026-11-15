@@ -11,29 +11,30 @@ export type PotSummary = {
 };
 
 const LABEL: Record<number, string> = {
-  [PotState.Funding]: 'Collecting', [PotState.Locked]: 'Locked', [PotState.PayoutRequested]: 'Payout requested',
-  [PotState.Released]: 'Paid out', [PotState.Frozen]: 'Frozen',
+  [PotState.Funding]: 'Funding', [PotState.Locked]: 'Locked', [PotState.PayoutRequested]: 'Payout requested',
+  [PotState.Released]: 'Released', [PotState.Frozen]: 'Frozen',
 };
 
 export function PotList({ pots }: { pots: PotSummary[] }) {
   if (pots.length === 0) {
-    return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No pots yet. Create one, or open an invite link a friend sent you.</p>;
+    return <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">No pots yet. Create one, or open an invite link a friend sent you.</p>;
   }
   return (
-    <ul className="divide-y rounded-xl border">
+    <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
       {pots.map(p => {
         const active = p.members.filter(m => m.active).length;
         const paid = p.members.filter(m => m.has_paid && !m.has_refunded).length;
         return (
           <li key={p.pot_id}>
-            <Link href={`/pots/${p.pot_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+            <Link href={`/pots/${p.pot_id}`} className="flex items-center gap-3 px-4 py-4 transition-colors hover:bg-muted/60">
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate font-medium">{p.title ?? `Pot #${p.pot_id}`}</p>
                   <Badge variant={p.state === PotState.Frozen ? 'destructive' : 'outline'}>{LABEL[p.state] ?? 'Unknown'}</Badge>
                 </div>
-                <Progress value={active ? Math.round((paid / active) * 100) : 0} aria-label={`${paid} of ${active} paid`} />
-                <p className="text-xs text-muted-foreground tabular-nums">
+                <Progress value={active ? Math.round((paid / active) * 100) : 0} aria-label={`${paid} of ${active} paid`}
+                  className="gap-0 [&_[data-slot=progress-track]]:h-2" />
+                <p className="money text-xs text-muted-foreground">
                   {paid} of {active} paid · {formatUnits(BigInt(p.total), 18)} USDC{p.is_organizer ? ' · You organize' : ''}
                 </p>
               </div>

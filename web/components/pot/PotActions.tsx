@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
 import { formatUnits } from 'viem';
 import { arcTestnet } from '@/lib/pot/chain';
@@ -19,7 +19,9 @@ const ROUTES: Record<Action, string> = {
   swap: 'swap', finalize: 'finalize', expire: 'expire',
 };
 
-type Done = { action: Action; txHash?: string };
+const BIG = 'h-12 w-full rounded-xl text-base';
+
+type Done = { action: Action; txHash?: string; at: Date };
 
 export function PotActions({ potId, actions, status, onSettled }: {
   potId: string; actions: Action[]; status: PotStatusRow; onSettled(): void;
@@ -46,14 +48,14 @@ export function PotActions({ potId, actions, status, onSettled }: {
     pendingRef.current = false;
     setPending(null);
     if (!res.ok) { setError(res.message); return; }
-    setDone({ action, txHash: res.data.transactionHash });
+    setDone({ action, txHash: res.data.transactionHash, at: new Date() });
     if (action === 'requestRelease') setReceipt('');
     if (action === 'swap') { setLeaver(''); setReplacement(''); }
     onSettled();
   }
 
-  if (done && (done.action === 'pay' || done.action === 'refund')) {
-    return <Confirmation done={done} amount={share} onDone={() => setDone(null)} />;
+  if (done) {
+    return <Confirmation done={done} title={status.title ?? `Pot #${status.pot_id}`} amount={share} onDone={() => setDone(null)} />;
   }
 
   const busy = pending !== null;
@@ -63,13 +65,13 @@ export function PotActions({ potId, actions, status, onSettled }: {
   return (
     <div className="space-y-4">
       {actions.includes('pay') && (
-        <Button size="lg" className="w-full" disabled={busy} onClick={() => run('pay')}>
+        <Button size="lg" className={BIG} disabled={busy} onClick={() => run('pay')}>
           {label('pay', `Pay ${share} USDC`, 'Paying…')}
         </Button>
       )}
 
       {actions.includes('refund') && (
-        <Button size="lg" variant="outline" className="w-full" disabled={busy} onClick={() => run('refund')}>
+        <Button size="lg" variant="outline" className={BIG} disabled={busy} onClick={() => run('refund')}>
           {label('refund', `Get my ${share} USDC back`, 'Refunding…')}
         </Button>
       )}
@@ -83,7 +85,7 @@ export function PotActions({ potId, actions, status, onSettled }: {
             <p className="text-xs text-muted-foreground">
               Members see this and have {formatWindow(status.objection_window_seconds)} to object before the money is released to you.
             </p>
-            <Button className="w-full" disabled={busy || receiptTrimmed.length === 0 || receiptTrimmed.length > 500}
+            <Button className={BIG} disabled={busy || receiptTrimmed.length === 0 || receiptTrimmed.length > 500}
               onClick={() => run('requestRelease', { receiptText: receiptTrimmed })}>
               {label('requestRelease', 'Request payout', 'Requesting…')}
             </Button>
@@ -92,13 +94,13 @@ export function PotActions({ potId, actions, status, onSettled }: {
       )}
 
       {actions.includes('object') && (
-        <Button size="lg" variant="destructive" className="w-full" disabled={busy} onClick={() => run('object')}>
+        <Button size="lg" variant="destructive" className={BIG} disabled={busy} onClick={() => run('object')}>
           {label('object', 'Object to this payout', 'Objecting…')}
         </Button>
       )}
 
       {actions.includes('finalize') && (
-        <Button size="lg" className="w-full" disabled={busy} onClick={() => run('finalize')}>
+        <Button size="lg" className={BIG} disabled={busy} onClick={() => run('finalize')}>
           {label('finalize', 'Finalize payout', 'Finalizing…')}
         </Button>
       )}
@@ -106,14 +108,14 @@ export function PotActions({ potId, actions, status, onSettled }: {
       {actions.includes('expire') && (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">The organizer didn&apos;t request the payout in time. Expiring the pot opens refunds for everyone who paid.</p>
-          <Button variant="outline" className="w-full" disabled={busy} onClick={() => run('expire')}>
+          <Button variant="outline" className={BIG} disabled={busy} onClick={() => run('expire')}>
             {label('expire', 'Expire pot and open refunds', 'Expiring…')}
           </Button>
         </div>
       )}
 
       {actions.includes('swap') && (
-        <details className="rounded-lg border p-3 text-sm">
+        <details className="rounded-2xl border bg-card p-4 text-sm">
           <summary className="cursor-pointer font-medium">Replace a member</summary>
           <div className="mt-3 space-y-3">
             <div className="space-y-1">
@@ -125,7 +127,7 @@ export function PotActions({ potId, actions, status, onSettled }: {
               <Input id="replacement" type="email" value={replacement} onChange={e => setReplacement(e.target.value)} placeholder="new@example.com" />
             </div>
             <p className="text-xs text-muted-foreground">If the leaving member already paid, they get their share back.</p>
-            <Button variant="outline" className="w-full" disabled={busy || !leaver.trim() || !replacement.trim()}
+            <Button variant="outline" className={BIG} disabled={busy || !leaver.trim() || !replacement.trim()}
               onClick={() => run('swap', { leaverEmail: leaver.trim().toLowerCase(), replacementEmail: replacement.trim().toLowerCase() })}>
               {label('swap', 'Swap seat', 'Swapping…')}
             </Button>
@@ -133,33 +135,72 @@ export function PotActions({ potId, actions, status, onSettled }: {
         </details>
       )}
 
-      {done && done.action !== 'pay' && done.action !== 'refund' && (
-        <p className="text-sm text-muted-foreground" role="status">Done. The page updates when the chain confirms.</p>
-      )}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
 
-function Confirmation({ done, amount, onDone }: { done: Done; amount: string; onDone(): void }) {
+const HEADING: Record<Action, string> = {
+  pay: 'You paid',
+  refund: 'Refunded to your wallet',
+  requestRelease: 'Payout requested',
+  object: 'Objection recorded',
+  finalize: 'Payout finalized',
+  expire: 'Refunds are open',
+  swap: 'Seat swapped',
+};
+
+/**
+ * Receipt for a settled action. Amount and pot name come from the pot; the time is when this page
+ * received the result; the code is the transaction hash, and it is omitted if the server sent none.
+ */
+function Confirmation({ done, title, amount, onDone }: { done: Done; title: string; amount: string; onDone(): void }) {
+  const hasAmount = done.action === 'pay' || done.action === 'refund';
+  const explorer = `${arcTestnet.blockExplorers.default.url}/tx/${done.txHash}`;
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { cardRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); }, []);
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
-        <CircleCheck className="size-12 text-primary" aria-hidden />
-        <p className="text-sm text-muted-foreground">{done.action === 'pay' ? 'You paid' : 'Refunded to your wallet'}</p>
-        <p className="text-3xl font-semibold tabular-nums">{amount} USDC</p>
+    <Card ref={cardRef}>
+      <CardContent className="flex flex-col items-center gap-5 px-5 py-8 text-center">
+        <span aria-hidden className="grid size-16 place-items-center rounded-full bg-success-soft text-success">
+          <CircleCheck className="size-9" />
+        </span>
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-muted-foreground" role="status">{HEADING[done.action]}</p>
+          {hasAmount && <p className="money font-heading text-5xl font-semibold tracking-tight">{`${amount} USDC`}</p>}
+          <p className="text-sm">
+            {hasAmount && (done.action === 'pay' ? 'to ' : 'from ')}
+            <span className="font-medium">{title}</span>
+          </p>
+        </div>
+
+        <dl className="w-full divide-y rounded-2xl border text-left text-sm">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <dt className="text-muted-foreground">Date</dt>
+            <dd className="money text-right">{formatWhen(done.at)}</dd>
+          </div>
+          {done.txHash && (
+            <div className="flex items-center justify-between gap-4 px-4 py-3">
+              <dt className="text-muted-foreground">Confirmation</dt>
+              <dd>
+                <a className="money font-mono font-medium underline underline-offset-4" href={explorer} target="_blank" rel="noreferrer">
+                  {shortHash(done.txHash)}
+                </a>
+              </dd>
+            </div>
+          )}
+        </dl>
+
         {done.action === 'pay' && <p className="text-sm text-muted-foreground">Your share is locked in the pot until it releases or refunds.</p>}
-        {done.txHash && (
-          <a className="text-xs text-muted-foreground underline underline-offset-4"
-            href={`${arcTestnet.blockExplorers.default.url}/tx/${done.txHash}`} target="_blank" rel="noreferrer">
-            View transaction
-          </a>
-        )}
-        <Button className="mt-2 w-full" onClick={onDone}>Done</Button>
+        <Button size="lg" className={BIG} onClick={onDone}>Done</Button>
       </CardContent>
     </Card>
   );
 }
+
+const shortHash = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
+
+const formatWhen = (d: Date) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
 
 export function formatWindow(seconds: number): string {
   if (seconds % 86400 === 0) return `${seconds / 86400} day${seconds === 86400 ? '' : 's'}`;
