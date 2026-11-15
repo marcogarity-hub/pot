@@ -4,7 +4,7 @@ import { potInterface } from './contract';
 
 export async function getPotReceipt(hash: Hex) {
   const { chain } = potInterface();
-  const client = createPublicClient({ chain, transport: http('https://rpc.testnet.arc.io') });
+  const client = createPublicClient({ chain, transport: http() });
   try { return await client.getTransactionReceipt({ hash }); }
   catch (error) {
     if (error && typeof error === 'object' && 'name' in error && error.name === 'TransactionReceiptNotFoundError') return null;

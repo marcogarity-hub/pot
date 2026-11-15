@@ -753,3 +753,13 @@ sandbox. Retried with network access; Turbopack then failed creating a process
 because binding to a port is not permitted (os error 1). Build remains blocked by
 the environment, not by a reported application diagnostic.
 ```
+
+## Conductor review — round 1 (2026-11-15)
+
+Done: reconciliation now returns retryable 503 for member-wallet lookup and
+`readPot` failures; 422 remains for missing/duplicate/invalid member wallets or
+an on-chain member-set mismatch. Receipt reads use the chain's default RPC.
+Added regression coverage for lookup and RPC failures.
+
+Validation: `cd web && npx vitest run && npx tsc --noEmit && npm run lint`
+passed (23 files, 318 tests; no TypeScript diagnostics; ESLint exit 0).

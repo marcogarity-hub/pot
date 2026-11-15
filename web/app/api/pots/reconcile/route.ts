@@ -56,17 +56,24 @@ export async function POST(request: Request) {
     potId = event.potId.toString();
   } catch { return failed(); }
 
+  let memberUsers;
+  try { memberUsers = await Promise.all(body.memberEmails.map(email => getWalletUser(email))); }
+  catch { return Response.json({ message: 'Could not verify the pot yet. Try again.' }, { status: 503 }); }
+  if (memberUsers.some(user => !user)) return Response.json({ error: 'MembersMismatch' }, { status: 422 });
+
   let expected: string[];
-  try {
-    const memberUsers = await Promise.all(body.memberEmails.map(email => getWalletUser(email)));
-    if (memberUsers.some(user => !user)) return Response.json({ error: 'MembersMismatch' }, { status: 422 });
-    expected = memberUsers.map(user => validAddress(user!.wallet_address).toLowerCase());
-    if (new Set(expected).size !== expected.length) return Response.json({ error: 'MembersMismatch' }, { status: 422 });
-    const pot = await readPot(BigInt(potId));
-    const onchain = (pot.members ?? []).map(member => validAddress(member).toLowerCase());
-    if (pot.organizer.toLowerCase() !== caller.wallet_address.toLowerCase()) return Response.json({ error: 'Forbidden' }, { status: 403 });
-    if (onchain.length !== expected.length || onchain.some(address => !expected.includes(address))) return Response.json({ error: 'MembersMismatch' }, { status: 422 });
-  } catch { return Response.json({ error: 'MembersMismatch' }, { status: 422 }); }
+  try { expected = memberUsers.map(user => validAddress(user!.wallet_address).toLowerCase()); }
+  catch { return Response.json({ error: 'MembersMismatch' }, { status: 422 }); }
+  if (new Set(expected).size !== expected.length) return Response.json({ error: 'MembersMismatch' }, { status: 422 });
+
+  let pot;
+  try { pot = await readPot(BigInt(potId)); }
+  catch { return Response.json({ message: 'Could not verify the pot yet. Try again.' }, { status: 503 }); }
+  if (pot.organizer.toLowerCase() !== caller.wallet_address.toLowerCase()) return Response.json({ error: 'Forbidden' }, { status: 403 });
+  let onchain: string[];
+  try { onchain = (pot.members ?? []).map(member => validAddress(member).toLowerCase()); }
+  catch { return Response.json({ error: 'MembersMismatch' }, { status: 422 }); }
+  if (onchain.length !== expected.length || onchain.some(address => !expected.includes(address))) return Response.json({ error: 'MembersMismatch' }, { status: 422 });
 
   const admin = createAdminSupabase();
   try {
