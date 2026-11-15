@@ -1,30 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import { cn } from 'cn';
 import { PotState } from '@/lib/pot/chain';
 import { usePot, type PotStatusRow } from '@/lib/realtime/usePot';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { linkButton } from '@/components/pot/linkButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { availableActions, verifiedReceipt } from './actions';
 import { useAutoFinalize } from './autoFinalize';
-import { Countdown, useNow } from './Countdown';
+import { formatRemaining, useNow } from './Countdown';
 import { InviteLink } from './InviteLink';
 import { MemberList } from './MemberList';
 import type { MeState } from './meState';
 import { PotActions } from './PotActions';
 import { ProgressBar } from './ProgressBar';
+import { stateInfo, type StateTone } from './potState';
 import { useMe } from './useMe';
-
-const STATE_LABEL: Record<number, string> = {
-  [PotState.Funding]: 'Collecting',
-  [PotState.Locked]: 'Locked',
-  [PotState.PayoutRequested]: 'Payout requested',
-  [PotState.Released]: 'Paid out',
-  [PotState.Frozen]: 'Frozen',
-};
 
 export function PotStatus({ potId }: { potId: string }) {
   const { status, loading, refetch } = usePot(potId);
@@ -52,21 +45,26 @@ export function PotStatus({ potId }: { potId: string }) {
   const isOrganizer = !!ready && (!!status.is_organizer || (!!myAddress && status.organizer_address.toLowerCase() === myAddress.toLowerCase()));
   const active = status.members.filter(m => m.active);
   const inPot = status.members.filter(m => m.has_paid && !m.has_refunded).length;
+  const info = stateInfo(status);
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Badge variant={status.state === PotState.Frozen ? 'destructive' : status.state === PotState.Released ? 'secondary' : 'default'}>
-          {STATE_LABEL[status.state] ?? 'Unknown'}
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight">{status.title ?? `Pot #${status.pot_id}`}</h1>
+      <div className="space-y-3">
+        <StateChip label={info.label} tone={info.tone} />
+        <h1 className="font-heading text-3xl font-semibold tracking-tight">{status.title ?? `Pot #${status.pot_id}`}</h1>
+        <p className="text-sm text-muted-foreground">{info.next}</p>
       </div>
 
-      <ProgressBar paidCount={inPot} memberCount={active.length} share={status.share} total={status.total} />
-      <StateDetail status={status} now={now} />
+      <Card className="gap-5 py-5">
+        <CardContent>
+          <ProgressBar paidCount={inPot} memberCount={active.length} share={status.share} total={status.total}
+            aside={<TimeLeft status={status} now={now} />} />
+        </CardContent>
+      </Card>
+
+      <StateDetail status={status} />
 
       <IdentityNotice me={me} potId={potId} onRetry={retry} />
-      <PotActions potId={potId} actions={actions} status={status} onSettled={() => { void refetch(); }} />
 
       {isOrganizer && status.invite_token && status.state === PotState.Funding && (
         <>
@@ -75,13 +73,48 @@ export function PotStatus({ potId }: { potId: string }) {
         </>
       )}
 
-      <Separator />
       <section className="space-y-3">
-        <h2 className="text-sm font-medium">Members</h2>
+        <h2 className="text-sm font-semibold">Members</h2>
         <MemberList status={status} myAddress={myAddress} />
       </section>
+
+      <PotActions potId={potId} actions={actions} status={status} onSettled={() => { void refetch(); }} />
     </div>
   );
+}
+
+const TONE: Record<StateTone, string> = {
+  accent: 'bg-accent text-accent-foreground',
+  neutral: 'bg-secondary text-secondary-foreground',
+  warning: 'bg-warning-soft text-warning',
+  success: 'bg-success-soft text-success',
+  danger: 'bg-destructive/10 text-destructive',
+};
+
+export function StateChip({ label, tone }: { label: string; tone: StateTone }) {
+  return (
+    <span className={cn('inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold', TONE[tone])}>
+      <span aria-hidden className="size-2 rounded-full bg-current" />
+      {label}
+    </span>
+  );
+}
+
+/** Time left in the current step, shown beside "N of M paid". Nothing once the window has closed. */
+function TimeLeft({ status, now }: { status: PotStatusRow; now: Date }) {
+  let label: string | null = null;
+  let target: number = NaN;
+  if (status.state === PotState.Funding) { label = 'Deadline in'; target = Date.parse(status.deadline); }
+  else if (status.state === PotState.Locked && status.locked_at) {
+    label = 'Request within';
+    target = Date.parse(status.locked_at) + status.request_window_seconds * 1000;
+  } else if (status.state === PotState.PayoutRequested && status.release_eligible_at) {
+    label = 'Objections close in';
+    target = Date.parse(status.release_eligible_at);
+  }
+  const remaining = target - now.getTime();
+  if (!label || !(remaining > 0)) return null;
+  return <p className="text-muted-foreground">{label} <span className="money font-semibold text-foreground">{formatRemaining(remaining)}</span></p>;
 }
 
 /** Says why the viewer has no actions. `ready` renders nothing. */
@@ -106,38 +139,18 @@ function IdentityNotice({ me, potId, onRetry }: { me: MeState | null; potId: str
   );
 }
 
-function StateDetail({ status, now }: { status: PotStatusRow; now: Date }) {
-  switch (status.state) {
-    case PotState.Funding:
-      return <Countdown target={status.deadline} now={now} label="Deadline in" doneLabel="The deadline has passed. Anyone who paid can get a refund." />;
-    case PotState.Locked: {
-      const expiresAt = new Date(Date.parse(status.locked_at ?? '') + status.request_window_seconds * 1000).toISOString();
-      return (
-        <div className="space-y-1">
-          <p className="text-sm">Everyone paid. The money is locked until the organizer requests the payout.</p>
-          {status.locked_at && <Countdown target={expiresAt} now={now} label="Organizer must request within" doneLabel="The request window has closed. Anyone can expire the pot to open refunds." />}
-        </div>
-      );
-    }
-    case PotState.PayoutRequested: {
-      const receipt = verifiedReceipt(status.receipt_text, status.receipt_hash);
-      return (
-        <Card>
-          <CardContent className="space-y-2 text-sm">
-            <p className="text-muted-foreground">The organizer requested the payout with this receipt:</p>
-            {receipt ? <p className="whitespace-pre-wrap rounded-md bg-muted p-3 font-medium">{receipt}</p>
-              : <p className="rounded-md bg-muted p-3 text-muted-foreground">Receipt pending</p>}
-            <p className="tabular-nums">{status.objections_count} of {status.threshold} objections needed to block it</p>
-            {status.release_eligible_at && <Countdown target={status.release_eligible_at} now={now} label="Objections close in" doneLabel="The objection window has closed." />}
-          </CardContent>
-        </Card>
-      );
-    }
-    case PotState.Released:
-      return <p className="text-sm">The money was released to the organizer.</p>;
-    case PotState.Frozen:
-      return <p className="text-sm">This pot is frozen. Everyone who paid can take their share back.</p>;
-    default:
-      return null;
-  }
+/** Extra detail for states that need it: the payout receipt and objection count. */
+function StateDetail({ status }: { status: PotStatusRow }) {
+  if (status.state !== PotState.PayoutRequested) return null;
+  const receipt = verifiedReceipt(status.receipt_text, status.receipt_hash);
+  return (
+    <Card>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">The organizer requested the payout with this receipt:</p>
+        {receipt ? <p className="whitespace-pre-wrap rounded-xl bg-muted p-3 font-medium">{receipt}</p>
+          : <p className="rounded-xl bg-muted p-3 text-muted-foreground">Receipt pending</p>}
+        <p className="money">{status.objections_count} of {status.threshold} objections needed to block it</p>
+      </CardContent>
+    </Card>
+  );
 }

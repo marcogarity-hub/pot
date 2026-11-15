@@ -76,3 +76,27 @@ describe('PotActions', () => {
     }));
   });
 });
+
+describe('PotActions confirmation', () => {
+  const hash = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+
+  it('shows the amount, the pot name, the time, and the transaction as a short confirmation code', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactionHash: hash }), { status: 200 })));
+    render(<PotActions potId="7" actions={['pay']} status={{ ...status, title: 'Cabin weekend' }} onSettled={() => {}} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    expect(screen.getByText('100 USDC')).toBeInTheDocument();
+    expect(screen.getByText('Cabin weekend')).toBeInTheDocument();
+    expect(screen.getByText('Date')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /0x1234.*cdef/ });
+    expect(link).toHaveAttribute('href', `https://explorer.testnet.arc.io/tx/${hash}`);
+    expect(link).toHaveTextContent('0x1234…cdef');
+  });
+
+  it('omits the confirmation code when the server returned no hash', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })));
+    render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText(/you paid/i)).toBeInTheDocument();
+  });
+});

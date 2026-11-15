@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
 import type { CreatePotBody } from '@/app/api/pots/schema';
@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { postJson } from './api';
+import { postJson, type ApiResult } from './api';
+import { reconcilePot, TIMEOUT_MESSAGE, type ReconcileInput, type ReconcileOutcome } from './reconcile';
 import { deriveShare, MAX_MEMBERS, normalizeEmail, validateCreate, type CreateErrors } from './validate';
 import { WindowField, type Preset } from './WindowField';
 
@@ -34,6 +35,16 @@ export function CreatePotForm() {
   const [errors, setErrors] = useState<CreateErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Set while a create or its recovery is in flight. Blocks every second submit, even before React re-renders.
+  const submittingRef = useRef(false);
+  const [finishing, setFinishing] = useState(false);
+  // Set when recovery gave up. The form stays locked: the pot may exist, and a second create could duplicate it.
+  const [stuckMessage, setStuckMessage] = useState<string | null>(null);
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => { unmountedRef.current = true; };
+  }, []);
 
   const filled = emails.map(normalizeEmail).filter(Boolean);
   const share = deriveShare(total, filled.length);
@@ -51,20 +62,43 @@ export function CreatePotForm() {
     };
   };
 
+  function release() {
+    submittingRef.current = false;
+    setSubmitting(false);
+    setFinishing(false);
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (submitting) return;
+    if (submittingRef.current || stuckMessage) return;
     setSubmitError(null);
     const input = body();
     const result = validateCreate(input, new Date());
     if (!result.ok) { setErrors(result.errors); return; }
     setErrors({});
+    submittingRef.current = true;
     setSubmitting(true);
     const res = await postJson<{ potId: string; inviteToken: string }>('/api/pots', input);
     if (res.ok) { router.push(`/pots/${res.data.potId}`); return; }
-    setSubmitting(false);
-    if (res.status === 401) { router.push('/sign-in?next=/new'); return; }
-    setSubmitError(res.message);
+    if (res.status === 401) { release(); router.push('/sign-in?next=/new'); return; }
+    const pending = recoveryInput(res, input);
+    if (!pending) { release(); setSubmitError(res.message); return; }
+    setFinishing(true);
+    const outcome = await reconcilePot(pending, { isCancelled: () => unmountedRef.current });
+    finish(outcome);
+  }
+
+  function finish(outcome: ReconcileOutcome) {
+    if (outcome.kind === 'created') { router.push(`/pots/${outcome.potId}`); return; }
+    if (outcome.kind === 'cancelled') { release(); return; }
+    if (outcome.kind === 'not-created') {
+      release();
+      setSubmitError("The pot wasn't created. You can try again.");
+      return;
+    }
+    // stop or timeout: keep the form locked so the pot can't be created twice.
+    setFinishing(false);
+    setStuckMessage(outcome.kind === 'stop' ? outcome.message : TIMEOUT_MESSAGE);
   }
 
   const setEmail = (i: number, v: string) => setEmails(list => list.map((e, j) => (j === i ? v : e)));
@@ -73,7 +107,8 @@ export function CreatePotForm() {
     <form onSubmit={onSubmit} noValidate className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>What&apos;s the pot for?</CardTitle>
+          <StepLabel n={1} />
+          <CardTitle className="font-heading text-xl">What&apos;s the pot for?</CardTitle>
           <CardDescription>Nobody is in until their money is locked in.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -95,7 +130,8 @@ export function CreatePotForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Who&apos;s in?</CardTitle>
+          <StepLabel n={2} />
+          <CardTitle className="font-heading text-xl">Who&apos;s in?</CardTitle>
           <CardDescription>Add each member&apos;s email, including yours if you&apos;re paying a share. Up to {MAX_MEMBERS}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -121,7 +157,8 @@ export function CreatePotForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Rules</CardTitle>
+          <StepLabel n={3} />
+          <CardTitle className="font-heading text-xl">Rules</CardTitle>
           <CardDescription>These are written into the contract and can&apos;t change later.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -147,12 +184,38 @@ export function CreatePotForm() {
         </CardContent>
       </Card>
 
+      {finishing && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Your pot is being confirmed on-chain. This can take up to two minutes. Please don&apos;t submit again.
+        </p>
+      )}
+      {stuckMessage && <p role="alert" className="text-sm text-destructive">{stuckMessage}</p>}
       {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}
-      <Button type="submit" size="lg" className="w-full" disabled={submitting}>
-        {submitting ? 'Creating pot…' : 'Create pot'}
+      <Button type="submit" size="lg" className="h-12 w-full rounded-xl text-base" disabled={submitting || stuckMessage !== null}>
+        {finishing ? 'Finishing up your pot…' : submitting ? 'Creating pot…' : 'Create pot'}
       </Button>
     </form>
   );
+}
+
+/**
+ * Create returned a pot that may already exist on-chain. Returns the reconcile request for it, or null
+ * when the error is a plain failure the user can retry. Only Lane 2's CreatePending (502) and the
+ * 503 with potId + transactionHash are recoverable this way.
+ */
+function recoveryInput(res: Extract<ApiResult<unknown>, { ok: false }>, input: { title: string; memberEmails: string[] }): ReconcileInput | null {
+  const { title, memberEmails } = input;
+  if (res.status === 502 && res.body.error === 'CreatePending' && typeof res.body.circleTransactionId === 'string') {
+    return { title, memberEmails, circleTransactionId: res.body.circleTransactionId };
+  }
+  if (res.status === 503 && typeof res.body.potId === 'string' && typeof res.body.transactionHash === 'string') {
+    return { title, memberEmails, transactionHash: res.body.transactionHash };
+  }
+  return null;
+}
+
+function StepLabel({ n }: { n: number }) {
+  return <p className="text-xs font-semibold uppercase tracking-wider text-primary">Step {n} of 3</p>;
 }
 
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: React.ReactNode }) {

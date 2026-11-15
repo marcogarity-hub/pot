@@ -1,5 +1,6 @@
 import 'server-only';
 import { createAdminSupabase } from '@/lib/supabase/admin';
+import { formatUnits } from 'viem';
 import type { InviteLookup, MemberState } from './auth';
 
 /** Resolves an invite token with the admin client (the caller isn't a member yet, so RLS would hide it). */
@@ -32,4 +33,22 @@ export async function lookupInvite(token: string, email: string): Promise<Invite
 export async function inviteTitle(token: string): Promise<string | null | undefined> {
   const { data } = await createAdminSupabase().from('pot_meta').select('title').eq('invite_token', token).maybeSingle();
   return data ? (data as { title: string | null }).title : undefined;
+}
+
+/** Pot name, share and organizer email for the join preview. Any field the projection hasn't filled is null. */
+export async function potSummary(potId: string): Promise<{ title: string | null; amount: string | null; organizerEmail: string | null }> {
+  const db = createAdminSupabase();
+  const [{ data: status }, { data: meta }] = await Promise.all([
+    db.from('pot_status').select('share::text,organizer_address').eq('pot_id', potId).maybeSingle(),
+    db.from('pot_meta').select('title').eq('pot_id', potId).maybeSingle(),
+  ]);
+  const row = status as { share: string; organizer_address: string } | null;
+  const organizerEmail = row?.organizer_address
+    ? ((await db.from('users').select('email').ilike('wallet_address', row.organizer_address).maybeSingle()).data as { email: string } | null)?.email ?? null
+    : null;
+  return {
+    title: (meta as { title: string | null } | null)?.title ?? null,
+    amount: row?.share ? formatUnits(BigInt(row.share), 18) : null,
+    organizerEmail,
+  };
 }
