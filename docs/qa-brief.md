@@ -3,7 +3,7 @@
 ## For Marco (read this part, then delete it before pasting)
 
 1. Ask me (the conductor) to create the QA pot. Tell me which email address you will use as the test account. I make a small pot with that email as a member and give you the **invite link**.
-2. Fill in the two placeholders below: `marcogarity@gmail.com` and `https://pot-pink.vercel.app/join/GPDkEyt40PKB5sB-GE42wT7V0Lw5s6ZIUpZgDIRkcV8`.
+2. Fill in the two placeholders below: `<<TEST_EMAIL>>` and `<<INVITE_LINK>>`. Edit a COPY outside this repository (File > Save As in TextEdit, or paste into a note). Never save real values over this file: the repository is going public.
 3. Sign-in emails you a **code** (a number of about 6 to 10 digits; it may be 8). Make sure custom SMTP and the code-only email templates are set up first, or the email will not contain a code.
 4. Grok will stop at sign-in and ask you for the code. Read it from your email and tell Grok the code. It types it into the page itself, so no link has to be opened and mail scanners cannot use the code up.
 5. Paste everything below the line into Grok Bot. When it finishes, paste its report into `docs/qa.md` and tell me. I tag each issue by lane and severity.

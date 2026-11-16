@@ -160,6 +160,7 @@ Environment variables (`web/.env.example`):
 | `PREFUND_DAILY_CAP` | daily cap on gas top-ups |
 | `NEXT_PUBLIC_POT_ADDRESS`, `POT_DEPLOY_BLOCK` | the deployed contract and its first block |
 | `QUICKNODE_STREAM_TOKEN` | authenticates the Stream's webhook calls |
+| `QUICKNODE_API_KEY` | only for `scripts/quicknode-stream.mjs` (creating and restarting the Stream). Keep it in `web/.env.local`; the deployed app does not need it |
 | `NEXT_PUBLIC_APP_URL` | optional: the app's public URL. If unset, the app uses the address it is served from (sign-in links) |
 
 Secrets live only in `.env.local` (git-ignored) and in the Vercel project settings. The contract deploy key is local to `contracts/.env` and is never deployed.
@@ -183,7 +184,7 @@ web/         Next.js app (App Router, TypeScript, Tailwind, shadcn/ui, viem)
   app/api/     route handlers: pots, wallet, streams
   lib/         pot ABI and chain config, Circle and relayer helpers
 supabase/    migrations
-scripts/     demo funding, event replay (backfill), QuickNode Stream setup
+scripts/     demo funding, event replay (backfill), QuickNode Stream setup, test-data cleanup
 docs/        brief, approved design spec and amendments, handoffs, merge log
 ```
 
@@ -199,7 +200,7 @@ These are accepted on purpose for the hackathon build; details in [`docs/known-l
 - **Rate limits** on pot creation are counted per server instance.
 - **Testnet only.**
 
-The contract was reviewed independently three times: a model reviewer during development, an adversarial Codex review, and a separate security review in Cursor (`docs/handoffs/contract-cursor-review.md`, with our triage of each finding). The Cursor review found no way to steal or misdirect funds, and its four findings are the limitations above. We chose not to redeploy the contract for them; see spec amendment A17.
+The contract was reviewed independently three times: a model reviewer during development, an adversarial Codex review, and a separate security review in Cursor (`docs/handoffs/contract-cursor-review.md`, with our triage of each finding). The Cursor review found no way for anyone to take funds from a pot. It rated one finding High (a pot whose organizer is a smart contract that rejects payments can get stuck, which the app cannot create because every organizer is a Circle EOA wallet) and gave three lower findings; all four are listed in the limitations above. We chose not to redeploy the contract for them; see spec amendment A17.
 
 ## How this was built
 
