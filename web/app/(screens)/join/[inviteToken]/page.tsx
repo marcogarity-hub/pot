@@ -6,6 +6,7 @@ import { linkButton } from '@/components/pot/linkButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { resolveInvite } from '@/components/pot/auth';
 import { inviteTitle, lookupInvite, potSummary } from '@/components/pot/invite.server';
+import { claimUser } from '@/lib/circle/identity';
 import { JoinPreview } from '@/components/pot/JoinPreview';
 import { Screen } from '@/components/pot/Screen';
 import { LinkNotice } from '@/components/pot/LinkNotice';
@@ -45,6 +46,11 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
 
   const outcome = resolveInvite(await lookupInvite(token, user.email));
   if (outcome.kind === 'pot') {
+    try {
+      await claimUser(user.id, user.email);
+    } catch (err) {
+      console.error('[join] claim skipped:', JSON.stringify({ name: err instanceof Error ? err.name : 'UnknownError' }));
+    }
     const summary = await potSummary(outcome.potId);
     return (
       <JoinPreview potId={outcome.potId} title={summary.title ?? 'a pot'} amount={summary.amount}
