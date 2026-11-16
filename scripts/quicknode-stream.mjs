@@ -5,6 +5,7 @@
 //   node scripts/quicknode-stream.mjs test   [--block 72510574]
 //   node scripts/quicknode-stream.mjs create --url https://<app>/api/streams [--name pot-events] [--yes] [--no-write-env]
 //   node scripts/quicknode-stream.mjs status
+//   node scripts/quicknode-stream.mjs activate [--name pot-events]   (restart a paused or terminated Stream)
 //
 // `create` is a dry run unless --yes is passed. On --yes it creates the Stream, reads back the
 // auto-generated security token, and saves it as QUICKNODE_STREAM_TOKEN in web/.env.local.
@@ -25,7 +26,7 @@ const TOKEN_ENV = 'QUICKNODE_STREAM_TOKEN';
 // Streams that follow the chain tip on such networks, and recommends elastic batching.
 const BATCH_SIZE = 5;
 const USAGE =
-  'Usage: node scripts/quicknode-stream.mjs test [--block N] | create --url https://<app>/api/streams [--name pot-events] [--yes] [--no-write-env] | status';
+  'Usage: node scripts/quicknode-stream.mjs test [--block N] | create --url https://<app>/api/streams [--name pot-events] [--yes] [--no-write-env] | status | activate [--name pot-events]';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webDir = path.resolve(here, '..', 'web');
@@ -269,6 +270,19 @@ async function cmdStatus() {
   }
 }
 
+async function cmdActivate(args) {
+  const list = await qn('GET', '/streams?limit=100');
+  if (list.status >= 300) throw new Error(describeError(list));
+  const stream = (list.json.data ?? []).find(s => s.name === args.name);
+  if (!stream) throw new Error(`No stream named "${args.name}"`);
+  console.log(`Stream ${stream.name}: status ${stream.status}, sequence ${stream.sequence ?? 'n/a'}`);
+  const res = await qn('POST', `/streams/${stream.id}/activate`);
+  console.log(`activate: HTTP ${res.status}`);
+  if (res.status >= 300) throw new Error(describeError(res));
+  const after = await qn('GET', `/streams/${stream.id}`);
+  console.log(`Now: status ${after.json.status}, sequence ${after.json.sequence ?? 'n/a'}`);
+}
+
 export async function run(argv) {
   try {
     const args = parseArgs(argv);
@@ -280,6 +294,7 @@ export async function run(argv) {
     if (args.command === 'test') await cmdTest(args);
     else if (args.command === 'create') await cmdCreate(args);
     else if (args.command === 'status') await cmdStatus();
+    else if (args.command === 'activate') await cmdActivate(args);
     else throw new Error(`Unknown command: ${args.command}`);
     return 0;
   } catch (error) {
