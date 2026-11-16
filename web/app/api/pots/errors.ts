@@ -16,6 +16,7 @@ export const messages: Record<string, string> = {
   InvalidParams: 'Check the pot details and try again.', ZeroAddress: 'A wallet address is missing or invalid.',
   DuplicateMember: 'Each member must have a different email address.', NotImplemented: 'That action is not available yet.',
   ReentrancyGuardReentrantCall: 'That action is already being processed.',
+  RequestWindowClosed: 'The time to request the payout has passed.',
 };
 
 const fieldLabels: Record<string, string> = { title: 'Name', total: 'Total', memberEmails: 'Members', deadline: 'Deadline', threshold: 'Objection threshold', objectionWindowSeconds: 'Objection window', requestWindowSeconds: 'Request window' };

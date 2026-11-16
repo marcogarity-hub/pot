@@ -9,11 +9,39 @@ vi.mock('@/lib/circle/identity',()=>({ensureUser:m.ensureUser,claimUser:m.claimU
 vi.mock('@/lib/circle/tx',async original=>({...await original<typeof import('@/lib/circle/tx')>(),callPot:m.callPot}));
 vi.mock('server-only',()=>({}));
 import { POST } from './route';
+import { createPotSchema, MAX_DEADLINE_SECONDS } from './schema';
+import { validationMessage } from './errors';
 import { createPotLimiter } from './limiter';
 const address='0x1111111111111111111111111111111111111111';
 const members=Array.from({length:8},(_,i)=>`friend${i}@x.com`);
 const body=()=>({title:'Airbnb',total:'2400',memberEmails:members,deadline:new Date(Date.now()+86400000).toISOString(),threshold:5,objectionWindowSeconds:120,requestWindowSeconds:120});
 const post=(data:unknown)=>POST(new Request('https://pot.test/api/pots',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)}));
+it('accepts a deadline exactly at the one-year limit',()=>{
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-16T12:00:00Z'));
+ const nowSeconds=Math.floor(Date.now()/1000);
+ const deadline=new Date((nowSeconds+MAX_DEADLINE_SECONDS)*1000).toISOString();
+ expect(createPotSchema.safeParse({...body(),deadline}).success).toBe(true);
+ vi.useRealTimers();
+});
+it('rejects a deadline one second beyond the one-year limit with a labelled message',()=>{
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-16T12:00:00Z'));
+ const nowSeconds=Math.floor(Date.now()/1000);
+ const deadline=new Date((nowSeconds+MAX_DEADLINE_SECONDS+1)*1000).toISOString();
+ const result=createPotSchema.safeParse({...body(),deadline});
+ expect(result.success).toBe(false);
+ if (!result.success) {
+  expect(result.error.issues[0].message).toBe('Deadline must be within one year');
+  expect(validationMessage(result.error.issues[0])).toBe('Deadline: Deadline must be within one year');
+ }
+ vi.useRealTimers();
+});
+it('keeps the existing past-deadline validation message',()=>{
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-16T12:00:00Z'));
+ const result=createPotSchema.safeParse({...body(),deadline:'2000-01-01T00:00:00Z'});
+ expect(result.success).toBe(false);
+ if (!result.success) expect(result.error.issues[0].message).toBe('Deadline must be in the future');
+ vi.useRealTimers();
+});
 beforeEach(()=>{
  vi.clearAllMocks();createPotLimiter.clear();process.env.NEXT_PUBLIC_POT_ADDRESS=address;
  m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:{id:'auth-id',email:' Organizer@x.com '}}})}});
@@ -24,6 +52,16 @@ beforeEach(()=>{
  m.callPot.mockResolvedValue({transactionHash:'0x1234',logs:[{address,topics,data}]});
 });
 it('requires a session',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await post(body())).status).toBe(401);expect(m.ensureUser).not.toHaveBeenCalled();});
+it('rejects a far-future deadline with the labelled one-year message',async()=>{
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-16T12:00:00Z'));
+ const nowSeconds=Math.floor(Date.now()/1000);
+ const deadline=new Date((nowSeconds+MAX_DEADLINE_SECONDS+86400)*1000).toISOString();
+ const response=await post({...body(),deadline});
+ expect(response.status).toBe(400);
+ expect(await response.json()).toEqual({message:'Deadline: Deadline must be within one year'});
+ expect(m.ensureUser).not.toHaveBeenCalled();
+ vi.useRealTimers();
+});
 it('rejects the sixth create in an hour',async()=>{for(let i=0;i<5;i++)expect((await post(body())).status).toBe(201);expect((await post(body())).status).toBe(429);expect(m.callPot).toHaveBeenCalledTimes(5);});
 it('requires an evenly divisible total',async()=>{const response=await post({...body(),total:'100',memberEmails:members.slice(0,3),threshold:2});expect(response.status).toBe(400);expect(await response.json()).toMatchObject({message:'Total: Total must divide evenly by the number of members'});expect(m.ensureUser).not.toHaveBeenCalled();});
 it.each([{field:'title',value:'',expected:'Name: Too small: expected string to have >=1 characters'},{field:'total',value:'abc',expected:'Total: Use a USDC amount with at most 18 decimal places'}])('labels create validation errors',async({field,value,expected})=>{const response=await post({...body(),[field]:value});expect(response.status).toBe(400);expect(await response.json()).toEqual({message:expected});});

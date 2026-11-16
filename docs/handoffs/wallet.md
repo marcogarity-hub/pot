@@ -814,3 +814,43 @@ If you are offline or behind a proxy, self-host the font with next/font/local, o
 ```
 
 Blocker: build depends on network access to Google Fonts, unavailable in this environment. No changes outside Lane 2 ownership; no merge or push.
+
+## 2026-11-16 — Create deadline cap and payout request error copy
+
+Done: `createPotSchema` now limits deadlines to `MAX_DEADLINE_SECONDS` (365 days)
+from the current whole-second timestamp, while retaining the existing future
+deadline check and message. Added the `RequestWindowClosed` user-facing message.
+Tests cover the exact limit, one second over, past-deadline wording, labeled
+validation copy, and a far-future POST response.
+
+Files changed: `web/app/api/pots/{schema.ts,errors.ts,route.test.ts,errors.test.ts}`;
+this handoff.
+
+TDD: new tests first failed for missing `MAX_DEADLINE_SECONDS`/cap behavior and
+missing `RequestWindowClosed` copy; all focused regressions then passed.
+
+Required gates (command exit 1 due to build):
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+ Test Files  30 passed (30)
+      Tests  356 passed (356)
+TypeScript: no diagnostics; exit 0
+> web@0.1.0 lint
+> eslint
+(exit 0)
+> web@0.1.0 build
+> next build
+▲ Next.js 16.4.6 (Turbopack)
+  Creating an optimized production build ...
+Turbopack build encountered 1 warning:
+[next]/internal/font/google/bricolage_grotesque_d13dde08.module.css
+Warning: Error while requesting resource
+There was an issue establishing a connection while requesting https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@200..800&display=swap
+Build error occurred
+Error: Turbopack build failed with 1 error:
+[next]/internal/font/google/bricolage_grotesque_d13dde08.module.css
+Error: next/font: error:
+Failed to fetch Bricolage Grotesque from Google Fonts.
+```
+
+`git diff --check` passed. No live wallet/chain operations, merge, or push.
