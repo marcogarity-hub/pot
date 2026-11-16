@@ -9,6 +9,14 @@
       "Bash(git diff:*)",
       "Bash(git log:*)"
     ],
-    "deny": ["Read(./.env)", "Read(./.env.*)"]
-  }
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
+  },
+  "model": "sonnet",
+  "effortLevel": "high"
 }

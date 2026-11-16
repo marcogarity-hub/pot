@@ -2,7 +2,8 @@
 name: reviewer
 description: Reviews a lane's diff against AGENTS.md, the spec, and lane file ownership. Use before any merge to main.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: haiku
+effort: medium
 ---
 Review the current branch's diff against main. Check, in order:
 1. Every changed file is owned by this lane (AGENTS.md table). Flag anything outside it, plus package.json, lockfiles and shared config.

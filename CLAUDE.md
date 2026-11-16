@@ -7,7 +7,7 @@
 
 ## Delegation
 - The orchestrator reads at most 3 files itself. Beyond that, send a scout.
-- Every dispatch names a model explicitly.
+- Every dispatch names a model explicitly: subagents run on Haiku at medium effort (pass model haiku + effort medium); the orchestrator runs Sonnet at high effort. Codex lane workers stay on gpt-6-luna unless Marco says otherwise.
 - Subagents return at most ~200 words. Anything longer goes in .agent-out/<task>.md, and they return the path.
 - Give subagents specific file paths, never "read the whole repo."
 - Max 5 subagents running at once. Review loops stop after 2 rounds.
