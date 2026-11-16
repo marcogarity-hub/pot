@@ -7,20 +7,23 @@ import { resolveInvite } from '@/components/pot/auth';
 import { inviteTitle, lookupInvite, potSummary } from '@/components/pot/invite.server';
 import { JoinPreview } from '@/components/pot/JoinPreview';
 import { Screen } from '@/components/pot/Screen';
+import { LinkNotice } from '@/components/pot/LinkNotice';
 import { SignInForm } from '@/components/pot/SignInForm';
 import { SignOutButton } from '@/components/pot/SignOutButton';
 
-export default function JoinPage({ params }: PageProps<'/join/[inviteToken]'>) {
+export default function JoinPage({ params, searchParams }: PageProps<'/join/[inviteToken]'>) {
   return (
     <Screen>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Checking your invite…</p>}>
-        {params.then(({ inviteToken }) => <JoinGate token={inviteToken} />)}
+        {Promise.all([params, searchParams]).then(([{ inviteToken }, sp]) => (
+          <JoinGate token={inviteToken} linkFailed={sp.error === 'link'} />
+        ))}
       </Suspense>
     </Screen>
   );
 }
 
-async function JoinGate({ token }: { token: string }) {
+async function JoinGate({ token, linkFailed }: { token: string; linkFailed: boolean }) {
   const supabase = await createServerSupabase();
   const { data } = await supabase.auth.getUser();
   const next = `/join/${encodeURIComponent(token)}`;
@@ -34,7 +37,7 @@ async function JoinGate({ token }: { token: string }) {
           <CardTitle>You&apos;re invited{title ? ` to ${title}` : ''}</CardTitle>
           <CardDescription>Sign in with the email your organizer invited to see the pot and pay your share.</CardDescription>
         </CardHeader>
-        <CardContent><SignInForm next={next} /></CardContent>
+        <CardContent className="space-y-4">{linkFailed && <LinkNotice />}<SignInForm next={next} /></CardContent>
       </Card>
     );
   }

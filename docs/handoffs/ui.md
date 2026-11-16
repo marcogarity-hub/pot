@@ -212,3 +212,38 @@ Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-
 ### Notes for the conductor
 - The max is computed when the form mounts. A page left open past midnight keeps the old max. The validator still runs on the live clock at submit, so this only affects the picker hint.
 - Users can still type a date past the max. The validator catches it, so the message is the real rule.
+
+## Email code sign-in, with link fallback (2026-11-16)
+
+Branch `lane/ui`. Not merged or pushed.
+
+### Done
+- `SignInForm` is two-step. Step 1 is unchanged: `signInWithOtp` with `emailRedirectTo: magicLinkRedirect(...)`. Step 2 shows the email and a numeric code field (`inputMode="numeric"`, `autoComplete="one-time-code"`). Non-digits are stripped and the code is capped at 10 digits. Verify with fewer than 6 digits shows a message and does not call `verifyOtp`. Verify calls `verifyOtp({ email, token, type: 'email' })` and then `router.replace(safeNext(next))` and `router.refresh()`. A wrong code shows the agreed message and keeps the field.
+- "Send a new code" has a 30-second cooldown (a 1-second interval) and calls `signInWithOtp` again. It clears the field and shows "New code sent". "Use a different email" returns to step 1. All buttons are disabled while a request is in flight. The code and email are never logged.
+- `LinkNotice` (new, `components/pot/LinkNotice.tsx`) shows the calm notice for `?error=link`. The sign-in page and the join page (not-signed-in branch, above the form) both render it. Styling matches `PotStatus` (`rounded-xl bg-muted p-3`); there is no Alert component in `ui/`.
+- `SignInFormSkeleton` and its fallback test are unchanged.
+
+### Files changed
+- `web/components/pot/SignInForm.tsx`
+- `web/components/pot/SignInForm.test.tsx` (new, 12 tests)
+- `web/components/pot/LinkNotice.tsx` (new)
+- `web/app/(screens)/sign-in/page.tsx`
+- `web/app/(screens)/join/[inviteToken]/page.tsx`
+
+### Gates (fresh run)
+```
+  Test Files  32 passed (32)
+       Tests  414 passed (414)
+$ npx tsc --noEmit          # exit 0
+$ npm run lint              # exit 0
+$ npm run build             # exit 0
+```
+Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4-vitest.txt`, `ui4-tsc.txt`, `ui4-lint.txt`, `ui4-build.txt`.
+
+### Needs another lane (Lane 2, wallet)
+- `web/app/api/wallet/callback/route.ts` does not yet redirect with `error=link`. On a failed or expired link it returns JSON 401/400. It should redirect to `/sign-in?error=link&next=<safe next>` (or `/join/<token>?error=link` for the join flow). The notice only renders once that lands. The UI reads the param and does nothing else.
+- Supabase's "Magic Link" email template should include `{{ .Token }}` so the 6-digit code appears in the email. The code length is set in the Supabase project; the field accepts 6 to 10 digits.
+
+### Notes
+- The old test "Check your email … Open it on this device" is replaced by "We emailed you a 6-digit code" with "or click the link in the email, in this same browser".
+- Testing note: the sign-in page's Suspense child only mounts inside `act`. Tests that render it wrap the render in `await act(...)`.
