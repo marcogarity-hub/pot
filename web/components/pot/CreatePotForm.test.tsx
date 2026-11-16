@@ -10,13 +10,19 @@ const json = (body: unknown, status: number) => new Response(JSON.stringify(body
 const CREATE = '/api/pots';
 const RECONCILE = '/api/pots/reconcile';
 
-function fillForm() {
+// Local wall-clock time in the format a datetime-local input uses: YYYY-MM-DDTHH:mm.
+const toLocalInput = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+function fillForm(deadline = toLocalInput(new Date(Date.now() + 30 * 24 * 3600 * 1000))) {
   fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Cabin' } });
   fireEvent.change(screen.getByLabelText('Total (USDC)'), { target: { value: '200' } });
   fireEvent.change(screen.getByLabelText('Member 1 email'), { target: { value: 'a@example.com' } });
   fireEvent.click(screen.getByRole('button', { name: /add member/i }));
   fireEvent.change(screen.getByLabelText('Member 2 email'), { target: { value: 'b@example.com' } });
-  fireEvent.change(screen.getByLabelText('Pay-in deadline'), { target: { value: '2030-01-01T10:00' } });
+  fireEvent.change(screen.getByLabelText('Pay-in deadline'), { target: { value: deadline } });
 }
 
 const submitButton = () => screen.getByRole('button', { name: /create pot|finishing up|creating pot/i });
@@ -31,6 +37,24 @@ function callsTo(fetchMock: ReturnType<typeof vi.fn>, url: string) {
 
 beforeEach(() => { vi.useFakeTimers(); push.mockClear(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+describe('CreatePotForm deadline limit', () => {
+  it('blocks a deadline more than one year away and never calls the API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<CreatePotForm />);
+    fillForm('2030-01-01T10:00');
+    await submit();
+    expect(screen.getByText('Deadline must be within one year')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sets the deadline picker max to one year from now', () => {
+    render(<CreatePotForm />);
+    const expected = toLocalInput(new Date(Date.now() + 365 * 24 * 3600 * 1000));
+    expect(screen.getByLabelText('Pay-in deadline')).toHaveAttribute('max', expected);
+  });
+});
 
 describe('CreatePotForm recovery', () => {
   it('creates the pot and goes to its page on 201', async () => {

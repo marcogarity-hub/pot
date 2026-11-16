@@ -184,3 +184,31 @@ Raw output is in `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-
 - **Lane 2 (for the conductor):** the expired-vs-frozen split uses `receipt_hash`. If the projection writes a receipt for an expired pot, the label will be wrong.
 - **Dark mode:** opt-in only. Needs a visual pass before it is used.
 - `Countdown.tsx` still exports the old `Countdown` component, which nothing imports now. Left in place to keep the change small.
+
+## Deadline cap, client side (2026-11-16)
+
+Branch `lane/ui`. Not merged or pushed. Matches the server cap that Lane 2 is adding. The contract is unchanged.
+
+### Done
+- `validate.ts`: exports `DEADLINE_MAX = 365 * 24 * 3600` (seconds). The deadline must be at most that far after now, compared in whole seconds. Past deadlines still say "Deadline must be in the future". Empty or unparsable still says "Pick a deadline". Over the limit says "Deadline must be within one year".
+- `CreatePotForm.tsx`: the datetime-local input gets `max` = now + 365 days, in the same local `YYYY-MM-DDTHH:mm` format as its value. It is read with `useSyncExternalStore` (server snapshot `undefined`), so SSR and hydration HTML match. An effect with setState fails the lint rule `react-hooks/set-state-in-effect`.
+- Tests (written first and seen failing): validator tests for empty, past, exactly 365 days (passes), one second beyond (fails with the new message), decades away, and the exported constant. Form tests: a 2030 deadline is blocked with no API call, and the `max` attribute equals now + 365 days. `fillForm` now uses a date 30 days out, because the old 2030 date would be rejected.
+
+### Files changed
+- `web/components/pot/validate.ts`, `validate.test.ts`
+- `web/components/pot/CreatePotForm.tsx`, `CreatePotForm.test.tsx`
+- `docs/handoffs/ui.md`
+
+### Gates (fresh run)
+```
+ Test Files  30 passed (30)
+      Tests  359 passed (359)
+$ npx tsc --noEmit                 # exit 0
+$ npm run lint                     # exit 0
+$ npm run build                    # exit 0 (static, partial prerender and dynamic routes listed)
+```
+Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui-gate-vitest.txt`, `ui-gate-tsc.txt`, `ui-gate-lint.txt`, `ui-gate-build.txt` in that directory.
+
+### Notes for the conductor
+- The max is computed when the form mounts. A page left open past midnight keeps the old max. The validator still runs on the live clock at submit, so this only affects the picker hint.
+- Users can still type a date past the max. The validator catches it, so the message is the real rule.

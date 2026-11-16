@@ -7,6 +7,8 @@ export const OBJECTION_MIN = 60;
 export const OBJECTION_MAX = 7 * 24 * 3600;
 export const REQUEST_MIN = 60;
 export const REQUEST_MAX = 30 * 24 * 3600;
+/** Longest allowed time from now until the pay-in deadline, in seconds. Matches the API cap. */
+export const DEADLINE_MAX = 365 * 24 * 3600;
 
 const AMOUNT = /^\d+(\.\d{1,18})?$/;
 const emailSchema = z.email();
@@ -40,7 +42,12 @@ export function validateCreate(input: CreatePotBody, now: Date): CreateResult {
 
   const deadlineMs = Date.parse(input.deadline);
   if (Number.isNaN(deadlineMs)) errors.deadline = 'Pick a deadline';
-  else if (Math.floor(deadlineMs / 1000) <= Math.floor(now.getTime() / 1000)) errors.deadline = 'Deadline must be in the future';
+  else {
+    const deadlineSeconds = Math.floor(deadlineMs / 1000);
+    const nowSeconds = Math.floor(now.getTime() / 1000);
+    if (deadlineSeconds <= nowSeconds) errors.deadline = 'Deadline must be in the future';
+    else if (deadlineSeconds > nowSeconds + DEADLINE_MAX) errors.deadline = 'Deadline must be within one year';
+  }
 
   if (!Number.isInteger(input.threshold) || input.threshold < 1 || (n > 0 && input.threshold > n)) {
     errors.threshold = `Threshold must be between 1 and ${Math.max(n, 1)}`;
