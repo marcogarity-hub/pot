@@ -15,6 +15,7 @@ const WRONG_CODE = 'That code is wrong or has expired. Check the newest email, o
 const CLAIM_FAILED = 'We could not finish signing you in. Please try again.';
 const signInWithOtp = vi.fn();
 const verifyOtp = vi.fn();
+const signInWithOAuth = vi.fn();
 const claimOk = { ok: true, status: 200, data: { ok: true } };
 
 /** Lets pending mocked promises settle inside act(), without relying on timers. */
@@ -38,13 +39,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   signInWithOtp.mockResolvedValue({ error: null });
   verifyOtp.mockResolvedValue({ error: null });
+  signInWithOAuth.mockResolvedValue({ error: null });
   api.postJson.mockReset();
   api.postJson.mockResolvedValue(claimOk);
-  vi.mocked(createBrowserSupabase).mockReturnValue({ auth: { signInWithOtp, verifyOtp } } as unknown as ReturnType<typeof createBrowserSupabase>);
+  vi.mocked(createBrowserSupabase).mockReturnValue({ auth: { signInWithOtp, verifyOtp, signInWithOAuth } } as unknown as ReturnType<typeof createBrowserSupabase>);
 });
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllEnvs();
   vi.useRealTimers();
 });
 
@@ -324,7 +327,7 @@ describe('sign-in page link-failure notice', () => {
     await act(async () => {
       render(<SignInPage params={Promise.resolve({})} searchParams={Promise.resolve({ error: 'link' })} />);
     });
-    expect(screen.getByText(/That sign-in link has expired/)).toBeTruthy();
+    expect(screen.getByText(/That sign-in did not finish/)).toBeTruthy();
     expect(document.querySelector('#email')).not.toBeNull();
   });
 
@@ -333,6 +336,96 @@ describe('sign-in page link-failure notice', () => {
       render(<SignInPage params={Promise.resolve({})} searchParams={Promise.resolve({ next: '/' })} />);
     });
     expect(document.querySelector('#email')).not.toBeNull();
-    expect(screen.queryByText(/That sign-in link has expired/)).toBeNull();
+    expect(screen.queryByText(/That sign-in did not finish/)).toBeNull();
+  });
+});
+
+describe('SignInForm Google and Apple', () => {
+  const OAUTH_FAILED = 'We could not start that sign-in. Please try again, or use the email code below.';
+
+  it('shows no provider buttons unless NEXT_PUBLIC_AUTH_PROVIDERS lists one', () => {
+    render(<SignInForm next="/" />);
+    expect(screen.queryByRole('button', { name: /continue with/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /email me a sign-in link/i })).toBeTruthy();
+  });
+
+  it('ignores unknown provider names', () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'github, facebook');
+    render(<SignInForm next="/" />);
+    expect(screen.queryByRole('button', { name: /continue with/i })).toBeNull();
+  });
+
+  it('starts Google sign-in with the callback redirect, the next path and the account chooser', () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
+    render(<SignInForm next="/join/tok" />);
+    expect(screen.queryByRole('button', { name: /continue with apple/i })).toBeNull();
+    expect(screen.queryByText(/share my email/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: magicLinkRedirect(window.location.origin, '/join/tok'), queryParams: { prompt: 'select_account' } },
+    });
+  });
+
+  it('starts Apple sign-in without Google-only parameters, and warns about hidden emails', () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'apple');
+    render(<SignInForm next="/" />);
+    expect(screen.getByText(/share my email/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /continue with apple/i }));
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'apple',
+      options: { redirectTo: magicLinkRedirect(window.location.origin, '/') },
+    });
+  });
+
+  it('shows both buttons in the order google, apple', () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'apple,google');
+    render(<SignInForm next="/" />);
+    const labels = screen.getAllByRole('button', { name: /continue with/i }).map(b => b.textContent);
+    expect(labels).toEqual(['Continue with Google', 'Continue with Apple']);
+  });
+
+  it('disables every button while redirecting, without saying the email is being sent', async () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google,apple');
+    render(<SignInForm next="/" />);
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    await settle();
+    expect((screen.getByRole('button', { name: /continue with google/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /continue with apple/i }) as HTMLButtonElement).disabled).toBe(true);
+    const emailButton = screen.getByRole('button', { name: /email me a sign-in link/i }) as HTMLButtonElement;
+    expect(emailButton.disabled).toBe(true);
+    expect(screen.queryByText('Sending…')).toBeNull();
+  });
+
+  it('shows a message and re-enables the buttons when Supabase returns an error', async () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
+    signInWithOAuth.mockResolvedValue({ error: { message: 'Unsupported provider: provider is not enabled' } });
+    render(<SignInForm next="/" />);
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    await settle();
+    expect(screen.getByRole('alert').textContent).toBe(OAUTH_FAILED);
+    expect((screen.getByRole('button', { name: /continue with google/i }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the same message when the request itself throws', async () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
+    signInWithOAuth.mockRejectedValue(new Error('network'));
+    render(<SignInForm next="/" />);
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    await settle();
+    expect(screen.getByRole('alert').textContent).toBe(OAUTH_FAILED);
+    expect((screen.getByRole('button', { name: /continue with google/i }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('re-enables the buttons when the page is restored from the back/forward cache', async () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
+    render(<SignInForm next="/" />);
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    await settle();
+    expect((screen.getByRole('button', { name: /continue with google/i }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => {
+      window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+    });
+    expect((screen.getByRole('button', { name: /continue with google/i }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

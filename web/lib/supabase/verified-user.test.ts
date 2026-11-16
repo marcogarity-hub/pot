@@ -39,6 +39,16 @@ describe('getVerifiedUser', () => {
     const user = await getVerifiedUser(client({ user: confirmed, accessToken: token({ amr: [{ method: 'otp' }] }) }));
     expect(user).toEqual({ id: 'u1', email: 'a@x.com' });
   });
+  it('accepts a Google or Apple (oauth) session for a confirmed email', async () => {
+    const user = await getVerifiedUser(client({ user: confirmed, accessToken: token({ amr: [{ method: 'oauth', provider: 'google' }] }) }));
+    expect(user).toEqual({ id: 'u1', email: 'a@x.com' });
+  });
+  it('refuses an oauth session whose provider did not confirm the email', async () => {
+    expect(await getVerifiedUser(client({ user: { ...confirmed, email_confirmed_at: null }, accessToken: token({ amr: [{ method: 'oauth' }] }) }))).toBeNull();
+  });
+  it('refuses a session that used a password even alongside oauth', async () => {
+    expect(await getVerifiedUser(client({ user: confirmed, accessToken: token({ amr: [{ method: 'oauth' }, { method: 'password' }] }) }))).toBeNull();
+  });
   it('refuses a password session, even for a confirmed email', async () => {
     expect(await getVerifiedUser(client({ user: confirmed, accessToken: token({ amr: [{ method: 'password' }] }) }))).toBeNull();
   });

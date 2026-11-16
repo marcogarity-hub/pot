@@ -4,7 +4,20 @@ export function safeNext(next: string | null | undefined): string {
   return next;
 }
 
-/** emailRedirectTo for Supabase magic links (spec Decision 4). */
+export type OAuthProvider = 'google' | 'apple';
+const OAUTH_PROVIDERS: readonly OAuthProvider[] = ['google', 'apple'];
+
+/**
+ * Parses NEXT_PUBLIC_AUTH_PROVIDERS (for example "google" or "google,apple") into the providers whose buttons
+ * show on the sign-in screen. Unknown names are dropped and unset means none, so a provider appears only after
+ * it has been enabled in Supabase and listed here. The order is always google, then apple.
+ */
+export function parseOAuthProviders(raw: string | undefined): OAuthProvider[] {
+  const wanted = new Set((raw ?? '').split(',').map(name => name.trim().toLowerCase()));
+  return OAUTH_PROVIDERS.filter(provider => wanted.has(provider));
+}
+
+/** emailRedirectTo for Supabase magic links (spec Decision 4). Also the redirectTo for Google/Apple sign-in. */
 export function magicLinkRedirect(appUrl: string, next: string | null | undefined): string {
   return `${appUrl.replace(/\/+$/, '')}/api/wallet/callback?next=${encodeURIComponent(safeNext(next))}`;
 }
