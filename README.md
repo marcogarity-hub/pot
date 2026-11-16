@@ -98,7 +98,7 @@ Script tests: `node --test scripts/*.test.mjs`.
 |---|---|
 | Network and dataset | `arc-testnet`, `logs` |
 | Filter | a JavaScript function that keeps only logs whose address is the Pot contract and returns `null` (no delivery) for every other block |
-| Batching | 5 blocks per delivery with elastic batching. Arc's blocks arrive faster than one a second, and QuickNode requires a batch of at least 5 for Streams that follow the chain tip on such networks |
+| Batching | Elastic batching, 5 blocks per delivery or the plan's maximum if that is lower (1 on the free plan, which the script detects and applies). Arc's blocks arrive faster than one a second, and QuickNode asks for a batch of at least 5 for Streams that follow the chain tip on such networks |
 | Destination | webhook to `POST /api/streams` on the deployed app, with QuickNode's auto-generated security token |
 | Start | the chain tip. History is rebuilt with the replay script above |
 

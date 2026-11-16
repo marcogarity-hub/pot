@@ -121,6 +121,12 @@ export function upsertEnvLine(text, key, value) {
   return `${text}${text === '' || text.endsWith('\n') ? '' : '\n'}${line}\n`;
 }
 
+/** Reads the plan's batch-size ceiling out of QuickNode's rejection message ("... max batch size: 5 > 1"). */
+export function parseMaxBatch(message) {
+  const m = /max batch size:\s*(\d+)\s*>\s*(\d+)/i.exec(String(message));
+  return m ? Number(m[2]) : undefined;
+}
+
 export function streamConfig({ name, url, filterSource }) {
   return {
     name,
@@ -220,7 +226,17 @@ async function cmdCreate(args) {
     return;
   }
 
-  const created = await qn('POST', '/streams', config);
+  let created = await qn('POST', '/streams', config);
+  if (created.status >= 300) {
+    // QuickNode asks tip-following Streams on fast chains for a batch of at least 5, but "or your plan's
+    // maximum if that is lower". Retry once at the plan's ceiling.
+    const planMax = parseMaxBatch(describeError(created));
+    if (planMax !== undefined && planMax >= 1 && planMax < config.dataset_batch_size) {
+      console.log(`Your QuickNode plan allows a batch size of at most ${planMax}; retrying with ${planMax}.`);
+      config.dataset_batch_size = planMax;
+      created = await qn('POST', '/streams', config);
+    }
+  }
   if (created.status >= 300) throw new Error(describeError(created));
   const id = created.json.id;
   if (!id) throw new Error('QuickNode returned no stream id');

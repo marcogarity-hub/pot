@@ -5,6 +5,7 @@ import {
   buildFilterSource,
   encodeFilter,
   parseArgs,
+  parseMaxBatch,
   streamConfig,
   upsertEnvLine,
   validateWebhookUrl,
@@ -100,4 +101,10 @@ test('streamConfig targets Arc testnet logs with a webhook and a tip-safe batch 
   assert.equal(cfg.elastic_batch_enabled, true);
   assert.equal(cfg.start_range, undefined);
   assert.equal(cfg.status, 'active');
+});
+
+test('parseMaxBatch reads the plan ceiling from QuickNode\'s rejection text', () => {
+  assert.equal(parseMaxBatch('QuickNode API returned HTTP 500: Dataset batch size is greater than max batch size: 5 > 1'), 1);
+  assert.equal(parseMaxBatch('Dataset batch size is greater than max batch size: 10 > 3'), 3);
+  assert.equal(parseMaxBatch('some other error'), undefined);
 });
