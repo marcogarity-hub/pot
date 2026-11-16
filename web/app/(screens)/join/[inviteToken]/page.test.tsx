@@ -4,12 +4,14 @@ import type { ReactElement } from 'react';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { getVerifiedUser } from '@/lib/supabase/verified-user';
 import { inviteTitle, lookupInvite, potSummary } from '@/components/pot/invite.server';
+import { claimUser } from '@/lib/circle/identity';
 import JoinPage from './page';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }) }));
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: vi.fn() }));
 vi.mock('@/lib/supabase/verified-user', () => ({ getVerifiedUser: vi.fn() }));
 vi.mock('@/lib/supabase/browser', () => ({ createBrowserSupabase: vi.fn() }));
+vi.mock('@/lib/circle/identity', () => ({ claimUser: vi.fn() }));
 vi.mock('@/components/pot/invite.server', () => ({
   inviteTitle: vi.fn(),
   lookupInvite: vi.fn(),
@@ -58,5 +60,66 @@ describe('JoinPage (JoinGate)', () => {
     expect(lookupInvite).toHaveBeenCalledWith('tok-2', 'ana@example.com');
     expect(screen.getByRole('heading', { name: /cabin weekend/i })).toBeInTheDocument();
     expect(screen.getByText(/you'll join as/i)).toHaveTextContent('ana@example.com');
+  });
+
+  describe('claiming the wallet on the pot outcome', () => {
+    beforeEach(() => {
+      vi.mocked(getVerifiedUser).mockResolvedValue({ id: 'user-9', email: 'ben@example.com' });
+      vi.mocked(lookupInvite).mockResolvedValue({ potId: '8', invited: true, isOrganizer: false, memberState: 'unknown' });
+      vi.mocked(potSummary).mockResolvedValue({ title: 'Ski trip', amount: '120', organizerEmail: 'host@example.com' });
+      vi.mocked(claimUser).mockResolvedValue(undefined);
+    });
+
+    it('calls claimUser once with the verified id and email before the preview is rendered', async () => {
+      await renderJoin('tok-3');
+      expect(claimUser).toHaveBeenCalledTimes(1);
+      expect(claimUser).toHaveBeenCalledWith('user-9', 'ben@example.com');
+      expect(vi.mocked(claimUser).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(potSummary).mock.invocationCallOrder[0],
+      );
+      expect(screen.getByRole('heading', { name: /ski trip/i })).toBeInTheDocument();
+    });
+
+    it('does not call claimUser when there is no verified user', async () => {
+      vi.mocked(getVerifiedUser).mockResolvedValue(null);
+      vi.mocked(inviteTitle).mockResolvedValue('Ski trip');
+      await renderJoin();
+      expect(claimUser).not.toHaveBeenCalled();
+    });
+
+    it('does not call claimUser for the not-found outcome', async () => {
+      vi.mocked(lookupInvite).mockResolvedValue(null);
+      await renderJoin();
+      expect(screen.getByRole('heading', { name: /invite not found/i })).toBeInTheDocument();
+      expect(claimUser).not.toHaveBeenCalled();
+    });
+
+    it('does not call claimUser for the left outcome', async () => {
+      vi.mocked(lookupInvite).mockResolvedValue({ potId: '8', invited: true, isOrganizer: false, memberState: 'inactive' });
+      await renderJoin();
+      expect(screen.getByRole('heading', { name: /no longer in this pot/i })).toBeInTheDocument();
+      expect(claimUser).not.toHaveBeenCalled();
+    });
+
+    it('swallows a claimUser rejection and still renders the preview', async () => {
+      vi.mocked(claimUser).mockRejectedValue(new Error('Identity already linked to another account'));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await renderJoin('tok-4');
+      expect(screen.getByRole('heading', { name: /ski trip/i })).toBeInTheDocument();
+      expect(screen.getByText(/you'll join as/i)).toHaveTextContent('ben@example.com');
+    });
+
+    it('logs only the error name, never the email, when the claim is skipped', async () => {
+      const err = Object.assign(new Error('could not link ben@example.com'), { name: 'IdentityConflictError' });
+      vi.mocked(claimUser).mockRejectedValue(err);
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await renderJoin('tok-5');
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith('[join] claim skipped:', JSON.stringify({ name: 'IdentityConflictError' }));
+      const logged = spy.mock.calls[0].map(String).join(' ');
+      expect(logged).toContain('IdentityConflictError');
+      expect(logged).not.toContain('ben@example.com');
+      spy.mockRestore();
+    });
   });
 });

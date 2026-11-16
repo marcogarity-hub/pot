@@ -426,3 +426,36 @@ $ npx tsc --noEmit    # exit 0 (no output)
 $ npm run lint        # exit 0
 $ npm run build       # exit 0
 ```
+
+## 2026-11-16: join page claims the wallet on sign-in (review item 5)
+
+**Problem:** a user who signed in before any invite existed had no link between their session and their `users` row. When an organizer later invited them, the join page recognised them by email, but RLS could not tie the session to the wallet, so the pot page showed "We couldn't find this pot" until a fresh sign-in.
+
+**Change:** `web/app/(screens)/join/[inviteToken]/page.tsx` (JoinGate) calls `claimUser(user.id, user.email)` from `@/lib/circle/identity` on the `pot` outcome only, before `potSummary` and `JoinPreview`. The call is wrapped in try/catch. A failure is ignored and logs only the error name: `console.error('[join] claim skipped:', JSON.stringify({ name }))`. Not called for no user, not-found, or left. Nothing else on the page changed.
+
+**Tests:** `web/app/(screens)/join/[inviteToken]/page.test.tsx` gained 6 cases, written red first (2 failed before the change, the rest passed trivially since nothing was called). They cover: one call with verified id and email, before the preview; no call without a verified user; no call for not-found; no call for left; a rejection is swallowed and the preview renders; the log line has the error name and not the email.
+
+**Files changed:** `web/app/(screens)/join/[inviteToken]/page.tsx`, `web/app/(screens)/join/[inviteToken]/page.test.tsx`, `docs/handoffs/ui.md`.
+
+**Blockers / for other lanes:** none. `claimUser` is in Lane 2 (`web/lib/circle/identity.ts`); this change only calls it. The page is a server component, so `@/lib/circle/identity` is imported server-side only.
+
+**Baseline:** before this change the suite was 486 tests in 43 files on this branch, so this adds 6.
+
+### Gates (fresh run, after the change)
+```
+$ npx vitest run
+Test Files  43 passed (43)
+Tests  492 passed (492)
+$ npx tsc --noEmit    # exit 0
+$ npm run lint        # exit 0
+> web@0.1.0 lint
+> eslint
+
+$ npm run build       # exit 0
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+
+```
