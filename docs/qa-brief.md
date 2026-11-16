@@ -3,9 +3,9 @@
 ## For Marco (read this part, then delete it before pasting)
 
 1. Ask me (the conductor) to create the QA pot. Tell me which email address you will use as the test account. I make a small pot with that email as a member and give you the **invite link**.
-2. Fill in the two placeholders below: `<<TEST_EMAIL>>` and `<<INVITE_LINK>>`.
-3. Sign-in sends a link by email. With Supabase's built-in email sender, only addresses on your Supabase team receive it, so use your own address, or set up custom SMTP first.
-4. Grok will stop at sign-in and ask you for the link. Paste it into **Grok's own browser tab, the same one it used to start signing in**. Sign-in only completes in the browser that requested it.
+2. Fill in the two placeholders below: `marcogarity@gmail.com` and `https://pot-pink.vercel.app/join/GPDkEyt40PKB5sB-GE42wT7V0Lw5s6ZIUpZgDIRkcV8`.
+3. Sign-in emails you a **code** (a number of about 6 to 10 digits; it may be 8). Make sure custom SMTP and the code-only email templates are set up first, or the email will not contain a code.
+4. Grok will stop at sign-in and ask you for the code. Read it from your email and tell Grok the code. It types it into the page itself, so no link has to be opened and mail scanners cannot use the code up.
 5. Paste everything below the line into Grok Bot. When it finishes, paste its report into `docs/qa.md` and tell me. I tag each issue by lane and severity.
 
 ---
@@ -24,8 +24,8 @@ You are testing a small web app called **Pot** the way a new user would. Your jo
 ### The path to test, in order
 
 1. Open the invite link. Describe what the first screen tells you and whether it makes sense without any explanation.
-2. Sign in with the test email address. Enter it on the sign-in page and request the sign-in link.
-3. The sign-in link is sent by email. **Stop here and ask me for it.** Tell me which page you are on and what it says. I will give you a link. Open it **in this same browser tab**.
+2. Sign in with the test email address. Enter it on the sign-in page and request the sign-in code.
+3. The code is sent by email. **Stop here and ask me for it.** Tell me which page you are on and what it says. I will give you the code. Type it into the code box on the page and press Verify. Do not open any link from the email. Report how the code step felt: is it clear what to do, and what happens if the code is wrong?
 4. After you are signed in, note what you see. Is it clear that you have been invited to a pot, how much your share is, and who organized it? Press the join button if there is one.
 5. On the pot's status page, look at the progress bar, the list of members, and the state label. Say in your own words what each one means. Is anything unclear?
 6. Press **Pay**. No wallet, card, or payment details are needed, and none should be asked for. This sends a small amount of test money. Note what happens, how long it takes, and what confirmation you get.
@@ -48,7 +48,7 @@ Also report anything that worked especially well, and any wording that was hard 
 ### Hard limits
 
 - Use only the test email address given above. Do not use any other email address.
-- When sign-in asks for a code or link, stop and ask me.
+- When sign-in asks for a code, stop and ask me. Do not open links from the email.
 - Never open GitHub, Vercel, Supabase, Circle, or QuickNode, even if a page links to them.
 - Never enter payment details, card numbers, wallet seed phrases, or private keys anywhere.
 - If you are unsure whether an action is safe or allowed, stop and ask me before doing it.

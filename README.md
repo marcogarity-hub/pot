@@ -28,7 +28,7 @@ A seat swap lets the organizer replace a member (for example, someone who can't 
 
 ```
  Browser (Next.js on Vercel)
-    │  sign in by email (Supabase Auth magic link)
+    │  sign in by email (Supabase Auth: a one-time code typed into the page, link as a fallback)
     ▼
  Route handlers  /api/pots/*  /api/wallet/*
     │  server maps email → Circle developer-controlled wallet,
@@ -160,7 +160,7 @@ Environment variables (`web/.env.example`):
 | `PREFUND_DAILY_CAP` | daily cap on gas top-ups |
 | `NEXT_PUBLIC_POT_ADDRESS`, `POT_DEPLOY_BLOCK` | the deployed contract and its first block |
 | `QUICKNODE_STREAM_TOKEN` | authenticates the Stream's webhook calls |
-| `NEXT_PUBLIC_APP_URL` | the app's public URL (magic links) |
+| `NEXT_PUBLIC_APP_URL` | optional: the app's public URL. If unset, the app uses the address it is served from (sign-in links) |
 
 Secrets live only in `.env.local` (git-ignored) and in the Vercel project settings. The contract deploy key is local to `contracts/.env` and is never deployed.
 
