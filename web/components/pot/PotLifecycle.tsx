@@ -88,7 +88,7 @@ const SR: Record<LifecycleStep['status'], string> = {
 };
 
 function Marker({ status }: { status: LifecycleStep['status'] }) {
-  if (status === 'current') return <span aria-hidden className="block size-6 border-2 border-primary bg-card" />;
+  if (status === 'current') return <span aria-hidden className="block size-6 border-2 border-primary bg-primary shadow-[inset_0_0_0_3px_var(--card)]" />;
   if (status === 'done') return <span aria-hidden className="block size-4 bg-primary" />;
   if (status === 'end') return <span aria-hidden className="block size-4 bg-destructive" />;
   return <span aria-hidden className="block size-4 border border-input bg-card" />;

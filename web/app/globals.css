@@ -166,7 +166,10 @@
   }
   input, textarea, select {
     caret-color: var(--primary);
+    accent-color: var(--primary);
   }
+  :root { color-scheme: light; }
+  .dark, :root[data-theme="dark"] { color-scheme: dark; }
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;

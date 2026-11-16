@@ -84,13 +84,16 @@ export function NeedsYou({ items }: { items: QueueItem[] }) {
   );
 }
 
-/** The two ways to begin: the form as it opens (2-minute demo windows), or with the production windows selected. */
-export function StartTiles() {
+/** The two ways to begin: the form as it opens (2-minute demo windows), or with the production windows selected. The solid blue is spent on one action: here only when nothing in Needs you is waiting. */
+export function StartTiles({ primary = true }: { primary?: boolean }) {
   return (
     <section aria-label="Start a pot" className="grid h-full gap-px border border-border bg-border">
-      <Link href="/new" className="group flex flex-col justify-between gap-6 bg-primary p-5 text-primary-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--primary),black_16%)] md:p-6">
+      <Link href="/new" className={cn(
+        'group flex flex-col justify-between gap-6 p-5 transition-colors md:p-6',
+        primary ? 'bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary),black_16%)]' : 'bg-card hover:bg-secondary/60',
+      )}>
         <span className="font-heading text-2xl font-semibold leading-tight">Start a pot</span>
-        <span className="flex items-end justify-between gap-3 text-sm">
+        <span className={cn('flex items-end justify-between gap-3 text-sm', !primary && 'text-muted-foreground')}>
           Collect equal shares from a group.
           <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>

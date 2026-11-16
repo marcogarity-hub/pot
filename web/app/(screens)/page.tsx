@@ -101,16 +101,15 @@ function SignedOut() {
     </div>
     <section aria-labelledby="how" className="space-y-3">
       <h2 id="how" className="text-lg font-semibold">How a pot works</h2>
-      <ol className="grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 md:grid-cols-4">
-        {STEPS.map(step => (
-          <li key={step.title} className="space-y-4 bg-card p-5">
-            <span className="inline-grid grid-cols-4 gap-1" aria-hidden>
-              {[0, 1, 2, 3].map(i => <span key={i} className={i < step.paid ? 'size-4 bg-primary' : 'size-4 border border-input bg-card'} />)}
+      <ol className="grid grid-cols-1 border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
+        {STEPS.map((step, i) => (
+          <li key={step.title} className="relative space-y-3 border-b border-border p-5 last:border-b-0 md:border-b-0">
+            <span className="flex items-center gap-1.5" aria-hidden>
+              {[0, 1, 2, 3].map(n => <span key={n} className={n < step.paid ? 'size-4 bg-primary' : 'size-4 border border-input bg-card'} />)}
+              <span className="money ml-auto text-xs text-muted-foreground">{i + 1} / {STEPS.length}</span>
             </span>
-            <div className="space-y-1">
-              <h3 className="font-semibold">{step.title}</h3>
-              <p className="text-sm text-muted-foreground">{step.body}</p>
-            </div>
+            <h3 className="font-semibold">{step.title}</h3>
+            <p className="text-sm text-muted-foreground">{step.body}</p>
           </li>
         ))}
       </ol>

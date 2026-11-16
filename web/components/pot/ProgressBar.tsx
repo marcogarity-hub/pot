@@ -8,7 +8,7 @@ export function ProgressBar({ paidCount, memberCount, members }: {
   return (
     <div className="space-y-4">
       <p className="money font-heading text-3xl font-semibold tracking-tight">{paidCount} of {memberCount} paid</p>
-      <MemberCells members={members} className="gap-1.5" />
+      <MemberCells members={members} size="lg" className="gap-2" />
     </div>
   );
 }

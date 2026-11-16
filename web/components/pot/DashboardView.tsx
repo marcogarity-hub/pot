@@ -25,7 +25,7 @@ export function DashboardView({ email, pots, queue, activity }: {
       <div className="space-y-8">
         <div className="grid grid-cols-1 gap-px bg-border md:grid-cols-12">
           <div className="min-w-0 md:col-span-8"><HeldSummary held={heldAmount(pots)} potCount={pots.length} needsCount={queue.length} counts={stateCounts(pots)} /></div>
-          <div className="min-w-0 md:col-span-4"><StartTiles /></div>
+          <div className="min-w-0 md:col-span-4"><StartTiles primary={queue.length === 0} /></div>
         </div>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
           <div className="min-w-0 space-y-8 md:col-span-8">
