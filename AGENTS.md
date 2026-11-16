@@ -30,3 +30,8 @@ check the ERC-20 decimals()). maxFeePerGas floor is 20 Gwei. Transfers to addres
 ## Handoffs
 When you finish a task, append to docs/handoffs/<lane>.md: done, files changed, blockers,
 anything another lane needs. Before starting, pull main and read the other lanes' handoff files.
+
+## Cursor
+- Cursor reads this file and CLAUDE.md. If you are Cursor: the Claude-only notes in CLAUDE.md do not apply to you. You are not the conductor or a lane worker.
+- Cursor runs in Ask mode by default and never edits files inside a lane worktree (../pot-*).
+- Cursor may run /review-security on contracts/. Findings go in docs/handoffs/contract-cursor-review.md. Cursor never fixes them in code.
