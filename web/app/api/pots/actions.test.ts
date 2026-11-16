@@ -1,14 +1,14 @@
 vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { keccak256, parseUnits, toBytes } from 'viem';
-const m = vi.hoisted(() => ({ server: vi.fn(), verified: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), getWalletUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
+const m = vi.hoisted(() => ({ server: vi.fn(), verified: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), getWalletUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), prefund: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: m.server }));
 vi.mock('@/lib/supabase/admin', () => ({ createAdminSupabase: m.admin }));
 vi.mock('@/lib/supabase/verified-user', () => ({ getVerifiedUser: m.verified }));
 vi.mock('@/lib/circle/identity', () => ({ ensureUser: m.ensureUser, getWalletUser: m.getWalletUser }));
 vi.mock('@/lib/circle/tx', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/circle/tx')>(), callPot: m.callPot }));
-vi.mock('@/lib/relayer', () => ({ relayerFinalize: m.finalize }));
+vi.mock('@/lib/relayer', () => ({ relayerFinalize: m.finalize, prefund: m.prefund }));
 vi.mock('viem', async importOriginal => ({ ...await importOriginal<typeof import('viem')>(), createPublicClient: () => ({ readContract: m.read, getBlock: m.block }) }));
 import { PotRevertError } from '@/lib/circle/tx';
 import { POST as pay } from './[potId]/pay/route';
@@ -18,12 +18,13 @@ import { POST as expire } from './[potId]/expire/route';
 import { POST as release } from './[potId]/request-release/route';
 import { POST as swap } from './[potId]/swap/route';
 import { POST as finalize } from './[potId]/finalize/route';
-import { toHttp } from './errors';
+import { messages, toHttp } from './errors';
 const org = '0x1111111111111111111111111111111111111111';
 const old = '0x2222222222222222222222222222222222222222';
 const replacement = '0x3333333333333333333333333333333333333333';
 const hash = `0x${'a'.repeat(64)}`;
-const pot = () => ({ organizer: org, share: parseUnits('300', 18), state: 1, threshold: BigInt(5), objectionsCount: BigInt(0), releaseEligibleAt: BigInt(1000) });
+const pot = () => ({ organizer: org, share: parseUnits('300', 18), state: 1, deadline: BigInt(5000), threshold: BigInt(5), objectionsCount: BigInt(0), releaseEligibleAt: BigInt(1000), members: [org, old] });
+const fundingPot = () => ({ ...pot(), state: 0 });
 type Handler = typeof pay;
 const post = (handler: Handler, body?: unknown, potId = '42') => handler(new Request('https://pot.test/api/pots/42', { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), { params: Promise.resolve({ potId }) });
 beforeEach(() => {
@@ -31,7 +32,7 @@ beforeEach(() => {
  m.server.mockResolvedValue({});
  m.verified.mockResolvedValue({ id: 'auth', email: ' Organizer@x.com ' });
  m.ensureUser.mockImplementation(async (email: string) => ({ circle_wallet_id: email === 'replacement@x.com' ? 'replacement-wallet' : 'caller-wallet', wallet_address: email === 'replacement@x.com' ? replacement : org }));
- m.getWalletUser.mockResolvedValue({ circle_wallet_id: 'caller-wallet', wallet_address: org });
+ m.getWalletUser.mockImplementation(async (email: string) => email === 'replacement@x.com' ? null : { circle_wallet_id: 'caller-wallet', wallet_address: org });
  m.read.mockResolvedValue(pot()); m.block.mockResolvedValue({ timestamp: BigInt(1000) });
  m.callPot.mockResolvedValue({ transactionHash: hash }); m.finalize.mockResolvedValue(hash);
  m.saved.mockResolvedValue({ data: { pot_id: '42' }, error: null }); m.leaver.mockResolvedValue({ data: { wallet_address: old }, error: null });
@@ -130,12 +131,14 @@ it('returns alreadyFinalized for Released', async () => {
  m.read.mockResolvedValue({ ...pot(), state: 3 }); const response = await post(finalize); expect(response.status).toBe(200); expect(await response.json()).toEqual({ alreadyFinalized: true }); expect(m.finalize).not.toHaveBeenCalled();
 });
 it('swaps normalized email wallets and upserts invitation after confirmation', async () => {
+ m.read.mockResolvedValue(fundingPot());
  const response = await post(swap, { leaverEmail: ' OLD@x.com ', replacementEmail: ' REPLACEMENT@x.com ' }); expect(response.status).toBe(200);
  expect(m.ensureUser).toHaveBeenCalledWith('replacement@x.com'); expect(m.callPot).toHaveBeenCalledWith('caller-wallet', 'swapSeat', [BigInt(42), old, replacement]);
  expect(m.from).toHaveBeenCalledWith('pot_invites');
  expect(m.upsert).toHaveBeenCalledWith({ pot_id: '42', address: replacement, email: 'replacement@x.com' }, { onConflict: 'pot_id,address' });
 });
 it('does not write invitation on failed swap', async () => {
+ m.read.mockResolvedValue(fundingPot());
  m.callPot.mockRejectedValue(new PotRevertError('FormerMember')); expect((await post(swap, { leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' })).status).toBe(409); expect(m.upsert).not.toHaveBeenCalled();
 });
 it.each(['-1', '1.5', 'abc', (BigInt(2) ** BigInt(256)).toString()])('rejects invalid uint256 id %s', async id => {
@@ -155,6 +158,7 @@ it('returns AlreadyPaid for the second pay', async () => {
  expect(await response.json()).toEqual({ error: 'AlreadyPaid', message: "You've already paid into this pot." });
 });
 it('keeps swap metadata untouched until confirmation', async () => {
+ m.read.mockResolvedValue(fundingPot());
  let confirm!: (value: unknown) => void;
  m.callPot.mockReturnValue(new Promise(resolve => { confirm = resolve; }));
  const response = post(swap, { leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' });
@@ -162,6 +166,7 @@ it('keeps swap metadata untouched until confirmation', async () => {
  confirm({ transactionHash: hash }); expect((await response).status).toBe(200); expect(m.upsert).toHaveBeenCalledTimes(1);
 });
 it('reports confirmed swap hash on invite persistence failure', async () => {
+ m.read.mockResolvedValue(fundingPot());
  m.upsert.mockResolvedValue({ error: { message: 'offline' } });
  const response = await post(swap, { leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' });
  expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ potId: '42', transactionHash: hash });
@@ -172,6 +177,7 @@ it('does not provision a missing leaver', async () => {
  expect(m.getWalletUser).toHaveBeenCalledTimes(1); expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled();
 });
 it('rejects invalid replacement wallets before signing', async () => {
+ m.read.mockResolvedValue(fundingPot());
  m.getWalletUser.mockResolvedValueOnce({ circle_wallet_id: 'caller', wallet_address: org }); m.ensureUser.mockResolvedValueOnce({ circle_wallet_id: 'replacement', wallet_address: `0x${'0'.repeat(40)}` });
  expect((await post(swap, { leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' })).status).toBe(400); expect(m.callPot).not.toHaveBeenCalled();
 });
@@ -234,4 +240,44 @@ it.each([pay, refund, object, expire, release, swap, finalize])('returns 503 bef
  expect(m.ensureUser).not.toHaveBeenCalled();
  expect(m.getWalletUser).not.toHaveBeenCalled();
  expect(m.read).not.toHaveBeenCalled();
+});
+
+describe('swap validates the pot before any provisioning or chain call', () => {
+ const swapBody = { leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' };
+ const expectRefusedBeforeWallets = async (code: string, response: Response) => {
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({ error: code, message: messages[code] });
+  expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled(); expect(m.prefund).not.toHaveBeenCalled();
+  expect(m.upsert).not.toHaveBeenCalled();
+ };
+ it('refuses a pot that is not in Funding', async () => {
+  m.read.mockResolvedValue({ ...fundingPot(), state: 1 });
+  await expectRefusedBeforeWallets('WrongState', await post(swap, swapBody));
+ });
+ it('refuses a pot whose chain deadline has passed', async () => {
+  m.read.mockResolvedValue(fundingPot()); m.block.mockResolvedValue({ timestamp: BigInt(5000) });
+  await expectRefusedBeforeWallets('DeadlinePassed', await post(swap, swapBody));
+ });
+ it('refuses a leaver whose wallet is not a member', async () => {
+  m.read.mockResolvedValue({ ...fundingPot(), members: [org] });
+  await expectRefusedBeforeWallets('NotMember', await post(swap, swapBody));
+ });
+ it('refuses a replacement who is already a member', async () => {
+  m.read.mockResolvedValue({ ...fundingPot(), members: [org, old, replacement] });
+  m.getWalletUser.mockImplementation(async (email: string) => email === 'replacement@x.com'
+   ? { circle_wallet_id: 'replacement-wallet', wallet_address: replacement }
+   : { circle_wallet_id: 'caller-wallet', wallet_address: org });
+  await expectRefusedBeforeWallets('DuplicateMember', await post(swap, swapBody));
+ });
+ it('refuses a replacement equal to the leaver', async () => {
+  m.read.mockResolvedValue(fundingPot());
+  await expectRefusedBeforeWallets('DuplicateMember', await post(swap, { leaverEmail: 'old@x.com', replacementEmail: 'old@x.com' }));
+ });
+ it('still provisions and signs a valid swap as before', async () => {
+  m.read.mockResolvedValue(fundingPot());
+  const response = await post(swap, swapBody);
+  expect(response.status).toBe(200);
+  expect(m.ensureUser).toHaveBeenCalledWith('replacement@x.com');
+  expect(m.callPot).toHaveBeenCalledWith('caller-wallet', 'swapSeat', [BigInt(42), old, replacement]);
+ });
 });

@@ -11,6 +11,7 @@ export type ActionPot = {
   threshold: bigint;
   objectionsCount: bigint;
   releaseEligibleAt: bigint;
+  deadline: bigint;
   members?: readonly string[];
 };
 export class PotNotFoundError extends Error {
@@ -27,7 +28,7 @@ export async function readPot(potId: bigint): Promise<ActionPot> {
   if (!pot || typeof pot.organizer !== 'string' || typeof pot.share !== 'bigint' ||
       !Number.isInteger(pot.state) || pot.state! < 0 || pot.state! > 4 ||
       typeof pot.threshold !== 'bigint' || typeof pot.objectionsCount !== 'bigint' ||
-      typeof pot.releaseEligibleAt !== 'bigint') throw new Error('Invalid getPot result');
+      typeof pot.releaseEligibleAt !== 'bigint' || typeof pot.deadline !== 'bigint') throw new Error('Invalid getPot result');
   if (pot.organizer.toLowerCase() === zeroAddress) throw new PotNotFoundError();
   validAddress(pot.organizer);
   return pot as ActionPot;

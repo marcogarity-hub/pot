@@ -81,7 +81,15 @@ export async function POST(request: Request) {
   try {
     const existing = await admin.from('pot_meta').select('invite_token').eq('pot_id', potId).maybeSingle();
     if (existing.error) throw new Error('Metadata lookup failed');
-    if (existing.data) return Response.json({ potId, inviteToken: existing.data.invite_token }, { status: 200 });
+    if (existing.data) {
+      // Backfill invites a previous attempt may have missed; existing rows are left untouched.
+      const backfill = await admin.from('pot_invites').upsert(
+        body.memberEmails.map((email, index) => ({ pot_id: potId, email, address: expected[index] })),
+        { onConflict: 'pot_id,address', ignoreDuplicates: true },
+      );
+      if (backfill.error) throw new Error('Invite backfill failed');
+      return Response.json({ potId, inviteToken: existing.data.invite_token }, { status: 200 });
+    }
     const inviteToken = randomBytes(32).toString('base64url');
     const meta = await admin.from('pot_meta').insert({ pot_id: potId, title: body.title, invite_token: inviteToken });
     if (meta.error) {

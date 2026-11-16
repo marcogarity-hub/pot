@@ -2,7 +2,7 @@ vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib
 import { beforeEach, expect, it, vi } from 'vitest';
 import { encodeAbiParameters, encodeEventTopics } from 'viem';
 import { potAbi } from '@/lib/pot';
-const m=vi.hoisted(()=>({server:vi.fn(),verified:vi.fn(),admin:vi.fn(),getWalletUser:vi.fn(),getTransaction:vi.fn(),receipt:vi.fn(),readPot:vi.fn(),insert:vi.fn(),select:vi.fn(),maybeSingle:vi.fn()}));
+const m=vi.hoisted(()=>({server:vi.fn(),verified:vi.fn(),admin:vi.fn(),getWalletUser:vi.fn(),getTransaction:vi.fn(),receipt:vi.fn(),readPot:vi.fn(),insert:vi.fn(),upsert:vi.fn(),select:vi.fn(),maybeSingle:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/supabase/verified-user',()=>({getVerifiedUser:m.verified}));
@@ -26,7 +26,8 @@ beforeEach(()=>{
  m.receipt.mockResolvedValue(eventReceipt());m.readPot.mockResolvedValue({organizer:address,members:[`0x${'2'.padStart(40,'0')}`,`0x${'3'.padStart(40,'0')}`]});
  m.maybeSingle.mockResolvedValue({data:null,error:null});m.select.mockReturnValue({eq:()=>({maybeSingle:m.maybeSingle})});
  m.insert.mockResolvedValue({error:null});
- m.admin.mockReturnValue({from:()=>({select:m.select,insert:m.insert})});
+ m.upsert.mockResolvedValue({error:null});
+ m.admin.mockReturnValue({from:()=>({select:m.select,insert:m.insert,upsert:m.upsert})});
 });
 it('requires a session and never resolves wallets',async()=>{m.verified.mockResolvedValue(null);expect((await post({...body(),transactionHash:`0x${'a'.repeat(64)}`})).status).toBe(401);expect(m.getWalletUser).not.toHaveBeenCalled();});
 it('answers 401 and reads no transaction, receipt, pot or database row when getVerifiedUser refuses the session',async()=>{
@@ -51,3 +52,25 @@ it('returns existing invite token without duplicate inserts',async()=>{m.maybeSi
 it('re-reads after unique race and returns existing token',async()=>{m.insert.mockResolvedValue({error:{code:'23505'}});m.maybeSingle.mockResolvedValueOnce({data:null,error:null}).mockResolvedValueOnce({data:{invite_token:'winner'},error:null});const r=await post({...body(),transactionHash:`0x${'a'.repeat(64)}`});expect(r.status).toBe(200);expect(await r.json()).toEqual({potId:'77',inviteToken:'winner'});});
 it('returns 503 for database failure',async()=>{m.insert.mockResolvedValue({error:{code:'XX',message:'failure'}});const r=await post({...body(),transactionHash:`0x${'a'.repeat(64)}`});expect(r.status).toBe(503);expect(await r.json()).toEqual({message:'Could not save the pot yet. Try again.'});});
 it('accepts a Circle transaction hash once complete',async()=>{const r=await post({...body(),circleTransactionId:'id'});expect(r.status).toBe(201);expect(m.receipt).toHaveBeenCalledWith(`0x${'a'.repeat(64)}`);});
+
+const inviteRows=[{pot_id:'77',email:'a@x.com',address:`0x${'2'.padStart(40,'0')}`},{pot_id:'77',email:'b@x.com',address:`0x${'3'.padStart(40,'0')}`}];
+it('backfills missing invites for an existing pot and returns the token',async()=>{
+ m.maybeSingle.mockResolvedValue({data:{invite_token:'existing'},error:null});
+ const r=await post({...body(),transactionHash:`0x${'a'.repeat(64)}`});
+ expect(r.status).toBe(200);expect(await r.json()).toEqual({potId:'77',inviteToken:'existing'});
+ expect(m.upsert).toHaveBeenCalledWith(inviteRows,{onConflict:'pot_id,address',ignoreDuplicates:true});
+ expect(m.insert).not.toHaveBeenCalled();
+});
+it('returns 503 when the invite backfill fails for an existing pot',async()=>{
+ m.maybeSingle.mockResolvedValue({data:{invite_token:'existing'},error:null});
+ m.upsert.mockResolvedValue({error:{code:'XX',message:'failure'}});
+ const r=await post({...body(),transactionHash:`0x${'a'.repeat(64)}`});
+ expect(r.status).toBe(503);expect(await r.json()).toEqual({message:'Could not save the pot yet. Try again.'});
+});
+it('leaves existing invites alone when the backfill finds them already present',async()=>{
+ m.maybeSingle.mockResolvedValue({data:{invite_token:'existing'},error:null});
+ m.upsert.mockResolvedValue({error:null});
+ const r=await post({...body(),transactionHash:`0x${'a'.repeat(64)}`});
+ expect(r.status).toBe(200);expect(await r.json()).toEqual({potId:'77',inviteToken:'existing'});
+ expect(m.upsert).toHaveBeenCalledTimes(1);
+});
