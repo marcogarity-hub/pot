@@ -107,3 +107,21 @@ it('returns a clear 503 before provisioning when the deployed address is unset',
  expect(m.ensureUser).not.toHaveBeenCalled();
  expect(m.callPot).not.toHaveBeenCalled();
 });
+
+it('logs one redacted [api/pots] line when provisioning fails and keeps the 503 body', async () => {
+ const secret='k3y-value-9876';process.env.CIRCLE_API_KEY=secret;
+ m.ensureUser.mockRejectedValueOnce(new Error(`Circle rejected ${secret} with Bearer abc123`));
+ const spy=vi.spyOn(console,'error').mockImplementation(()=>{});
+ try {
+  const response=await post(body());
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({message:'Wallet provisioning pending. Please retry shortly.'});
+  expect(spy).toHaveBeenCalledTimes(1);
+  const line=String(spy.mock.calls[0][0]);
+  expect(line.startsWith('[api/pots]')).toBe(true);
+  expect(line).not.toContain(secret);
+  expect(line).not.toContain('abc123');
+ } finally {
+  spy.mockRestore();delete process.env.CIRCLE_API_KEY;
+ }
+});
