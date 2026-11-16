@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getVerifiedUser } from '@/lib/supabase/verified-user';
 import { linkButton } from '@/components/pot/linkButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { resolveInvite } from '@/components/pot/auth';
@@ -25,10 +26,10 @@ export default function JoinPage({ params, searchParams }: PageProps<'/join/[inv
 
 async function JoinGate({ token, linkFailed }: { token: string; linkFailed: boolean }) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getUser();
+  const user = await getVerifiedUser(supabase);
   const next = `/join/${encodeURIComponent(token)}`;
 
-  if (!data.user?.email) {
+  if (!user) {
     const title = await inviteTitle(token);
     if (title === undefined) return <NotFound />;
     return (
@@ -42,12 +43,12 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
     );
   }
 
-  const outcome = resolveInvite(await lookupInvite(token, data.user.email));
+  const outcome = resolveInvite(await lookupInvite(token, user.email));
   if (outcome.kind === 'pot') {
     const summary = await potSummary(outcome.potId);
     return (
       <JoinPreview potId={outcome.potId} title={summary.title ?? 'a pot'} amount={summary.amount}
-        organizerEmail={summary.organizerEmail} email={data.user.email} />
+        organizerEmail={summary.organizerEmail} email={user.email} />
     );
   }
   if (outcome.kind === 'not-found') return <NotFound />;
@@ -56,7 +57,7 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
     <Card>
       <CardHeader>
         <CardTitle>This invite isn&apos;t for your email</CardTitle>
-        <CardDescription>You&apos;re signed in as {data.user.email}. Ask the organizer to add this address, or sign in with the one they invited.</CardDescription>
+        <CardDescription>You&apos;re signed in as {user.email}. Ask the organizer to add this address, or sign in with the one they invited.</CardDescription>
       </CardHeader>
       <CardContent className="flex gap-2">
         <SignOutButton />
