@@ -177,11 +177,15 @@ docs/        brief, approved design spec and amendments, handoffs, merge log
 
 These are accepted on purpose for the hackathon build; details in [`docs/known-limitations.md`](docs/known-limitations.md).
 
-- **Stuck-organizer payout:** if the organizer's address refused the payout transfer, the pot would stay in *Payout requested*. The app can't reach this, because every organizer is a Circle EOA wallet.
+- **Stuck-organizer payout:** if the organizer's address refused the payout transfer, the pot would stay in *Payout requested*. The app can't reach this, because every organizer is a Circle EOA wallet. The same applies to a member whose address rejects a refund.
+- **Late payout request:** after the request window ends, the organizer can still request the payout until someone calls `expire`. Members keep their objection veto.
+- **No contract-level deadline cap:** the app and API cap deadlines at 365 days; the contract itself does not.
 - **Seat swaps after others have paid** can change who is allowed to object. Paid members' money is never at risk.
 - **Custody:** see above. The operator can sign for member wallets.
 - **Rate limits** on pot creation are counted per server instance.
 - **Testnet only.**
+
+The contract was reviewed independently three times: a model reviewer during development, an adversarial Codex review, and a separate security review in Cursor (`docs/handoffs/contract-cursor-review.md`, with our triage of each finding). The Cursor review found no way to steal or misdirect funds, and its four findings are the limitations above. We chose not to redeploy the contract for them; see spec amendment A17.
 
 ## How this was built
 

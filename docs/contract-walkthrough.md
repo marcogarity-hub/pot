@@ -40,4 +40,4 @@ States: Funding (0) → Locked (1) → PayoutRequested (2) → Released (3) or F
 4. **Known gap (A16):** `finalizeRelease` to an organizer that refuses transfers leaves the pot stuck in PayoutRequested (`test_RejectingOrganizer_FinalizeReverts_KnownGap`). The app can't reach it, because organizers are Circle EOA wallets.
 5. **Access note:** `finalizeRelease` and `expire` can be called by anyone, which is by design: they only move money according to rules already fixed, so the treasury or any member can trigger them.
 
-Cursor security findings (Step 2b) will be labelled in `docs/handoffs/contract-cursor-review.md` once that file exists.
+Independent security review (Cursor, 2026-11-16): findings and our triage are in `docs/handoffs/contract-cursor-review.md`. Findings 1 and 4 extend flag 4 above; finding 2 is the late-`requestRelease` overlap noted in the `requestRelease` row; finding 3 is the missing contract-level deadline cap. All four are accepted limitations (spec amendment A17); nothing was redeployed.
