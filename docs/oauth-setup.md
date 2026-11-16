@@ -25,6 +25,18 @@ Test: open an invite link in a private window, press Continue with Google, pick 
 address was invited, and check that you land on the pot. Then open the same link signed in with a Google account
 that was not invited and check that the page says that address is not on the invite list.
 
+### If Google sign-in fails
+
+The app shows "That sign-in did not finish" for every failure, so read the reason:
+
+- **Vercel log** (the callback line `sign-in failed`): `Unable to exchange external code` means Supabase could not swap Google's one-time code for a sign-in.
+- **Supabase, Logs, Auth** (not API Gateway): the line next to it names Google's reply.
+  - `"invalid client" "The provided client secret is invalid."`: the secret Supabase holds is wrong. After pasting it, click the eye icon and check it starts exactly with `GOCSPX-`. The dashboard has been seen to add a stray character when pasting, and Save accepts it silently.
+  - `"unauthorized client"`: the code and the exchange used different clients, for example a sign-in that started while the settings were being saved. Wait 30 seconds after saving and try once.
+- **Google's own error page** `redirect_uri_mismatch`: the callback address is not registered on the client whose ID Supabase has. It goes under Authorized redirect URIs, not JavaScript origins.
+- **Which project?** The digits at the start of a client ID are the Google Cloud project number. Two projects can share a name. The client ID, its secret, the redirect address and the consent screen (Branding and Audience) must all come from the same project, and the consent screen must be **In production**.
+- Do not change settings and try a sign-in in the same few seconds.
+
 ## Apple (only if you already have a paid Apple Developer account)
 
 Apple needs the Apple Developer Program ($99 a year), a Services ID, a signing key and a client secret that
