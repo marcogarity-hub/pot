@@ -854,3 +854,27 @@ Failed to fetch Bricolage Grotesque from Google Fonts.
 ```
 
 `git diff --check` passed. No live wallet/chain operations, merge, or push.
+
+## 2026-11-16: Server-side error logging for POST /api/pots
+
+Done: `describeError` (whitelisted fields only, secrets and Bearer/API-key strings redacted, message capped at 300 chars) and `logApiError` in `web/app/api/pots/errors.ts`. One `console.error` line prefixed `[api/pots]` at: provisioning 503, final 502 around callPot (CircleTimeoutError and PotRevertError excluded), metadata-recovery 503, and the toHttp 500 fallthrough. Response bodies and statuses are unchanged.
+
+Files changed: `web/app/api/pots/errors.ts`, `web/app/api/pots/errors.test.ts`, `web/app/api/pots/route.ts`, `web/app/api/pots/route.test.ts`, `docs/handoffs/wallet.md`.
+
+Next for the deployed app: redeploy, reproduce POST /api/pots, then read the `[api/pots] provisioning failed: {...}` line in Vercel logs for Circle's real error name, status and code.
+
+Gates (run from web/):
+```text
+$ npx vitest run
+ Test Files  30 passed (30)
+      Tests  375 passed (375)
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+exit 0
+$ npm run build
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+exit 0
+```

@@ -7,7 +7,7 @@ import { callPot, CircleTimeoutError, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { createPotSchema } from './schema';
 import { createPotLimiter } from './limiter';
-import { toHttp, validationMessage } from './errors';
+import { logApiError, toHttp, validationMessage } from './errors';
 export async function POST(request: Request) {
   const supabase = await createServerSupabase();
   const session = await supabase.auth.getUser();
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     } catch { return Response.json({message:'Invalid or duplicate wallet address'},{status:400}); }
   } catch (error) {
     if (error instanceof Error && error.message === 'Identity already linked to another account') return Response.json({error:'IdentityConflict',message:'This email is linked to a different sign-in.'},{status:409});
+    logApiError('provisioning failed', error);
     return Response.json({message:'Wallet provisioning pending. Please retry shortly.'},{status:503});
   }
   let potId: string;
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof CircleTimeoutError) return Response.json({error:'CreatePending',message:'Your pot is still being created. Do not submit again — refresh in a minute.',circleTransactionId:error.circleTransactionId},{status:502});
     if (error instanceof PotRevertError) return toHttp(error);
+    logApiError('pot creation not confirmed', error);
     return Response.json({message:'Pot creation could not be confirmed. Reconcile the transaction before retrying.',...(transactionHash?{transactionHash}:{})},{status:502}); }
   const inviteToken = randomBytes(32).toString('base64url');
   try {
@@ -59,5 +61,5 @@ export async function POST(request: Request) {
     const invites = await admin.from('pot_invites').insert(body.memberEmails.map((email,index)=>({pot_id:potId,email,address:addresses[index]})));
     if (invites.error) throw new Error('Invite insert failed');
     return Response.json({potId,inviteToken},{status:201});
-  } catch { return Response.json({message:'Pot created, but metadata needs recovery. Do not create it again.',potId,transactionHash},{status:503}); }
+  } catch (error) { logApiError('metadata recovery', error); return Response.json({message:'Pot created, but metadata needs recovery. Do not create it again.',potId,transactionHash},{status:503}); }
 }
