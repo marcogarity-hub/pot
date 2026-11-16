@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { parseUnits } from 'viem';
+export const MAX_DEADLINE_SECONDS = 365 * 24 * 3600;
 const uint256Max = BigInt(2) ** BigInt(256) - BigInt(1);
 const amount = z.string().regex(/^\d+(\.\d{1,18})?$/, 'Use a USDC amount with at most 18 decimal places').refine(value => {
   if (!/^\d+(\.\d{1,18})?$/.test(value)) return false;
@@ -10,7 +11,9 @@ export const createPotSchema = z.object({
   title: z.string().trim().min(1).max(120),
   total: amount,
   memberEmails: z.array(z.string().trim().toLowerCase().email()).min(1).max(20),
-  deadline: z.iso.datetime({offset:true}).refine(value => Math.floor(Date.parse(value)/1000) > Math.floor(Date.now()/1000), 'Deadline must be in the future'),
+  deadline: z.iso.datetime({offset:true})
+    .refine(value => Math.floor(Date.parse(value)/1000) > Math.floor(Date.now()/1000), 'Deadline must be in the future')
+    .refine(value => Math.floor(Date.parse(value)/1000) <= Math.floor(Date.now()/1000) + MAX_DEADLINE_SECONDS, 'Deadline must be within one year'),
   threshold: z.number().int().min(1),
   objectionWindowSeconds: z.number().int().min(60).max(7*24*3600),
   requestWindowSeconds: z.number().int().min(60).max(30*24*3600),
