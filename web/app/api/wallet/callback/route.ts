@@ -1,20 +1,43 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { claimUser } from '@/lib/circle/identity';
 function safeNext(input: string | null): string {
-  if (!input || !input.startsWith('/') || input.startsWith('//') || /[\\\u0000-\u0020]/.test(input)) return '/';
+  if (!input || !input.startsWith('/') || input.startsWith('//') || /[\\\u0000- ]/.test(input)) return '/';
   try {
     const decoded = decodeURIComponent(input);
-    if (decoded.startsWith('//') || /[\\\u0000-\u0020]/.test(decoded)) return '/';
+    if (decoded.startsWith('//') || /[\\\u0000- ]/.test(decoded)) return '/';
   } catch { return '/'; }
   return input;
 }
+const PROVIDER_ERROR_PARAMS = ['error', 'error_code', 'error_description'];
+const MAX_SUPABASE_CODE_LENGTH = 40;
+function shortCode(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 && value.length <= MAX_SUPABASE_CODE_LENGTH ? value : null;
+}
+/** Logs one redacted line (reason and short Supabase code only) and sends the user back to the sign-in page. */
+function signInFailed(request: Request, reason: 'missing_code' | 'provider_error' | 'exchange_failed', supabaseCode: string | null, next: string | null): Response {
+  console.error('[api/wallet/callback] sign-in failed:', JSON.stringify({ reason, supabaseCode }));
+  const target = new URL('/sign-in', request.url);
+  target.searchParams.set('error', 'link');
+  if (next) target.searchParams.set('next', next);
+  return Response.redirect(target, 302);
+}
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const nextParam = url.searchParams.get('next');
+  const validNext = nextParam !== null && safeNext(nextParam) === nextParam ? nextParam : null;
+  if (PROVIDER_ERROR_PARAMS.some(p => url.searchParams.has(p))) {
+    return signInFailed(request, 'provider_error', shortCode(url.searchParams.get('error_code')), validNext);
+  }
   const code = url.searchParams.get('code');
-  if (!code) return Response.json({ error: 'Missing authorization code' },{status:400});
+  if (!code) return signInFailed(request, 'missing_code', null, validNext);
   const supabase = await createServerSupabase();
-  const exchanged = await supabase.auth.exchangeCodeForSession(code);
-  if (exchanged.error) return Response.json({ error: 'Sign-in failed' },{status:401});
+  let exchanged;
+  try {
+    exchanged = await supabase.auth.exchangeCodeForSession(code);
+  } catch {
+    return signInFailed(request, 'exchange_failed', null, validNext);
+  }
+  if (exchanged.error) return signInFailed(request, 'exchange_failed', shortCode(exchanged.error.code), validNext);
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user?.email) return Response.json({ error: 'Sign-in failed' },{status:401});
   try { await claimUser(data.user.id,data.user.email); }
