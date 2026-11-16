@@ -106,7 +106,7 @@ $ cd web && npx vitest run lib/circle lib/relayer app/api/pots app/api/wallet
   - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
- RUN  v5.1.0 /Users/marcogarity/code/pot-wallet/web
+ RUN  v5.1.0 ~/code/pot-wallet/web
 
  Test Files  4 passed (4)
       Tests  47 passed (47)
@@ -177,7 +177,7 @@ $ cd web && npx vitest run && npx tsc --noEmit && npm run lint
   - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
- RUN  v5.1.0 /Users/marcogarity/code/pot-wallet/web
+ RUN  v5.1.0 ~/code/pot-wallet/web
 
  Test Files  4 passed (4)
       Tests  58 passed (58)
@@ -193,7 +193,7 @@ integration items remain. No merge or push performed.
 
 Commit blocker: the requested git add/commit command failed before staging with:
 ```text
-fatal: Unable to create '/Users/marcogarity/code/pot/.git/worktrees/pot-wallet/index.lock': Operation not permitted
+fatal: Unable to create '~/code/pot/.git/worktrees/pot-wallet/index.lock': Operation not permitted
 ```
 This session's sandbox denies the shared worktree metadata write and its approval
 policy is never, so escalation is unavailable. The verified changes are left
@@ -256,7 +256,7 @@ $ cd web && npx vitest run lib/circle lib/relayer app/api/pots app/api/wallet
   - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set "type": "module" in the closest package.json
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
- RUN  v5.1.0 /Users/marcogarity/code/pot-wallet/web
+ RUN  v5.1.0 ~/code/pot-wallet/web
 
  Test Files  5 passed (5)
       Tests  104 passed (104)
@@ -598,7 +598,7 @@ p_cap numeric)` and `public.release_prefund(p_amount numeric)` with service-role
 execution as specified in the task. The HTTP create limiter remains an
 in-process five pots/hour/auth user limiter; distribute it before multi-instance
 abuse enforcement is required. `git pull --ff-only origin main` was blocked
-because worktree metadata at `/Users/marcogarity/code/pot/.git/worktrees/pot-wallet`
+because worktree metadata at `~/code/pot/.git/worktrees/pot-wallet`
 is not writable in this sandbox. No merge or push.
 
 ## Conductor review — round 1 of 2

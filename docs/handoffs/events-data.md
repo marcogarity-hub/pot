@@ -79,7 +79,7 @@ We recommend updating regularly for new features and bug fixes: https://supabase
 ```
 
 The initial sandbox attempt exited 1 before connecting because the CLI could not
-write `/Users/marcogarity/.supabase/telemetry.json.tmp.1794542503979` (EPERM).
+write `~/.supabase/telemetry.json.tmp.1794542503979` (EPERM).
 The retry with sandbox escalation succeeded, including network access.
 `git diff --check` passed. No migrations were applied to the linked database;
 the dry-run checks the pending migration list, not SQL execution or RLS behavior.
@@ -239,7 +239,7 @@ $ cd web && npx vitest run app/api/streams lib/realtime
   - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
- RUN  v5.1.0 /Users/marcogarity/code/pot-events-data/web
+ RUN  v5.1.0 ~/code/pot-events-data/web
 
 
  Test Files  3 passed (3)
@@ -284,7 +284,7 @@ $ cd web && npx vitest run && npx tsc --noEmit && npm run lint
   - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
- RUN  v5.1.0 /Users/marcogarity/code/pot-events-data/web
+ RUN  v5.1.0 ~/code/pot-events-data/web
 
 
  Test Files  3 passed (3)
@@ -299,7 +299,7 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
 Commit blocker: `git add` failed before staging with:
 ```text
-fatal: Unable to create '/Users/marcogarity/code/pot/.git/worktrees/pot-events-data/index.lock': Operation not permitted
+fatal: Unable to create '~/code/pot/.git/worktrees/pot-events-data/index.lock': Operation not permitted
 ```
 The session disallows sandbox escalation, so the requested
 `fix(data): review round 1` commit could not be created. The four review files

@@ -1,6 +1,6 @@
 No files changed. All 21 numbered tests have plan tasks, and the submission checklist is covered by Tasks 1.7, 3.4 and 4.5. The problems are in the proposed behavior and verification.
 
-References: [Spec](</Users/marcogarity/Documents/Pot App/docs/superpowers/specs/2026-11-12-pot-design.md>), [Plan](</Users/marcogarity/Documents/Pot App/docs/superpowers/plans/2026-11-12-pot.md>), [Brief](</Users/marcogarity/Documents/Pot App/docs/brief.md>), [Rules](</Users/marcogarity/Documents/Pot App/AGENTS.md>).
+References: [Spec](<~/Documents/Pot App/docs/superpowers/specs/2026-11-12-pot-design.md>), [Plan](<~/Documents/Pot App/docs/superpowers/plans/2026-11-12-pot.md>), [Brief](<~/Documents/Pot App/docs/brief.md>), [Rules](<~/Documents/Pot App/AGENTS.md>).
 
 1. **Blocker — Locked funds have no timeout.**  
    **Spec:** Smart contract, Decision 7; **Plan:** 1.5. If everyone pays and the organizer never requests release, nobody can object, finalize or refund. “Post-lock exits route through object + refund” also requires the organizer to request release and enough members to object. **Fix:** add a release-request deadline and permissionless transition to refunds after organizer inactivity; test it.

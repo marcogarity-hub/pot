@@ -74,7 +74,7 @@ Objection timing. object requires timestamp < releaseEligibleAt. finalizeRelease
 
 Transfers that revert for everyone else. One member's failed refund does not freeze the pot or any other pot. MAX_MEMBERS is 20, so the create and swap loops are bounded. Non-payable functions reject accidental value. There is no receive, so a plain transfer to the contract reverts.
 
-The file search finished. Pot.sol and IPot.sol are not in this checkout (lane0/scaffold). The source copies live under /Users/marcogarity/code/pot-contract and match the copies in pot, pot-wallet, pot-ui, and pot-events-data. The security review used that source.
+The file search finished. Pot.sol and IPot.sol are not in this checkout (lane0/scaffold). The source copies live under ~/code/pot-contract and match the copies in pot, pot-wallet, pot-ui, and pot-events-data. The security review used that source.
 
 ---
 
