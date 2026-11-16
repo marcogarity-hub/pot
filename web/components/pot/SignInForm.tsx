@@ -187,7 +187,7 @@ export function SignInForm({ next }: { next: string }) {
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link'}</Button>
-      <p className="text-xs text-muted-foreground">No password. We create a wallet for you the first time you sign in.</p>
+      <p className="text-xs text-muted-foreground">No password. We email you a sign-in code and a link.</p>
     </form>
   );
 }

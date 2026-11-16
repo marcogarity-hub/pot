@@ -4,15 +4,11 @@ import { formatUnits } from 'viem';
 import { PotState } from '@/lib/pot/chain';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { stateInfo } from './potState';
 
 export type PotSummary = {
-  pot_id: string; title: string | null; state: number; total: string; share: string;
+  pot_id: string; title: string | null; state: number; receipt_hash: string | null; total: string; share: string;
   is_organizer: boolean | null; members: Array<{ has_paid: boolean; has_refunded: boolean; active: boolean }>;
-};
-
-const LABEL: Record<number, string> = {
-  [PotState.Funding]: 'Funding', [PotState.Locked]: 'Locked', [PotState.PayoutRequested]: 'Payout requested',
-  [PotState.Released]: 'Released', [PotState.Frozen]: 'Frozen',
 };
 
 export function PotList({ pots }: { pots: PotSummary[] }) {
@@ -30,7 +26,7 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate font-medium">{p.title ?? `Pot #${p.pot_id}`}</p>
-                  <Badge variant={p.state === PotState.Frozen ? 'destructive' : 'outline'}>{LABEL[p.state] ?? 'Unknown'}</Badge>
+                  <Badge variant={p.state === PotState.Frozen ? 'destructive' : 'outline'}>{stateInfo(p).label}</Badge>
                 </div>
                 <Progress value={active ? Math.round((paid / active) * 100) : 0} aria-label={`${paid} of ${active} paid`}
                   className="gap-0 [&_[data-slot=progress-track]]:h-2" />

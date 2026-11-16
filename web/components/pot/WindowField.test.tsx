@@ -36,3 +36,11 @@ describe('WindowField custom input', () => {
     expect(screen.getByRole('spinbutton')).toHaveValue(2);
   });
 });
+
+describe('WindowField accessible names', () => {
+  it('names the minutes input and links it to its hint', () => {
+    render(<Harness initial={7 * 60} />);
+    const minutes = screen.getByRole('spinbutton', { name: 'Window in minutes' });
+    expect(minutes).toHaveAccessibleDescription('hint');
+  });
+});

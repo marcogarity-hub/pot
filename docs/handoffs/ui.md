@@ -372,3 +372,57 @@ $ npm run build       # exit 0
 ### Not done / out of scope
 - UI-04, UI-05, UI-07 and UI-08 were not touched. They are outside the four findings in this task.
 - `swap` returns the same 503 recovery shape from `app/api/pots/actions.ts`. It should be handled the same way, but that was outside the scope given.
+
+## 2026-11-16: UI review fixes (UI-05, UI-07, UI-09, UI-10, UI-11, UI-12, UI-15, UI-18, UI-19, UI-20, UI-22)
+
+### Done
+- **UI-05 (no error boundary):** added `app/(screens)/error.tsx` (client; friendly copy, "Try again" calls `reset`, "Go home" link, inside `Screen`) and `app/(screens)/not-found.tsx`. Neither shows the error message or digest. Covers the screens group only; a crash in the root layout is still Next's default.
+- **UI-07 (create validation silent):** on a failed validation, `CreatePotForm` focuses the first invalid field (member emails focus member 1, since the error covers the group). Each error has an id, inputs carry `aria-describedby` and `aria-invalid`, and one `role="alert"` summary ("Fix the fields with errors, then try again.") appears. Existing messages are unchanged.
+- **UI-09 (Locked copy):** `potState.ts` Locked, the create-form request-window hint, and the Expire copy now say: request before the window ends; after that anyone may expire; until someone expires, a request is still accepted. No hard cutoff and no "unlimited". The request form is not hidden (copy-only change, as instructed).
+- **UI-10 (Frozen vs Expired in list):** `PotList` labels with `stateInfo(p).label`. The home query selects `receipt_hash`, and `PotSummary` has the field.
+- **UI-11 (copy):** Funding copy now says refunds apply once the deadline passes. The join screen heading after clicking Join reads "You've joined" (was "You're in!"), since joining records nothing on-chain.
+- **UI-12 (wallet copy and dead end):** sign-in no longer says a wallet is created on first sign-in. The no-wallet notice adds "Open the invite link the organizer sent you to join it."
+- **UI-15:** the WindowField minutes input has `aria-label="<label> in minutes"` and `aria-describedby` for its hint (and error).
+- **UI-18:** `CardTitle` takes `as` (`div` by default). Sign-in and invite titles render as `h1`.
+- **UI-19:** the skeleton is `role="status"` with `aria-busy` and its label.
+- **UI-20 (focus contrast):** the base `*` rule uses `outline-ring` instead of `outline-ring/50`. No token value changed.
+- **UI-22:** the receipt scroll uses `behavior: 'auto'` when `prefers-reduced-motion: reduce` matches.
+
+### Focus contrast (computed with node, WCAG relative luminance)
+| Pair | Before | After |
+|---|---|---|
+| `#1f8a67` at 50% over `--background` `#faf8f4` | 1.91:1 | n/a |
+| `#1f8a67` at 50% over `--card` `#ffffff` | 1.94:1 | n/a |
+| `#1f8a67` solid over `--background` | n/a | 4.05:1 |
+| `#1f8a67` solid over `--card` | n/a | 4.29:1 |
+| dark `#4cc79c` over dark background `#0f1714` | n/a | 8.64:1 |
+
+Buttons and inputs also get a solid `border-ring` on focus-visible, so they already had a solid indicator.
+
+### Files changed
+- `web/app/globals.css`
+- `web/app/(screens)/error.tsx`, `error.test.tsx`, `not-found.tsx`, `not-found.test.tsx` (new)
+- `web/app/(screens)/page.tsx`, `sign-in/page.tsx`, `join/[inviteToken]/page.tsx`
+- `web/components/pot/CreatePotForm.tsx`, `CreatePotForm.test.tsx`, `PotActions.tsx`, `PotActions.test.tsx`, `PotList.tsx`, `PotList.test.tsx` (new), `PotStatus.tsx`, `SignInForm.tsx`, `SignInFormSkeleton.tsx`, `SignInFormSkeleton.test.tsx` (new), `WindowField.tsx`, `WindowField.test.tsx`, `JoinPreview.tsx`, `JoinPreview.test.tsx`, `potState.ts`
+- `web/components/ui/card.tsx`, `card.test.tsx` (new)
+- `docs/handoffs/ui.md`
+
+### TDD
+- New tests were written first. The red run had 7 failing tests and 2 suites that could not load (no module). After the change, all pass.
+
+### Not done (skipped, with reasons)
+- **UI-11, active member sees "You're invited" and "Join pot":** `resolveInvite` in `components/pot/auth.ts` drops `memberState: 'active'` and returns the same `pot` outcome, so the fix needs a new outcome plus invite-logic tests. That is a behavior change, not copy, so it is left for Marco.
+- **UI-11, "(demo)" and "(production)" presets in the live form:** whether those presets ship is a product decision. Left as is.
+- **UI-20, focus halos on buttons and inputs:** `components/ui/button.tsx`, `input.tsx`, `textarea.tsx`, and `select.tsx` use `focus-visible:ring-ring/50` box-shadow halos. Changing them needs edits outside `globals.css`, which is the only file allowed for UI-20. The solid border already passes (see table).
+- **UI-09, hiding the request form after the window:** the instruction asked for copy only, so the form stays visible.
+- **UI-05, root `global-error.tsx`:** only the `(screens)` group is covered.
+
+### Gates (fresh run, after the change)
+```
+$ npx vitest run
+Test Files  42 passed (42)
+Tests  474 passed (474)
+$ npx tsc --noEmit    # exit 0 (no output)
+$ npm run lint        # exit 0
+$ npm run build       # exit 0
+```

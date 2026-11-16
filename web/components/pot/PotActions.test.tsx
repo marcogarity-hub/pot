@@ -136,3 +136,30 @@ describe('PotActions session and refresh handling', () => {
     expect(onSettled).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('PotActions confirmation scroll', () => {
+  const originalScroll = Element.prototype.scrollIntoView;
+  afterEach(() => { Element.prototype.scrollIntoView = originalScroll; });
+
+  async function payAndSettle() {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactionHash: '0xabc' }), { status: 200 })));
+    render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+  }
+
+  it('scrolls without animation when the user prefers reduced motion', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: true })));
+    await payAndSettle();
+    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+  });
+
+  it('scrolls smoothly otherwise', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: false })));
+    await payAndSettle();
+    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+});

@@ -121,7 +121,7 @@ function TimeLeft({ status, now }: { status: PotStatusRow; now: Date }) {
 function IdentityNotice({ me, potId, onRetry }: { me: MeState | null; potId: string; onRetry(): void }) {
   if (me === null || me.kind === 'ready') return null;
   if (me.kind === 'no-wallet') {
-    return <p className="text-sm text-muted-foreground">You&apos;re signed in but not part of this pot yet.</p>;
+    return <div className="space-y-1 text-sm text-muted-foreground"><p>You&apos;re signed in but not part of this pot yet.</p><p>Open the invite link the organizer sent you to join it.</p></div>;
   }
   if (me.kind === 'error') {
     return (

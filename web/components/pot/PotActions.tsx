@@ -122,7 +122,7 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost }: {
 
       {actions.includes('expire') && (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">The organizer didn&apos;t request the payout in time. Expiring the pot opens refunds for everyone who paid.</p>
+          <p className="text-sm text-muted-foreground">The request window has ended. Expiring the pot opens refunds for everyone who paid. Until someone expires it, the organizer can still request the payout.</p>
           <Button variant="outline" className={BIG} disabled={busy} onClick={() => run('expire')}>
             {label('expire', 'Expire pot and open refunds', 'Expiring…')}
           </Button>
@@ -175,7 +175,10 @@ function Confirmation({ done, title, amount, onDone }: { done: Done; title: stri
   const hasAmount = done.action === 'pay' || done.action === 'refund';
   const explorer = `${arcTestnet.blockExplorers.default.url}/tx/${done.txHash}`;
   const cardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { cardRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); }, []);
+  useEffect(() => {
+    const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cardRef.current?.scrollIntoView?.({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, []);
   return (
     <Card ref={cardRef}>
       <CardContent className="flex flex-col items-center gap-5 px-5 py-8 text-center">

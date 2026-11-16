@@ -205,3 +205,18 @@ describe('CreatePotForm 502 with a transaction hash (UI-03)', () => {
     expect(screen.getByRole('button', { name: 'Create pot' })).toBeEnabled();
   });
 });
+
+describe('CreatePotForm validation announcements', () => {
+  it('focuses the first invalid field, wires its error, and shows one summary alert', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    render(<CreatePotForm />);
+    await submit();
+    const name = screen.getByLabelText('Name');
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(name).toHaveAccessibleDescription('Give the pot a name');
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent(/fix the fields with errors/i);
+  });
+});

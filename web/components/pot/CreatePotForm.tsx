@@ -20,6 +20,20 @@ function toLocalInput(d: Date) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/** Field order on the form, with the DOM id focused for each. Member emails focus the first member input. */
+const FIELD_FOCUS: Array<[keyof CreateErrors, string]> = [
+  ['title', 'title'], ['memberEmails', 'member-0'], ['total', 'total'], ['deadline', 'deadline'],
+  ['threshold', 'threshold'], ['objectionWindowSeconds', 'objection-window'], ['requestWindowSeconds', 'request-window'],
+];
+
+/** Moves focus to the first field with an error. WindowField's minutes input is absent in preset mode, so its trigger is the fallback. */
+function focusFirstInvalid(errors: CreateErrors) {
+  const hit = FIELD_FOCUS.find(([key]) => errors[key]);
+  if (!hit) return;
+  const el = document.getElementById(hit[1]) ?? document.getElementById(`${hit[1]}-trigger`);
+  el?.focus();
+}
+
 const OBJECTION_PRESETS: Preset[] = [
   { label: '2 minutes (demo)', seconds: 120 },
   { label: '48 hours (production)', seconds: 172800 },
@@ -86,7 +100,11 @@ export function CreatePotForm() {
     setSubmitError(null);
     const input = body();
     const result = validateCreate(input, new Date());
-    if (!result.ok) { setErrors(result.errors); return; }
+    if (!result.ok) {
+      setErrors(result.errors);
+      focusFirstInvalid(result.errors);
+      return;
+    }
     setErrors({});
     submittingRef.current = true;
     setSubmitting(true);
@@ -126,11 +144,13 @@ export function CreatePotForm() {
         <CardContent className="space-y-5">
           <Field id="title" label="Name" error={errors.title}>
             <Input id="title" value={title} placeholder="Cabin weekend" maxLength={120}
-              onChange={e => setTitle(e.target.value)} aria-invalid={!!errors.title} />
+              onChange={e => setTitle(e.target.value)} aria-invalid={!!errors.title}
+              aria-describedby={errors.title ? 'title-error' : undefined} />
           </Field>
           <Field id="total" label="Total (USDC)" error={errors.total}>
             <Input id="total" inputMode="decimal" value={total} placeholder="2400"
-              onChange={e => setTotal(e.target.value)} aria-invalid={!!errors.total} />
+              onChange={e => setTotal(e.target.value)} aria-invalid={!!errors.total}
+              aria-describedby={errors.total ? 'total-error' : undefined} />
             <p className="text-sm text-muted-foreground" data-testid="share">
               {share ? <>Each member pays <span className="font-medium text-foreground">{share} USDC</span></>
                 : filled.length > 0 && total.trim() ? 'Total must divide evenly by the number of members'
@@ -149,8 +169,9 @@ export function CreatePotForm() {
         <CardContent className="space-y-3">
           {emails.map((email, i) => (
             <div key={i} className="flex gap-2">
-              <Input type="email" autoComplete="off" aria-label={`Member ${i + 1} email`} placeholder="friend@example.com"
-                value={email} onChange={e => setEmail(i, e.target.value)} aria-invalid={!!errors.memberEmails} />
+              <Input id={`member-${i}`} type="email" autoComplete="off" aria-label={`Member ${i + 1} email`} placeholder="friend@example.com"
+                value={email} onChange={e => setEmail(i, e.target.value)} aria-invalid={!!errors.memberEmails}
+                aria-describedby={errors.memberEmails ? 'member-emails-error' : undefined} />
               {emails.length > 1 && (
                 <Button type="button" variant="ghost" size="icon" aria-label={`Remove member ${i + 1}`}
                   onClick={() => setEmails(list => list.filter((_, j) => j !== i))}>
@@ -159,7 +180,7 @@ export function CreatePotForm() {
               )}
             </div>
           ))}
-          {errors.memberEmails && <p className="text-sm text-destructive">{errors.memberEmails}</p>}
+          {errors.memberEmails && <p id="member-emails-error" className="text-sm text-destructive">{errors.memberEmails}</p>}
           <Button type="button" variant="outline" size="sm" disabled={emails.length >= MAX_MEMBERS}
             onClick={() => setEmails(list => [...list, ''])}>
             <Plus /> Add member
@@ -176,12 +197,14 @@ export function CreatePotForm() {
         <CardContent className="space-y-5">
           <Field id="deadline" label="Pay-in deadline" error={errors.deadline}>
             <Input id="deadline" type="datetime-local" value={deadlineLocal} max={deadlineMax}
-              onChange={e => setDeadlineLocal(e.target.value)} aria-invalid={!!errors.deadline} />
+              onChange={e => setDeadlineLocal(e.target.value)} aria-invalid={!!errors.deadline}
+              aria-describedby={errors.deadline ? 'deadline-error' : undefined} />
             <p className="text-xs text-muted-foreground">If not everyone pays by then, everyone who paid can take their money back.</p>
           </Field>
           <Field id="threshold" label="Objections needed to block the payout" error={errors.threshold}>
             <Input id="threshold" type="number" inputMode="numeric" min={1} max={Math.max(filled.length, 1)} className="w-28"
-              value={threshold} onChange={e => setThreshold(e.target.value)} aria-invalid={!!errors.threshold} />
+              value={threshold} onChange={e => setThreshold(e.target.value)} aria-invalid={!!errors.threshold}
+              aria-describedby={errors.threshold ? 'threshold-error' : undefined} />
             <p className="text-xs text-muted-foreground">Between 1 and {Math.max(filled.length, 1)} (the number of members).</p>
           </Field>
           <Separator />
@@ -190,7 +213,7 @@ export function CreatePotForm() {
             presets={OBJECTION_PRESETS} seconds={objectionWindowSeconds} onChange={setObjection}
             error={errors.objectionWindowSeconds} />
           <WindowField id="request-window" label="Payout request window"
-            hint="After the pot locks, you must request the payout within this time, or members can get refunds."
+            hint="After the pot locks, the organizer should request the payout within this time. After that, anyone can expire the pot so members can get refunds."
             presets={REQUEST_PRESETS} seconds={requestWindowSeconds} onChange={setRequest}
             error={errors.requestWindowSeconds} />
         </CardContent>
@@ -201,6 +224,7 @@ export function CreatePotForm() {
           Your pot is being confirmed on-chain. This can take up to two minutes. Please don&apos;t submit again.
         </p>
       )}
+      {Object.keys(errors).length > 0 && <p role="alert" className="text-sm text-destructive">Fix the fields with errors, then try again.</p>}
       {stuckMessage && <p role="alert" className="text-sm text-destructive">{stuckMessage}</p>}
       {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}
       <Button type="submit" size="lg" className="h-12 w-full rounded-xl text-base" disabled={submitting || stuckMessage !== null}>
@@ -238,7 +262,7 @@ function Field({ id, label, error, children }: { id: string; label: string; erro
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p id={`${id}-error`} className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

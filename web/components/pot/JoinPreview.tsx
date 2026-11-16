@@ -24,7 +24,7 @@ export function JoinPreview({ potId, title, amount, organizerEmail, email }: {
             <Check className="size-9" />
           </span>
           <div className="space-y-2">
-            <h1 className="font-heading text-3xl font-semibold tracking-tight">You&apos;re in!</h1>
+            <h1 className="font-heading text-3xl font-semibold tracking-tight">You&apos;ve joined</h1>
             <p className="text-sm text-muted-foreground">
               You&apos;re part of {title}{amount ? `. Your share is ${amount} USDC.` : '.'} Pay when you&apos;re ready.
             </p>

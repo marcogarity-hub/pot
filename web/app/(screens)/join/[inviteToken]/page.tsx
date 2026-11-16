@@ -35,7 +35,7 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
     return (
       <Card>
         <CardHeader>
-          <CardTitle>You&apos;re invited{title ? ` to ${title}` : ''}</CardTitle>
+          <CardTitle as="h1">You&apos;re invited{title ? ` to ${title}` : ''}</CardTitle>
           <CardDescription>Sign in with the email your organizer invited to see the pot and pay your share.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">{linkFailed && <LinkNotice />}<SignInForm next={next} /></CardContent>
@@ -56,7 +56,7 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
   return (
     <Card>
       <CardHeader>
-        <CardTitle>This invite isn&apos;t for your email</CardTitle>
+        <CardTitle as="h1">This invite isn&apos;t for your email</CardTitle>
         <CardDescription>You&apos;re signed in as {user.email}. Ask the organizer to add this address, or sign in with the one they invited.</CardDescription>
       </CardHeader>
       <CardContent className="flex gap-2">
@@ -71,7 +71,7 @@ function NoLongerMember() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>You&apos;re no longer in this pot.</CardTitle>
+        <CardTitle as="h1">You&apos;re no longer in this pot.</CardTitle>
         <CardDescription>Your seat was given to someone else. Ask the organizer if you think this is a mistake.</CardDescription>
       </CardHeader>
       <CardContent><Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link></CardContent>
@@ -83,7 +83,7 @@ function NotFound() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invite not found</CardTitle>
+        <CardTitle as="h1">Invite not found</CardTitle>
         <CardDescription>This link may be mistyped or the pot may still be confirming. Ask the organizer to send it again.</CardDescription>
       </CardHeader>
       <CardContent><Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link></CardContent>

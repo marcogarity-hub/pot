@@ -35,7 +35,8 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
           }
         }}
       >
-        <SelectTrigger id={`${id}-trigger`} className="w-full">
+        <SelectTrigger id={`${id}-trigger`} className="w-full" aria-invalid={!!error}
+          aria-describedby={error && !showCustom ? `${id}-error` : undefined}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -52,13 +53,15 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
             className="w-28"
             value={Math.round(seconds / 60)}
             onChange={e => onChange(Math.round(Number(e.target.value) * 60))}
+            aria-label={`${label} in minutes`}
+            aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
             aria-invalid={!!error}
           />
           <span className="text-sm text-muted-foreground">minutes</span>
         </div>
       )}
-      <p className="text-xs text-muted-foreground">{hint}</p>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p>
+      {error && <p id={`${id}-error`} className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
