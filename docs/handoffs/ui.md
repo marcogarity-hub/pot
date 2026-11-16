@@ -300,3 +300,36 @@ Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-
 
 ### Notes
 - The older "6-digit" wording earlier in this file is historical and was left as written.
+
+## 2026-11-16: Screens use getVerifiedUser (Lane 4)
+
+### Done
+- `HomeContent` (`app/(screens)/page.tsx`) and `JoinGate` (`app/(screens)/join/[inviteToken]/page.tsx`) now identify the user with `getVerifiedUser(supabase)` from `@/lib/supabase/verified-user`, not `auth.getUser()`. A null result takes the existing signed-out branch: Home shows `SignedOut`, JoinGate shows the sign-in card. No pot_status or invite query runs in that case. Verified users use the returned `email` and `id`.
+- Browser code (`SignInForm`, `SignOutButton`) is unchanged. No server-side `auth.getUser` remains under `web/components`.
+- No existing test mocked `auth.getUser` for these pages, so there was nothing to update. Added `page.test.tsx` beside each page (4 tests: null and verified cases for each).
+
+### Not converted (outside Lane 4 ownership)
+- `web/app/api/pots/route.ts`, `web/app/api/pots/actions.ts`, `web/app/api/pots/reconcile/route.ts`, `web/app/api/wallet/callback/route.ts`, `web/app/api/wallet/me/route.ts`, `web/app/api/wallet/claim/route.ts` still call `auth.getUser()`. `web/app/api/**` is Lane 2 and conductor territory. Lane 2 should switch these to `getVerifiedUser`.
+
+### Files changed
+- `web/app/(screens)/page.tsx`, `web/app/(screens)/page.test.tsx` (new)
+- `web/app/(screens)/join/[inviteToken]/page.tsx`, `web/app/(screens)/join/[inviteToken]/page.test.tsx` (new)
+- `docs/handoffs/ui.md`
+
+### TDD
+- Tests written first. Before the change, all 4 new tests failed with `Cannot read properties of undefined (reading 'getUser')`. After it, they pass.
+
+### Gates (fresh run, raw output in scratchpad)
+```
+$ npx vitest run     # exit 0
+ Test Files  37 passed (37)
+      Tests  454 passed (454)
+$ npx tsc --noEmit   # exit 0
+$ npm run lint       # exit 0
+$ npm run build      # exit 0
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+
+```
+Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-vitest.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-tsc.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-lint.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-build.txt`.
