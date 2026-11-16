@@ -29,6 +29,9 @@ export function SignInForm({ next }: { next: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // True once verifyOtp has succeeded and only the wallet claim is left. Retries then re-run the claim alone:
+  // the code is single-use, so verifying it again would wrongly report it as wrong.
+  const [verified, setVerified] = useState(false);
 
   const coolingDown = cooldown > 0;
   useEffect(() => {
@@ -80,6 +83,10 @@ export function SignInForm({ next }: { next: string }) {
   async function onVerify(e: FormEvent) {
     e.preventDefault();
     if (!sentTo || busy) return;
+    if (verified) {
+      await completeSignIn();
+      return;
+    }
     if (code.length < MIN_CODE_LENGTH) {
       setError('Enter the code from the email.');
       return;
@@ -93,13 +100,26 @@ export function SignInForm({ next }: { next: string }) {
       setError(WRONG_CODE);
       return;
     }
-    // The emailed link ties the account to the member's wallet row; the code path must do the same.
+    setVerified(true);
+    await completeSignIn();
+  }
+
+  /**
+   * Ties the signed-in account to the member's wallet row, then navigates. The emailed link does the same
+   * claim, so the code path must too. Runs after verifyOtp succeeds; a failure leaves the session in place
+   * and only this step is retried.
+   */
+  async function completeSignIn() {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
     const claimed = await claimWallet();
     if (!claimed.ok) {
       setBusy(false);
       setError(claimed.message);
       return;
     }
+    setVerified(false);
     router.replace(safeNext(next));
     router.refresh();
   }
@@ -123,10 +143,14 @@ export function SignInForm({ next }: { next: string }) {
     setNotice(null);
     setError(null);
     setBusy(false);
+    setVerified(false);
   }
 
   if (sentTo) {
     const resendLabel = cooldown > 0 ? `Send a new code in ${cooldown}s` : 'Send a new code';
+    const verifyLabel = verified
+      ? (busy ? 'Signing you in…' : 'Try again')
+      : (busy ? 'Checking…' : 'Verify');
     return (
       <div className="space-y-4">
         <div className="flex flex-col items-center gap-2 text-center">
@@ -139,15 +163,15 @@ export function SignInForm({ next }: { next: string }) {
           <div className="space-y-2">
             <Label htmlFor="sign-in-code">Sign-in code</Label>
             <Input id="sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code"
-              placeholder="Enter code" maxLength={MAX_CODE_LENGTH} value={code}
+              placeholder="Enter code" maxLength={MAX_CODE_LENGTH} value={code} disabled={verified}
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, MAX_CODE_LENGTH))} />
           </div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Checking…' : 'Verify'}</Button>
+          <Button type="submit" className="w-full" disabled={busy}>{verifyLabel}</Button>
         </form>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={busy || cooldown > 0} onClick={onResend}>{resendLabel}</Button>
+          <Button type="button" variant="outline" size="sm" disabled={busy || cooldown > 0 || verified} onClick={onResend}>{resendLabel}</Button>
           <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={useDifferentEmail}>Use a different email</Button>
         </div>
       </div>
@@ -163,7 +187,7 @@ export function SignInForm({ next }: { next: string }) {
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link'}</Button>
-      <p className="text-xs text-muted-foreground">No password. We create a wallet for you the first time you sign in.</p>
+      <p className="text-xs text-muted-foreground">No password. We email you a sign-in code and a link.</p>
     </form>
   );
 }

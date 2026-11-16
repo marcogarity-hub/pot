@@ -26,7 +26,7 @@ async function HomeContent() {
 
   const { data: rows } = await supabase
     .from('pot_status')
-    .select('pot_id::text,title,state,total::text,share::text,is_organizer,members')
+    .select('pot_id::text,title,state,receipt_hash,total::text,share::text,is_organizer,members')
     .order('created_at', { ascending: false });
 
   return (

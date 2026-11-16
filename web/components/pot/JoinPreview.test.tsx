@@ -20,10 +20,11 @@ describe('JoinPreview', () => {
     expect(screen.queryByText(/organized by/i)).toBeNull();
   });
 
-  it('shows a You\'re in state with a link to the pot after the primary button', () => {
+  it('shows a joined state with a link to the pot after the primary button', () => {
     render(<JoinPreview {...props} />);
     fireEvent.click(screen.getByRole('button', { name: /join pot/i }));
-    expect(screen.getByRole('heading', { name: /you're in/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /you've joined/i })).toBeInTheDocument();
+    expect(screen.queryByText(/you're in/i)).toBeNull();
     expect(screen.getByRole('link', { name: /go to pot/i })).toHaveAttribute('href', '/pots/7');
     expect(screen.queryByRole('button', { name: /join pot/i })).toBeNull();
   });

@@ -12,9 +12,9 @@ const ZERO_HASH = /^0x0*$/;
 export function stateInfo(s: { state: number; receipt_hash: string | null }): StateInfo {
   switch (s.state) {
     case PotState.Funding:
-      return { label: 'Funding', tone: 'accent', next: 'Members pay their share before the deadline. If everyone pays, the money locks. If not, everyone who paid can take it back.' };
+      return { label: 'Funding', tone: 'accent', next: 'Members pay their share before the deadline. If everyone pays, the money locks. If not everyone pays by the deadline, everyone who paid can take their money back.' };
     case PotState.Locked:
-      return { label: 'Locked', tone: 'neutral', next: 'Everyone paid, so the money is locked. The organizer has to request the payout with a receipt before the window closes.' };
+      return { label: 'Locked', tone: 'neutral', next: 'Everyone paid, so the money is locked. The organizer should request the payout before the request window ends. After that, anyone can expire the pot so everyone can take their money back. Until someone expires it, a request is still accepted.' };
     case PotState.PayoutRequested:
       return { label: 'Payout requested', tone: 'warning', next: 'The organizer asked for the payout. Members can object during the window. If too few object, the money goes to the organizer.' };
     case PotState.Released:

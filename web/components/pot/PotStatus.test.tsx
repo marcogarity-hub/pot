@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { PotStatusRow } from '@/lib/realtime/usePot';
 import { usePot } from '@/lib/realtime/usePot';
 import { useMe } from './useMe';
@@ -97,5 +97,25 @@ describe('PotStatus by identity state', () => {
     render(<PotStatus potId="1" />);
     expect(screen.queryByRole('button', { name: /pay/i })).toBeNull();
     expect(screen.getByRole('link', { name: /sign in/i })).toBeTruthy();
+  });
+});
+
+describe('PotStatus session expiry (UI-01)', () => {
+  it('a 401 from an action re-checks the identity, and the signed-out state shows the sign-in link and no actions', async () => {
+    const retry = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })));
+    mockPot(status);
+    mockMe({ kind: 'ready', email: 'a@example.com', wallet_address: ME_ADDRESS }, retry);
+    const { rerender } = render(<PotStatus potId="1" />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Please sign in again.');
+    expect(retry).toHaveBeenCalledTimes(1);
+
+    // retry() makes useMe report the session as gone.
+    mockMe({ kind: 'signed-out' }, retry);
+    rerender(<PotStatus potId="1" />);
+    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/sign-in?next=/pots/1');
+    expect(screen.queryByRole('button', { name: /pay/i })).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

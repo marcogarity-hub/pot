@@ -23,14 +23,19 @@ const BIG = 'h-12 w-full rounded-xl text-base';
 
 type Done = { action: Action; txHash?: string; at: Date };
 
-export function PotActions({ potId, actions, status, onSettled }: {
+export function PotActions({ potId, actions, status, onSettled, onAuthLost }: {
   potId: string; actions: Action[]; status: PotStatusRow; onSettled(): void;
+  /** Called on a 401: the session is gone, so the page should re-check who is signed in. */
+  onAuthLost?(): void;
 }) {
   const [pending, setPending] = useState<Action | null>(null);
   const pendingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const [receipt, setReceipt] = useState('');
+  // Set when request-release confirmed on-chain but its metadata save failed. The request form is hidden
+  // so the organizer can't submit the same receipt again; this holds the server's recovery text.
+  const [releaseStuck, setReleaseStuck] = useState<string | null>(null);
   const [leaver, setLeaver] = useState('');
   const [replacement, setReplacement] = useState('');
   const share = formatUnits(BigInt(status.share), 18);
@@ -47,7 +52,17 @@ export function PotActions({ potId, actions, status, onSettled }: {
       : await postJson<{ transactionHash?: string }>(`/api/pots/${potId}/${ROUTES[action]}`, body);
     pendingRef.current = false;
     setPending(null);
-    if (!res.ok) { setError(res.message); return; }
+    if (!res.ok) {
+      if (res.status === 401) onAuthLost?.();
+      if (action === 'requestRelease' && res.status === 503) {
+        setReceipt('');
+        setReleaseStuck(res.message);
+      } else {
+        setError(res.message);
+      }
+      onSettled();
+      return;
+    }
     setDone({ action, txHash: res.data.transactionHash, at: new Date() });
     if (action === 'requestRelease') setReceipt('');
     if (action === 'swap') { setLeaver(''); setReplacement(''); }
@@ -76,7 +91,7 @@ export function PotActions({ potId, actions, status, onSettled }: {
         </Button>
       )}
 
-      {actions.includes('requestRelease') && (
+      {actions.includes('requestRelease') && !releaseStuck && (
         <Card>
           <CardContent className="space-y-3">
             <Label htmlFor="receipt">Receipt or booking reference</Label>
@@ -107,7 +122,7 @@ export function PotActions({ potId, actions, status, onSettled }: {
 
       {actions.includes('expire') && (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">The organizer didn&apos;t request the payout in time. Expiring the pot opens refunds for everyone who paid.</p>
+          <p className="text-sm text-muted-foreground">The request window has ended. Expiring the pot opens refunds for everyone who paid. Until someone expires it, the organizer can still request the payout.</p>
           <Button variant="outline" className={BIG} disabled={busy} onClick={() => run('expire')}>
             {label('expire', 'Expire pot and open refunds', 'Expiring…')}
           </Button>
@@ -135,6 +150,8 @@ export function PotActions({ potId, actions, status, onSettled }: {
         </details>
       )}
 
+      {releaseStuck && <p role="status" className="text-sm font-medium">{releaseStuck}</p>}
+
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </div>
   );
@@ -158,7 +175,10 @@ function Confirmation({ done, title, amount, onDone }: { done: Done; title: stri
   const hasAmount = done.action === 'pay' || done.action === 'refund';
   const explorer = `${arcTestnet.blockExplorers.default.url}/tx/${done.txHash}`;
   const cardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { cardRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); }, []);
+  useEffect(() => {
+    const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cardRef.current?.scrollIntoView?.({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, []);
   return (
     <Card ref={cardRef}>
       <CardContent className="flex flex-col items-center gap-5 px-5 py-8 text-center">
