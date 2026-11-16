@@ -432,3 +432,62 @@ UI and conductor handoffs. No merge to main, push, live transactions, migrations
 or edits outside Lane 3. No blockers for this task. Production build remains
 with the conductor as requested; live Streams/Supabase/browser verification is
 still an integration step and is not claimed by these mocked tests.
+
+## Streams payload shape hardening and rejection logging (2026-11-16)
+
+Done: QuickNode's real delivery was rejected with 400 "Invalid Streams logs
+payload" five times, which terminated the Stream. The decoder now accepts the
+log array as `{data: [...]}` (unchanged), a bare top-level array, or
+`{data: {data: [...]}, metadata?}`. Elements may still be flat logs or nested
+arrays. Null, strings, numbers, objects without a usable array, bare log
+objects and empty-string bodies still throw, so the handler returns 400. The
+address filter, removed-log rejection and strict decodeEventLog are unchanged.
+
+Logging (responses and statuses unchanged):
+- 400 path writes one `[api/streams] payload rejected:` line with a shape
+  summary (type, array lengths, up to 12 key names, depth 3, first 3 array
+  items, no values) and the error name and message (truncated to 200 chars).
+  Long hex runs (40+ chars: addresses, topics, data) are replaced with `[hex]`.
+  Unparseable JSON logs `shape: "not json"`, the byte length and the error name
+  only. The message is omitted because V8's SyntaxError text quotes body text.
+- 500 path writes `[api/streams] projection failed:` with name and message
+  (200 chars). Values of SUPABASE_SECRET_KEY and QUICKNODE_STREAM_TOKEN are
+  replaced with `[redacted]` when they are at least 8 chars.
+
+Files changed:
+- `web/app/api/streams/decode.ts`, `decode.test.ts` (new)
+- `web/app/api/streams/handler.ts`, `route.test.ts`
+- `docs/handoffs/events-data.md`
+
+TDD: 10 new tests failed first (bare array, wrapped shape, 200 for signed
+bare array, 400 logging, not-json logging, redacted 500 log). After
+implementation the stream suite passes.
+
+Gates (run in web/): exit codes 0 for all four.
+```text
+Real output tails:
+--- vitest ---
+   Duration  3.27s (environment 46%, import 23%, tests 14%, setup 11%, transform 6%, worker 1%)
+
+Environment  jsdom was created 31 times · 8.68s total, 46% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+--- tsc ---
+--- lint ---
+
+> web@0.1.0 lint
+> eslint
+
+--- build ---
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+```
+Full logs: /private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/vitest.log, /private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/tsc.log, /private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/lint.log, /private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/build.log
+
+Blockers: none in this lane. The live QuickNode Stream still needs
+re-enabling (the old one was terminated) and a redelivery check to confirm which
+body shape QuickNode actually sends. The new log line will show it.
