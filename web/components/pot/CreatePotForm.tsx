@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
 import type { CreatePotBody } from '@/app/api/pots/schema';
@@ -11,8 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { postJson, type ApiResult } from './api';
 import { reconcilePot, TIMEOUT_MESSAGE, type ReconcileInput, type ReconcileOutcome } from './reconcile';
-import { deriveShare, MAX_MEMBERS, normalizeEmail, validateCreate, type CreateErrors } from './validate';
+import { DEADLINE_MAX, deriveShare, MAX_MEMBERS, normalizeEmail, validateCreate, type CreateErrors } from './validate';
 import { WindowField, type Preset } from './WindowField';
+
+/** Wall-clock time in the YYYY-MM-DDTHH:mm format a datetime-local input uses. */
+function toLocalInput(d: Date) {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 const OBJECTION_PRESETS: Preset[] = [
   { label: '2 minutes (demo)', seconds: 120 },
@@ -29,6 +35,12 @@ export function CreatePotForm() {
   const [total, setTotal] = useState('');
   const [emails, setEmails] = useState<string[]>(['']);
   const [deadlineLocal, setDeadlineLocal] = useState('');
+  // No max on the server render, so server and client HTML match (the clock differs between them).
+  const deadlineMax = useSyncExternalStore(
+    () => () => {},
+    () => toLocalInput(new Date(Date.now() + DEADLINE_MAX * 1000)),
+    () => undefined,
+  );
   const [threshold, setThreshold] = useState('1');
   const [objectionWindowSeconds, setObjection] = useState(120);
   const [requestWindowSeconds, setRequest] = useState(120);
@@ -163,7 +175,7 @@ export function CreatePotForm() {
         </CardHeader>
         <CardContent className="space-y-5">
           <Field id="deadline" label="Pay-in deadline" error={errors.deadline}>
-            <Input id="deadline" type="datetime-local" value={deadlineLocal}
+            <Input id="deadline" type="datetime-local" value={deadlineLocal} max={deadlineMax}
               onChange={e => setDeadlineLocal(e.target.value)} aria-invalid={!!errors.deadline} />
             <p className="text-xs text-muted-foreground">If not everyone pays by then, everyone who paid can take their money back.</p>
           </Field>

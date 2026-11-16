@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CreatePotBody } from '@/app/api/pots/schema';
-import { deriveShare, validateCreate } from './validate';
+import { DEADLINE_MAX, deriveShare, validateCreate } from './validate';
 
 const now = new Date('2026-11-14T12:00:00Z');
 const emails = (n: number) => Array.from({ length: n }, (_, i) => `m${i}@x.com`);
@@ -64,6 +64,32 @@ describe('validateCreate', () => {
     expect(errorsOf(base({ deadline: now.toISOString() })).deadline).toBeDefined();
     expect(errorsOf(base({ deadline: '2026-11-14T11:00:00Z' })).deadline).toBeDefined();
     expect(errorsOf(base({ deadline: 'garbage' })).deadline).toBeDefined();
+  });
+
+  it('says "Pick a deadline" when the deadline is empty', () => {
+    expect(errorsOf(base({ deadline: '' })).deadline).toBe('Pick a deadline');
+  });
+
+  it('says "Deadline must be in the future" for a past deadline', () => {
+    expect(errorsOf(base({ deadline: '2026-11-14T11:00:00Z' })).deadline).toBe('Deadline must be in the future');
+  });
+
+  it('accepts a deadline exactly 365 days after now', () => {
+    const exact = new Date(now.getTime() + 365 * 24 * 3600 * 1000).toISOString();
+    expect(validateCreate(base({ deadline: exact }), now).ok).toBe(true);
+  });
+
+  it('rejects a deadline one second beyond 365 days', () => {
+    const beyond = new Date(now.getTime() + (365 * 24 * 3600 + 1) * 1000).toISOString();
+    expect(errorsOf(base({ deadline: beyond })).deadline).toBe('Deadline must be within one year');
+  });
+
+  it('rejects a deadline decades away', () => {
+    expect(errorsOf(base({ deadline: '2050-01-01T00:00:00Z' })).deadline).toBe('Deadline must be within one year');
+  });
+
+  it('exports the one-year limit in seconds', () => {
+    expect(DEADLINE_MAX).toBe(365 * 24 * 3600);
   });
 
   it('bounds the objection window to 60 s .. 7 days', () => {
