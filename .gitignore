@@ -16,3 +16,5 @@ contracts/broadcast/
 # IDE
 .vscode/
 .idea/
+
+.agent-out/
