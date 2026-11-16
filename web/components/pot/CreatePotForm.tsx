@@ -212,13 +212,16 @@ export function CreatePotForm() {
 
 /**
  * Create returned a pot that may already exist on-chain. Returns the reconcile request for it, or null
- * when the error is a plain failure the user can retry. Only Lane 2's CreatePending (502) and the
- * 503 with potId + transactionHash are recoverable this way.
+ * when the error is a plain failure the user can retry. Recoverable: a 502 CreatePending with a circle
+ * transaction id, any 502 that carries a transaction hash, and the 503 with potId + transactionHash.
  */
 function recoveryInput(res: Extract<ApiResult<unknown>, { ok: false }>, input: { title: string; memberEmails: string[] }): ReconcileInput | null {
   const { title, memberEmails } = input;
   if (res.status === 502 && res.body.error === 'CreatePending' && typeof res.body.circleTransactionId === 'string') {
     return { title, memberEmails, circleTransactionId: res.body.circleTransactionId };
+  }
+  if (res.status === 502 && typeof res.body.transactionHash === 'string' && typeof res.body.circleTransactionId !== 'string') {
+    return { title, memberEmails, transactionHash: res.body.transactionHash };
   }
   if (res.status === 503 && typeof res.body.potId === 'string' && typeof res.body.transactionHash === 'string') {
     return { title, memberEmails, transactionHash: res.body.transactionHash };

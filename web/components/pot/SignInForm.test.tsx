@@ -215,7 +215,7 @@ describe('SignInForm wallet claim after verify', () => {
     expect(nav.replace).not.toHaveBeenCalled();
     expect(nav.refresh).not.toHaveBeenCalled();
     expect(screen.getByText('We emailed you a code. Enter it below.')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'Try again' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('shows the 503 message and does not navigate', async () => {
@@ -226,7 +226,7 @@ describe('SignInForm wallet claim after verify', () => {
     await verifyCode();
     expect(screen.getByRole('alert').textContent).toBe('Could not finish signing you in. Please try again.');
     expect(nav.replace).not.toHaveBeenCalled();
-    expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'Try again' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('shows the generic message for a 401 without a message, and does not navigate', async () => {
@@ -241,7 +241,7 @@ describe('SignInForm wallet claim after verify', () => {
     await verifyCode();
     expect(screen.getByRole('alert').textContent).toBe(CLAIM_FAILED);
     expect(nav.replace).not.toHaveBeenCalled();
-    expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'Try again' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('shows the generic message if the claim call throws, and does not navigate', async () => {
@@ -256,6 +256,55 @@ describe('SignInForm wallet claim after verify', () => {
     await verifyCode();
     expect(api.postJson).not.toHaveBeenCalled();
     expect(screen.getByRole('alert').textContent).toBe(WRONG_CODE);
+  });
+});
+
+describe('SignInForm claim retry (UI-06)', () => {
+  const claimFailed = { ok: false, status: 503, message: 'Could not finish signing you in. Please try again.', body: { message: 'Could not finish signing you in. Please try again.' } };
+
+  async function verifyCode(next = '/join/tok_1') {
+    render(<SignInForm next={next} />);
+    await requestCode();
+    fireEvent.change(codeInput(), { target: { value: '482913' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    await settle();
+  }
+
+  it('after a failed claim, Try again re-runs only the claim: verifyOtp is still called once', async () => {
+    api.postJson.mockResolvedValueOnce(claimFailed).mockResolvedValueOnce(claimOk);
+    await verifyCode();
+    expect(screen.getByRole('alert').textContent).toBe(claimFailed.message);
+    expect(nav.replace).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await settle();
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
+    expect(api.postJson).toHaveBeenCalledTimes(2);
+    expect(api.postJson).toHaveBeenLastCalledWith('/api/wallet/claim', {});
+    expect(nav.replace).toHaveBeenCalledWith('/join/tok_1');
+    expect(nav.refresh).toHaveBeenCalled();
+  });
+
+  it('while the claim is retried the code field is disabled and the wrong-code message never appears', async () => {
+    api.postJson.mockResolvedValueOnce(claimFailed).mockResolvedValueOnce(claimOk);
+    await verifyCode();
+    expect(codeInput().disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await settle();
+    expect(screen.queryByText(WRONG_CODE)).toBeNull();
+  });
+
+  it('a failed retry keeps the claim-only state: still no second verifyOtp, and the claim message is shown', async () => {
+    api.postJson.mockResolvedValue(claimFailed);
+    await verifyCode();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await settle();
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
+    expect(api.postJson).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('alert').textContent).toBe(claimFailed.message);
+    expect(screen.queryByText(WRONG_CODE)).toBeNull();
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
   });
 });
 

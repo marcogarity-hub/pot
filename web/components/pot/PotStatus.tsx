@@ -78,7 +78,7 @@ export function PotStatus({ potId }: { potId: string }) {
         <MemberList status={status} myAddress={myAddress} />
       </section>
 
-      <PotActions potId={potId} actions={actions} status={status} onSettled={() => { void refetch(); }} />
+      <PotActions potId={potId} actions={actions} status={status} onSettled={() => { void refetch(); }} onAuthLost={retry} />
     </div>
   );
 }

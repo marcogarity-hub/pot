@@ -168,3 +168,40 @@ describe('CreatePotForm recovery', () => {
     expect(screen.getByRole('button', { name: 'Create pot' })).toBeEnabled();
   });
 });
+
+describe('CreatePotForm 502 with a transaction hash (UI-03)', () => {
+  it('reconciles with the hash and keeps the form locked while it runs', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json({ message: 'Pot creation could not be confirmed. Reconcile the transaction before retrying.', transactionHash: '0xdef' }, 502))
+      .mockResolvedValue(json({ error: 'StillPending' }, 202));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<CreatePotForm />);
+    fillForm();
+    await submit();
+    const sent = JSON.parse(callsTo(fetchMock, RECONCILE)[0][1].body);
+    expect(sent).toEqual({ title: 'Cabin', memberEmails: ['a@example.com', 'b@example.com'], transactionHash: '0xdef' });
+    expect(screen.getByRole('button', { name: /finishing up your pot/i })).toBeDisabled();
+    expect(callsTo(fetchMock, CREATE)).toHaveLength(1);
+  });
+
+  it('redirects once reconcile reports the pot', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(json({ message: 'could not confirm', transactionHash: '0xdef' }, 502))
+      .mockResolvedValueOnce(json({ potId: '77', inviteToken: 'tok' }, 201)));
+    render(<CreatePotForm />);
+    fillForm();
+    await submit();
+    expect(push).toHaveBeenCalledWith('/pots/77');
+  });
+
+  it('a 502 without any transaction hash re-enables the form and shows the message', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ message: 'Pot creation could not be confirmed.' }, 502));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<CreatePotForm />);
+    fillForm();
+    await submit();
+    expect(callsTo(fetchMock, RECONCILE)).toHaveLength(0);
+    expect(screen.getByRole('alert')).toHaveTextContent('Pot creation could not be confirmed.');
+    expect(screen.getByRole('button', { name: 'Create pot' })).toBeEnabled();
+  });
+});

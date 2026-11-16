@@ -100,3 +100,39 @@ describe('PotActions confirmation', () => {
     expect(screen.getByText(/you paid/i)).toBeInTheDocument();
   });
 });
+
+describe('PotActions session and refresh handling', () => {
+  it('UI-01: a 401 shows the readable message and calls onAuthLost so the page can offer sign-in', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })));
+    const onAuthLost = vi.fn();
+    render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} onAuthLost={onAuthLost} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Please sign in again.');
+    expect(onAuthLost).toHaveBeenCalledTimes(1);
+  });
+
+  it('UI-02: onSettled runs after an error response too', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'AlreadyPaid', message: "You've already paid into this pot." }), { status: 409 }),
+    ));
+    const onSettled = vi.fn();
+    render(<PotActions potId="7" actions={['pay']} status={status} onSettled={onSettled} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+
+  it('UI-02: a 503 metadata-recovery response on request-release hides the request form, clears the receipt and shows the recovery text', async () => {
+    const recoveryText = 'Transaction confirmed, but metadata needs recovery. Do not submit it again.';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: recoveryText, potId: '7', transactionHash: '0xabc' }), { status: 503 }),
+    ));
+    const onSettled = vi.fn();
+    render(<PotActions potId="7" actions={['requestRelease']} status={{ ...status, state: 1 }} onSettled={onSettled} />);
+    fireEvent.change(screen.getByLabelText(/receipt/i), { target: { value: 'Airbnb conf HMX123' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /request payout/i })); });
+    expect(screen.queryByRole('button', { name: /request payout|requesting/i })).toBeNull();
+    expect(screen.queryByLabelText(/receipt/i)).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(recoveryText);
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+});

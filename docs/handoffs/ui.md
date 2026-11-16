@@ -333,3 +333,42 @@ $ npm run build      # exit 0
 
 ```
 Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-vitest.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-tsc.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-lint.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4c-build.txt`.
+
+## 2026-11-16: UI review fixes (UI-01, UI-02, UI-03, UI-06)
+
+### Done
+- **UI-01 (expired session):** `PotActions` takes an optional `onAuthLost`, called on a 401. `PotStatus` passes `useMe().retry`, so `me` becomes signed-out and the existing `IdentityNotice` shows the Sign in link. Pot actions disappear because they need a `ready` viewer. The "Please sign in again." message is kept. It is set in `PotActions`, which unmounts while `useMe` reloads, so the user sees the sign-in notice rather than the message.
+- **UI-02 (failed actions never refresh):** `PotActions` calls `onSettled()` after every settled response, success or error. On a 503 for request-release, the receipt is cleared, the request form (button and textarea) is hidden, and the server's recovery text is shown in a `role="status"` line. Swap returns the same 503 recovery shape. It is not handled here because the finding covers request-release only.
+- **UI-03 (create form unlocks after a possible send):** `recoveryInput` in `CreatePotForm` now treats any 502 with a string `transactionHash` and no `circleTransactionId` as recoverable. It reconciles with `{title, memberEmails, transactionHash}`, and the form stays locked. A 502 without a hash is unchanged (form re-enables, message shows). No API route was changed.
+- **UI-06 (sign-in dead end):** `SignInForm` tracks `verified` (verifyOtp succeeded). Once it is set, the code field is disabled, the button reads "Try again", and Resend is disabled. Try again runs only `POST /api/wallet/claim`, so verifyOtp is called once. Navigation happens only after the claim succeeds, and `verified` is cleared first. The wrong-code message comes only from a failed verifyOtp.
+
+### Files changed
+- `web/components/pot/PotActions.tsx`, `PotActions.test.tsx`
+- `web/components/pot/PotStatus.tsx`, `PotStatus.test.tsx`
+- `web/components/pot/CreatePotForm.tsx`, `CreatePotForm.test.tsx`
+- `web/components/pot/SignInForm.tsx`, `SignInForm.test.tsx`
+- `docs/handoffs/ui.md`
+
+Existing `SignInForm` claim-failure tests now expect the "Try again" button, not "Verify". That is the intended behavior change.
+
+### TDD
+- Tests were written first. Before the change, 9 of the 10 new tests failed, plus 3 existing claim-failure tests that asserted the old Verify button. The one new test that passed is the UI-03 502-without-hash regression guard, which is today's behavior and should stay green.
+- After the change, all 10 new tests pass. The UI-03 and UI-06 tests cover the required scenarios.
+
+### Gates (fresh run, after the change)
+```
+$ npx vitest run      # exit 0
+ Test Files  37 passed (37)
+      Tests  464 passed (464)
+$ npx tsc --noEmit    # exit 0 (no output)
+$ npm run lint        # exit 0
+$ npm run build       # exit 0
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+```
+
+### Not done / out of scope
+- UI-04, UI-05, UI-07 and UI-08 were not touched. They are outside the four findings in this task.
+- `swap` returns the same 503 recovery shape from `app/api/pots/actions.ts`. It should be handled the same way, but that was outside the scope given.
