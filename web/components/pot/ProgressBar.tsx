@@ -1,24 +1,14 @@
-import type { ReactNode } from 'react';
-import { formatUnits } from 'viem';
-import { Progress } from '@/components/ui/progress';
+import type { CellMember } from './MemberCells';
+import { MemberCells } from './MemberCells';
 
-/** Big "X USDC of Y USDC" header, a thick bar, and "N of M paid". Amounts are 18-decimal wei strings. */
-export function ProgressBar({ paidCount, memberCount, share, total, aside }: {
-  paidCount: number; memberCount: number; share: string; total: string; aside?: ReactNode;
+/** "N of M paid" in display type, with the member strip beneath it. Counts are computed by the caller. */
+export function ProgressBar({ paidCount, memberCount, members }: {
+  paidCount: number; memberCount: number; members: CellMember[];
 }) {
-  const paid = BigInt(share) * BigInt(paidCount);
-  const pct = memberCount === 0 ? 0 : Math.round((paidCount / memberCount) * 100);
   return (
     <div className="space-y-4">
-      <p className="money font-heading text-4xl font-semibold tracking-tight">
-        {formatUnits(paid, 18)} <span className="text-lg font-medium text-muted-foreground">USDC</span>
-        <span className="block text-base font-normal text-muted-foreground">of {formatUnits(BigInt(total), 18)} USDC</span>
-      </p>
-      <Progress value={pct} aria-label="Pot progress" className="gap-0 [&_[data-slot=progress-track]]:h-4 [&_[data-slot=progress-indicator]]:rounded-full" />
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <p className="font-medium">{paidCount} of {memberCount} paid</p>
-        {aside}
-      </div>
+      <p className="money font-heading text-3xl font-semibold tracking-tight">{paidCount} of {memberCount} paid</p>
+      <MemberCells members={members} className="gap-1.5" />
     </div>
   );
 }
