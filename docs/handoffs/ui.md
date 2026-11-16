@@ -271,3 +271,32 @@ Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-
 
 ### Needs another lane (Lane 2, wallet)
 - `POST /api/wallet/claim` must exist and answer as the contract says: 200 `{ok:true}`; 401 `{error:'Unauthorized'}`; 409 `{error:'IdentityConflict', message}`; 503 `{message}`. Until it exists the code path will show the generic failure message.
+
+## 2026-11-16: Sign-in copy no longer names the code length (Lane 4)
+
+### Done
+- Supabase's code length is a project setting, so user-facing text no longer hard-codes it. The step 2 heading reads "We emailed you a code. Enter it below." The short-code error reads "Enter the code from the email." The placeholder is "Enter code".
+- Validation is unchanged: digits only, capped at 10, and `verifyOtp` is not called below 6 digits. These are limits, not copy.
+- A 5-digit code is rejected without calling `verifyOtp`. An 8-digit code is sent to `verifyOtp` unchanged.
+- Searched `web/components` and `web/app/(screens)` for `6-digit`, `six-digit` and `6 digit`. No other user-facing wording exists. The only remaining hit is a test title, which is not user-facing.
+
+### Files changed
+- `web/components/pot/SignInForm.tsx` (copy, placeholder, doc comment)
+- `web/components/pot/SignInForm.test.tsx` (updated strings; new 5-digit and 8-digit tests)
+- `docs/handoffs/ui.md`
+
+### TDD
+- Tests were updated first. Before the component change, 4 tests failed on the old copy and the new cases (the 5-digit test and the 8-digit test, which were green-to-red on the copy assertion). After the change, all 21 SignInForm tests pass.
+
+### Gates (fresh run, raw output in scratchpad)
+```
+$ npx vitest run     # exit 0
+  Tests  441 passed (441)
+$ npx tsc --noEmit   # exit 0
+$ npm run lint       # exit 0
+$ npm run build      # exit 0 (routes include /sign-in as Partial Prerender)
+```
+Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4b-vitest.txt`, `.../ui4b-tsc.txt`, `.../ui4b-lint.txt`, `.../ui4b-build.txt`.
+
+### Notes
+- The older "6-digit" wording earlier in this file is historical and was left as written.

@@ -61,7 +61,7 @@ describe('SignInForm step 1: email', () => {
   it('moves to the code step, showing the email and a numeric code field', async () => {
     render(<SignInForm next="/" />);
     await requestCode();
-    expect(screen.getByText('We emailed you a 6-digit code. Enter it below.')).toBeTruthy();
+    expect(screen.getByText('We emailed you a code. Enter it below.')).toBeTruthy();
     expect(screen.getByText('ada@example.com')).toBeTruthy();
     expect(screen.getByText(/or click the link in the email/i)).toBeTruthy();
     const input = codeInput();
@@ -75,7 +75,7 @@ describe('SignInForm step 1: email', () => {
     render(<SignInForm next="/" />);
     await requestCode();
     expect(screen.getByRole('alert').textContent).toBe('Rate limit exceeded');
-    expect(screen.queryByText('We emailed you a 6-digit code. Enter it below.')).toBeNull();
+    expect(screen.queryByText('We emailed you a code. Enter it below.')).toBeNull();
   });
 });
 
@@ -110,7 +110,7 @@ describe('SignInForm step 2: verify', () => {
     expect(screen.getByRole('alert').textContent).toBe(WRONG_CODE);
     expect(codeInput().value).toBe('482913');
     expect(nav.replace).not.toHaveBeenCalled();
-    expect(screen.getByText('We emailed you a 6-digit code. Enter it below.')).toBeTruthy();
+    expect(screen.getByText('We emailed you a code. Enter it below.')).toBeTruthy();
   });
 
   it('strips non-digits and caps the code at 10 digits', async () => {
@@ -129,7 +129,30 @@ describe('SignInForm step 2: verify', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
     await settle();
     expect(verifyOtp).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert').textContent).toMatch(/6-digit code/);
+    expect(screen.getByRole('alert').textContent).toBe('Enter the code from the email.');
+  });
+
+  it('rejects a 5-digit code without calling verifyOtp and does not name a length', async () => {
+    render(<SignInForm next="/" />);
+    await requestCode();
+    fireEvent.change(codeInput(), { target: { value: '48291' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    await settle();
+    expect(verifyOtp).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toBe('Enter the code from the email.');
+    expect(screen.getByRole('alert').textContent).not.toMatch(/\d-digit/);
+  });
+
+  it('accepts an 8-digit code and sends it to verifyOtp unchanged', async () => {
+    render(<SignInForm next="/join/tok_8" />);
+    await requestCode();
+    fireEvent.change(codeInput(), { target: { value: '48291037' } });
+    expect(codeInput().value).toBe('48291037');
+    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    await settle();
+    expect(verifyOtp).toHaveBeenCalledWith({ email: 'ada@example.com', token: '48291037', type: 'email' });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(nav.replace).toHaveBeenCalledWith('/join/tok_8');
   });
 });
 
@@ -191,7 +214,7 @@ describe('SignInForm wallet claim after verify', () => {
     expect(screen.getByRole('alert').textContent).toBe('This email is linked to a different sign-in.');
     expect(nav.replace).not.toHaveBeenCalled();
     expect(nav.refresh).not.toHaveBeenCalled();
-    expect(screen.getByText('We emailed you a 6-digit code. Enter it below.')).toBeTruthy();
+    expect(screen.getByText('We emailed you a code. Enter it below.')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
