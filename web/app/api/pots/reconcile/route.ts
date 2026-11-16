@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { isHex, parseEventLogs, type Hex } from 'viem';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
+import { getVerifiedUser } from '@/lib/supabase/verified-user';
 import { getWalletUser } from '@/lib/circle/identity';
 import { getCircleTransaction } from '@/lib/circle/transactions';
 import { getPotReceipt } from '@/lib/circle/receipt';
@@ -15,8 +16,8 @@ const failed = () => Response.json({ error: 'CreateFailed', message: 'The pot wa
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabase();
-  const session = await supabase.auth.getUser();
-  if (session.error || !session.data.user?.email) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await getVerifiedUser(supabase);
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   let raw: unknown;
   try { raw = await request.json(); } catch { return Response.json({ message: 'Invalid JSON body' }, { status: 400 }); }
   const parsed = reconcilePotSchema.safeParse(raw);
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   const body = parsed.data;
 
   let caller;
-  try { caller = await getWalletUser(session.data.user.email); }
+  try { caller = await getWalletUser(user.email); }
   catch { return Response.json({ message: 'Could not read wallet mapping' }, { status: 503 }); }
   if (!caller) return Response.json({ error: 'NoWallet' }, { status: 403 });
 

@@ -2,8 +2,9 @@ vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib
 import { beforeEach, expect, it, vi } from 'vitest';
 import { encodeAbiParameters, encodeEventTopics, parseUnits } from 'viem';
 import { potAbi } from '@/lib/pot';
-const m=vi.hoisted(()=>({server:vi.fn(),admin:vi.fn(),ensureUser:vi.fn(),claimUser:vi.fn(),callPot:vi.fn(),insert:vi.fn()}));
+const m=vi.hoisted(()=>({server:vi.fn(),verified:vi.fn(),admin:vi.fn(),ensureUser:vi.fn(),claimUser:vi.fn(),callPot:vi.fn(),insert:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
+vi.mock('@/lib/supabase/verified-user',()=>({getVerifiedUser:m.verified}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/circle/identity',()=>({ensureUser:m.ensureUser,claimUser:m.claimUser}));
 vi.mock('@/lib/circle/tx',async original=>({...await original<typeof import('@/lib/circle/tx')>(),callPot:m.callPot}));
@@ -44,14 +45,26 @@ it('keeps the existing past-deadline validation message',()=>{
 });
 beforeEach(()=>{
  vi.clearAllMocks();createPotLimiter.clear();process.env.NEXT_PUBLIC_POT_ADDRESS=address;
- m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:{id:'auth-id',email:' Organizer@x.com '}}})}});
+ m.server.mockResolvedValue({});
+ m.verified.mockResolvedValue({id:'auth-id',email:' Organizer@x.com '});
  m.insert.mockResolvedValue({error:null});m.admin.mockReturnValue({from:()=>({insert:m.insert})});
  m.ensureUser.mockImplementation(async(email:string)=>({id:email,circle_wallet_id:email==='organizer@x.com'?'organizer-wallet':email,wallet_address:email==='organizer@x.com'?address:`0x${(members.indexOf(email)+2).toString(16).padStart(40,'0')}`}));
  const topics=encodeEventTopics({abi:potAbi,eventName:'PotCreated',args:{potId:BigInt(42),organizer:address}});
  const data=encodeAbiParameters([{type:'address[]'},{type:'uint256'},{type:'uint256'},{type:'uint256'},{type:'uint256'},{type:'uint256'},{type:'uint256'}],[[address],BigInt(2400),BigInt(300),BigInt(100),BigInt(5),BigInt(120),BigInt(120)]);
  m.callPot.mockResolvedValue({transactionHash:'0x1234',logs:[{address,topics,data}]});
 });
-it('requires a session',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await post(body())).status).toBe(401);expect(m.ensureUser).not.toHaveBeenCalled();});
+it('requires a session',async()=>{m.verified.mockResolvedValue(null);expect((await post(body())).status).toBe(401);expect(m.ensureUser).not.toHaveBeenCalled();});
+it('answers 401 Unauthorized and makes no provisioning, claim, chain or database calls when getVerifiedUser refuses the session',async()=>{
+ m.verified.mockResolvedValue(null);
+ const response=await post(body());
+ expect(response.status).toBe(401);
+ expect(await response.json()).toEqual({error:'Unauthorized'});
+ expect(m.ensureUser).not.toHaveBeenCalled();
+ expect(m.claimUser).not.toHaveBeenCalled();
+ expect(m.callPot).not.toHaveBeenCalled();
+ expect(m.admin).not.toHaveBeenCalled();
+ expect(m.insert).not.toHaveBeenCalled();
+});
 it('rejects a far-future deadline with the labelled one-year message',async()=>{
  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-16T12:00:00Z'));
  const nowSeconds=Math.floor(Date.now()/1000);

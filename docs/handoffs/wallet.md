@@ -939,3 +939,52 @@ $ npm run build
 ƒ  (Dynamic)            server-rendered on demand
 exit 0
 ```
+
+## 2026-11-16 - Verified-session guard on wallet and pot routes (Lane 2)
+
+Every identity lookup in the wallet and pot routes now calls `getVerifiedUser(supabase)` from `@/lib/supabase/verified-user` instead of `auth.getUser()`. A password or anonymous session, an unconfirmed email, or a session Supabase does not vouch for gets the route's existing unauthenticated answer and no downstream call (no wallet lookup, claimUser, ensureUser, Circle call, prefund or admin write). `grep -rn "auth.getUser" web/app/api` returns nothing.
+
+Routes changed:
+- `web/app/api/pots/route.ts` (POST create): 401 `{error:'Unauthorized'}` when null.
+- `web/app/api/pots/actions.ts` (pay, refund, object, expire, request-release, swap caller resolution): 401 `{error:'Unauthorized'}` when null. `finalize` takes no identity and is unchanged.
+- `web/app/api/pots/reconcile/route.ts` (POST): 401 `{error:'Unauthorized'}` when null.
+- `web/app/api/wallet/me/route.ts` (GET): 401 `{error:'Unauthorized'}` when null.
+- `web/app/api/wallet/claim/route.ts` (POST): 401 `{error:'Unauthorized'}` when null.
+- `web/app/api/wallet/callback/route.ts` (GET): after `exchangeCodeForSession` succeeds, a null result now redirects to `/sign-in?error=link` (with `next` kept if valid) through the existing `signInFailed` helper, logging reason `unverified_session`. No claim. This replaces the old 401 `Sign-in failed` branch.
+
+Tests (TDD: failing tests written before the route changes, confirmed red, then made green):
+- Each of the six routes has a null-path test asserting the unauthenticated response and that wallet lookup, claimUser, ensureUser, callPot, prefund and admin writes were not called. `wallet/me` has a new `route.test.ts`.
+- Existing route tests mock `getVerifiedUser` instead of `auth.getUser`.
+- `web/lib/circle/identity.test.ts` also drove the callback and `me` routes through `auth.getUser`; it now mocks `getVerifiedUser` too.
+
+Files changed: the six route files above, their `*.test.ts` files, new `web/app/api/wallet/me/route.test.ts`, `web/lib/circle/identity.test.ts`, this handoff.
+
+Not changed: `web/lib/supabase/`, package or config files, `web/lib/relayer/`.
+
+Gates (run from web/, fresh, 2026-11-16):
+```text
+$ npx vitest run
+  Test Files  36 passed (36)
+       Tests  462 passed (462)
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+> web@0.1.0 lint
+> eslint
+exit 0
+$ npm run build
+├ ○ /new
+├   /pots/[potId]
+│ └ ◐ /pots/[potId]
+└ ◐ /sign-in
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+
+exit 0
+```

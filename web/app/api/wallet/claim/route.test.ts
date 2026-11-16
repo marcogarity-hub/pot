@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const m=vi.hoisted(()=>({server:vi.fn(),claimUser:vi.fn(),getUser:vi.fn()}));
+const m=vi.hoisted(()=>({server:vi.fn(),claimUser:vi.fn(),verified:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
+vi.mock('@/lib/supabase/verified-user',()=>({getVerifiedUser:m.verified}));
 vi.mock('@/lib/circle/identity',()=>({
  claimUser:m.claimUser,
  normalizeEmail:(email:string)=>email.trim().toLowerCase(),
@@ -13,26 +14,27 @@ const logged=()=>errSpy.mock.calls.flat().map(String).join(' ');
 beforeEach(()=>{
  vi.clearAllMocks();
  errSpy=vi.spyOn(console,'error').mockImplementation(()=>{});
- m.server.mockResolvedValue({auth:{getUser:m.getUser}});
- m.getUser.mockResolvedValue({data:{user:{id:'auth-id',email:'Member@X.com'}},error:null});
+ m.server.mockResolvedValue({});
+ m.verified.mockResolvedValue({id:'auth-id',email:'Member@X.com'});
  m.claimUser.mockResolvedValue(undefined);
 });
 afterEach(()=>{errSpy.mockRestore();});
 
 it('returns 401 Unauthorized when there is no session',async()=>{
- m.getUser.mockResolvedValue({data:{user:null},error:{message:'Auth session missing!'}});
+ m.verified.mockResolvedValue(null);
  const response=await post();
  expect(response.status).toBe(401);
  expect(await response.json()).toEqual({error:'Unauthorized'});
  expect(m.claimUser).not.toHaveBeenCalled();
 });
 
-it('returns 401 when the signed-in user has no email',async()=>{
- m.getUser.mockResolvedValue({data:{user:{id:'auth-id',email:undefined}},error:null});
+it('returns 401 when getVerifiedUser refuses the session (unconfirmed, password or anonymous)',async()=>{
+ m.verified.mockResolvedValue(null);
  const response=await post();
  expect(response.status).toBe(401);
  expect(await response.json()).toEqual({error:'Unauthorized'});
  expect(m.claimUser).not.toHaveBeenCalled();
+ expect(errSpy).not.toHaveBeenCalled();
 });
 
 it('claims the session user with their lower-cased email and returns ok',async()=>{
