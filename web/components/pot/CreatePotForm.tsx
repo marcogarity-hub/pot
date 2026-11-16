@@ -43,7 +43,11 @@ const REQUEST_PRESETS: Preset[] = [
   { label: '7 days (production)', seconds: 604800 },
 ];
 
-export function CreatePotForm() {
+/** Window values a new pot starts with: the 2-minute demo windows. The `booking` preset (linked from the dashboard) starts on the production windows instead. */
+const DEFAULT_WINDOWS = { objection: 120, request: 120 };
+const BOOKING_WINDOWS = { objection: OBJECTION_PRESETS[1].seconds, request: REQUEST_PRESETS[1].seconds };
+
+export function CreatePotForm({ preset }: { preset?: string }) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [total, setTotal] = useState('');
@@ -56,8 +60,9 @@ export function CreatePotForm() {
     () => undefined,
   );
   const [threshold, setThreshold] = useState('1');
-  const [objectionWindowSeconds, setObjection] = useState(120);
-  const [requestWindowSeconds, setRequest] = useState(120);
+  const initialWindows = preset === 'booking' ? BOOKING_WINDOWS : DEFAULT_WINDOWS;
+  const [objectionWindowSeconds, setObjection] = useState(initialWindows.objection);
+  const [requestWindowSeconds, setRequest] = useState(initialWindows.request);
   const [errors, setErrors] = useState<CreateErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

@@ -12,6 +12,9 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-warning-soft: var(--warning-soft);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-grid: var(--grid-line);
+  --color-field: var(--field);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -54,82 +57,89 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Pot Grid: white modules on a pale-blue field, one electric blue, square corners, hairline joins.
+   Text pairs meet WCAG AA. State colours carry meaning only, and always travel with a text label. */
 :root {
-  /* Warm off-white paper, deep "money" green, amber for waiting, red for damage. Text pairs meet WCAG AA. */
-  --background: #faf8f4;
-  --foreground: #17201c;
+  --background: #f4f7ff;
+  --field: #f4f7ff;
+  --foreground: #0b1020;
   --card: #ffffff;
-  --card-foreground: #17201c;
+  --card-foreground: #0b1020;
   --popover: #ffffff;
-  --popover-foreground: #17201c;
-  --primary: #0d5c47;
+  --popover-foreground: #0b1020;
+  --primary: #2b59ff;
   --primary-foreground: #ffffff;
-  --secondary: #edf1ec;
-  --secondary-foreground: #17201c;
-  --muted: #f1eee8;
-  --muted-foreground: #5a6661;
-  --accent: #e2f2ea;
-  --accent-foreground: #0d5c47;
+  --secondary: #e6edff;
+  --secondary-foreground: #0b1020;
+  --muted: #eaf0ff;
+  --muted-foreground: #4a5373;
+  --accent: #e6edff;
+  --accent-foreground: #1740d6;
   --destructive: #b42318;
-  --border: #e6e1d6;
-  --input: #8f887b;
-  --ring: #1f8a67;
-  --success: #17724a;
+  --destructive-soft: #fde7e4;
+  --border: #c9d4ff;
+  --grid-line: #dbe3ff;
+  --input: #6f7ba8;
+  --ring: #2b59ff;
+  --success: #136c3a;
   --success-foreground: #ffffff;
-  --success-soft: #e0f3e8;
+  --success-soft: #ddf4e6;
   --warning: #8a5300;
   --warning-foreground: #ffffff;
-  --warning-soft: #fcf0d9;
-  --chart-1: #0d5c47;
-  --chart-2: #1f8a67;
+  --warning-soft: #fff1d6;
+  --chart-1: #2b59ff;
+  --chart-2: #1740d6;
   --chart-3: #8a5300;
-  --chart-4: #5a6661;
+  --chart-4: #4a5373;
   --chart-5: #b42318;
-  --radius: 0.875rem;
+  --radius: 0rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #17201c;
-  --sidebar-primary: #0d5c47;
+  --sidebar-foreground: #0b1020;
+  --sidebar-primary: #2b59ff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e2f2ea;
-  --sidebar-accent-foreground: #0d5c47;
-  --sidebar-border: #e6e1d6;
-  --sidebar-ring: #1f8a67;
+  --sidebar-accent: #e6edff;
+  --sidebar-accent-foreground: #1740d6;
+  --sidebar-border: #c9d4ff;
+  --sidebar-ring: #2b59ff;
 }
 
 /* Dark mode is opt-in (.dark or data-theme="dark"). It does not follow the OS setting yet. */
 .dark, :root[data-theme="dark"] {
-  --background: #0f1714;
-  --foreground: #eef4f0;
-  --card: #17221e;
-  --card-foreground: #eef4f0;
-  --popover: #17221e;
-  --popover-foreground: #eef4f0;
-  --primary: #4cc79c;
-  --primary-foreground: #0b1512;
-  --secondary: #22302b;
-  --secondary-foreground: #eef4f0;
-  --muted: #22302b;
-  --muted-foreground: #a3b3ab;
-  --accent: #1d3b31;
-  --accent-foreground: #c8f0df;
+  --background: #070b18;
+  --field: #070b18;
+  --foreground: #eef2ff;
+  --card: #0e1530;
+  --card-foreground: #eef2ff;
+  --popover: #0e1530;
+  --popover-foreground: #eef2ff;
+  --primary: #7c98ff;
+  --primary-foreground: #070b18;
+  --secondary: #18214a;
+  --secondary-foreground: #eef2ff;
+  --muted: #18214a;
+  --muted-foreground: #a5b0d6;
+  --accent: #18214a;
+  --accent-foreground: #c9d4ff;
   --destructive: #ff8b7b;
-  --border: #2a3833;
-  --input: #5d6f67;
-  --ring: #4cc79c;
-  --success: #4cc79c;
-  --success-foreground: #0b1512;
-  --success-soft: #163326;
+  --destructive-soft: #3a1612;
+  --border: #26305a;
+  --grid-line: #18214a;
+  --input: #6f7ba8;
+  --ring: #7c98ff;
+  --success: #5fd391;
+  --success-foreground: #070b18;
+  --success-soft: #11301f;
   --warning: #f5b94a;
-  --warning-foreground: #0b1512;
+  --warning-foreground: #070b18;
   --warning-soft: #3a2c10;
-  --sidebar: #17221e;
-  --sidebar-foreground: #eef4f0;
-  --sidebar-primary: #4cc79c;
-  --sidebar-primary-foreground: #0b1512;
-  --sidebar-accent: #1d3b31;
-  --sidebar-accent-foreground: #c8f0df;
-  --sidebar-border: #2a3833;
-  --sidebar-ring: #4cc79c;
+  --sidebar: #0e1530;
+  --sidebar-foreground: #eef2ff;
+  --sidebar-primary: #7c98ff;
+  --sidebar-primary-foreground: #070b18;
+  --sidebar-accent: #18214a;
+  --sidebar-accent-foreground: #c9d4ff;
+  --sidebar-border: #26305a;
+  --sidebar-ring: #7c98ff;
 }
 
 @layer base {
@@ -141,13 +151,68 @@
   }
   html {
     @apply font-sans;
+    scrollbar-width: thin;
+    scrollbar-color: var(--input) transparent;
   }
-  h1, h2, h3 {
+  h1, h2, h3, .font-heading {
     font-family: var(--font-heading);
+    font-variation-settings: "wdth" 125;
     letter-spacing: -0.01em;
+  }
+  /* Browser surfaces that ship with defaults belong to the design too. */
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  input, textarea, select {
+    caret-color: var(--primary);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  a {
+    text-underline-offset: 3px;
   }
   /* Money: numbers line up in columns and don't jump while the pot updates. */
   .money {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* The construction grid: twelve columns on desktop, four on phones, drawn as hairlines
+     behind a container. Content modules sit on top and cover it. */
+  .grid-armature {
+    position: relative;
+    isolation: isolate;
+  }
+  .grid-armature::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px);
+    background-size: calc(100% / 4) 100%;
+    border-right: 1px solid var(--grid-line);
+  }
+  @media (min-width: 768px) {
+    .grid-armature::before {
+      background-size: calc(100% / 12) 100%;
+    }
+  }
+  /* Registration ticks: a small "+" marks a grid intersection, set on a module corner. */
+  .tick {
+    position: relative;
+  }
+  .tick::after {
+    content: "+";
+    position: absolute;
+    top: -0.62em;
+    left: -0.36em;
+    font: 400 14px/1 var(--font-geist-mono);
+    color: var(--primary);
+    pointer-events: none;
   }
 }

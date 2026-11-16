@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Archivo, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,10 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Headings and big money figures. Bricolage has a friendly, slightly quirky voice that still reads at small sizes.
-const display = Bricolage_Grotesque({
+// Headings, the wordmark and the big money figure. Archivo's width axis is pushed to its expanded end
+// (see `.font-heading` in globals.css) for the wide, squared capitals of Crouwel's grid posters.
+const display = Archivo({
   variable: "--font-display",
   subsets: ["latin"],
+  axes: ["wdth"],
 });
 
 export const metadata: Metadata = {

@@ -200,27 +200,28 @@ export function SignInForm({ next }: { next: string }) {
       ? (busy ? 'Signing you in…' : 'Try again')
       : (busy ? 'Checking…' : 'Verify');
     return (
-      <div className="space-y-4">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <MailCheck className="size-10 text-primary" aria-hidden />
-          <p className="font-medium">Check your email</p>
-          <p className="text-sm text-muted-foreground">We emailed you a code. Enter it below.</p>
-          <p className="text-sm text-muted-foreground">Sent to <span className="font-medium text-foreground">{sentTo}</span>. Or click the link in the email, in this same browser.</p>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <MailCheck className="size-6 text-primary" aria-hidden />
+          <h2 className="font-heading text-xl font-semibold tracking-tight">Check your email</h2>
+          <p className="text-base text-muted-foreground">We emailed you a code. Enter it below.</p>
+          <p className="text-base text-muted-foreground">Sent to <span className="font-medium text-foreground">{sentTo}</span>. Or click the link in the email, in this same browser.</p>
         </div>
         <form onSubmit={onVerify} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="sign-in-code">Sign-in code</Label>
             <Input id="sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code"
               placeholder="Enter code" maxLength={MAX_CODE_LENGTH} value={code} disabled={verified}
+              className="money h-14 text-2xl tracking-[0.3em] md:text-2xl"
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, MAX_CODE_LENGTH))} />
           </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p>}
           {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-          <Button type="submit" className="w-full" disabled={busy}>{verifyLabel}</Button>
+          <Button type="submit" size="lg" className="w-full" disabled={busy}>{verifyLabel}</Button>
         </form>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={busy || cooldown > 0 || verified} onClick={onResend}>{resendLabel}</Button>
-          <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={useDifferentEmail}>Use a different email</Button>
+          <Button type="button" variant="outline" disabled={busy || cooldown > 0 || verified} onClick={onResend}>{resendLabel}</Button>
+          <Button type="button" variant="ghost" disabled={busy} onClick={useDifferentEmail}>Use a different email</Button>
         </div>
       </div>
     );
@@ -235,9 +236,9 @@ export function SignInForm({ next }: { next: string }) {
           <Input id="email" type="email" autoComplete="email" required placeholder="you@example.com"
             value={email} onChange={e => setEmail(e.target.value)} />
         </div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" className="w-full" disabled={busy}>{busy && !redirecting ? 'Sending…' : 'Email me a sign-in link'}</Button>
-        <p className="text-xs text-muted-foreground">No password. We email you a sign-in code and a link.</p>
+        {error && <p role="alert" className="bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p>}
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && !redirecting ? 'Sending…' : 'Email me a sign-in link'}</Button>
+        <p className="text-sm text-muted-foreground">No password. We email you a sign-in code and a link.</p>
       </form>
     </div>
   );

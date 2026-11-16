@@ -220,3 +220,39 @@ describe('CreatePotForm validation announcements', () => {
     expect(alerts[0]).toHaveTextContent(/fix the fields with errors/i);
   });
 });
+
+describe('CreatePotForm window presets from the URL', () => {
+  async function submitAndReadWindows(preset?: string) {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ potId: '1', inviteToken: 't' }, 201));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<CreatePotForm preset={preset} />);
+    fillForm();
+    await submit();
+    const sent = JSON.parse(callsTo(fetchMock, CREATE)[0][1].body);
+    return { objection: sent.objectionWindowSeconds, request: sent.requestWindowSeconds };
+  }
+
+  it('preset=booking starts on the production windows (48 hours, 7 days)', async () => {
+    render(<CreatePotForm preset="booking" />);
+    expect(screen.getByLabelText('Objection window')).toHaveTextContent('48 hours (production)');
+    expect(screen.getByLabelText('Payout request window')).toHaveTextContent('7 days (production)');
+    cleanup();
+    expect(await submitAndReadWindows('booking')).toEqual({ objection: 172800, request: 604800 });
+  });
+
+  it('no preset keeps the old defaults', async () => {
+    render(<CreatePotForm />);
+    expect(screen.getByLabelText('Objection window')).toHaveTextContent('2 minutes (demo)');
+    expect(screen.getByLabelText('Payout request window')).toHaveTextContent('2 minutes (demo)');
+    cleanup();
+    expect(await submitAndReadWindows()).toEqual({ objection: 120, request: 120 });
+  });
+
+  it('an unknown preset keeps the old defaults', async () => {
+    render(<CreatePotForm preset="whatever" />);
+    expect(screen.getByLabelText('Objection window')).toHaveTextContent('2 minutes (demo)');
+    expect(screen.getByLabelText('Payout request window')).toHaveTextContent('2 minutes (demo)');
+    cleanup();
+    expect(await submitAndReadWindows('whatever')).toEqual({ objection: 120, request: 120 });
+  });
+});

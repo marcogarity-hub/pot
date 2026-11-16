@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import type { OAuthProvider } from './auth';
 
@@ -22,24 +24,23 @@ function AppleIcon() {
   );
 }
 
-/** "Continue with Google / Apple" buttons and the "or" divider above the email form. Renders nothing when no provider is enabled. */
-export function OAuthButtons({ providers, busy, onSelect }: { providers: OAuthProvider[]; busy: boolean; onSelect: (provider: OAuthProvider) => void }) {
+/** Client component: the server-rendered skeleton passes only `providers` and `busy`, never a handler.
+ * "Continue with Google / Apple" buttons and the "or" divider above the email form. Renders nothing when no provider is enabled. */
+export function OAuthButtons({ providers, busy, onSelect }: { providers: OAuthProvider[]; busy: boolean; onSelect?: (provider: OAuthProvider) => void }) {
   if (providers.length === 0) return null;
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {providers.map(provider => (
-        <Button key={provider} type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={() => onSelect(provider)}>
+        <Button key={provider} type="button" variant="outline" size="lg" className="w-full gap-2" disabled={busy} onClick={() => onSelect?.(provider)}>
           {provider === 'google' ? <GoogleIcon /> : <AppleIcon />}
           {LABEL[provider]}
         </Button>
       ))}
       {providers.includes('apple') && (
-        <p className="text-xs text-muted-foreground">With Apple, choose “Share My Email” so it matches the address your organizer invited.</p>
+        <p className="text-sm text-muted-foreground">With Apple, choose “Share My Email” so it matches the address your organizer invited.</p>
       )}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground" role="separator" aria-label="or sign in with email">
-        <span className="h-px flex-1 bg-border" aria-hidden />
-        or
-        <span className="h-px flex-1 bg-border" aria-hidden />
+      <div role="separator" aria-label="or sign in with email" className="relative h-px bg-border">
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-sm text-muted-foreground">or</span>
       </div>
     </div>
   );

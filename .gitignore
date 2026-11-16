@@ -21,3 +21,10 @@ contracts/broadcast/
 
 # Third-party app screenshots used as design inspiration; keep local, never publish
 docs/design-refs/
+
+# Impeccable design-tool session files (decision pages, screenshots); the surface briefs and PRODUCT.md/DESIGN.md are committed
+web/.impeccable/mocks/
+web/.impeccable/questions/
+web/.impeccable/questions-payload.json
+web/.impeccable/review/
+web/.impeccable/build/
