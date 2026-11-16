@@ -92,7 +92,28 @@ QUICKNODE_STREAM_TOKEN=... node scripts/replay-stream.mjs --url https://<your-ap
 
 Script tests: `node --test scripts/*.test.mjs`.
 
-> TODO before submit: Stream name and ID, the exact filter, the destination URL, and a screenshot or log of a live `Paid` event reaching the progress bar. The route is built and tested against a fixture generated from the deployed contract's ABI; the live Stream has not been created yet.
+**Stream configuration** (created and tested with `scripts/quicknode-stream.mjs`):
+
+| Setting | Value |
+|---|---|
+| Network and dataset | `arc-testnet`, `logs` |
+| Filter | a JavaScript function that keeps only logs whose address is the Pot contract and returns `null` (no delivery) for every other block |
+| Batching | 5 blocks per delivery with elastic batching. Arc's blocks arrive faster than one a second, and QuickNode requires a batch of at least 5 for Streams that follow the chain tip on such networks |
+| Destination | webhook to `POST /api/streams` on the deployed app, with QuickNode's auto-generated security token |
+| Start | the chain tip. History is rebuilt with the replay script above |
+
+The filter was tested on QuickNode's own filter-test endpoint against a real block holding two Pot events in one transaction (`Paid` and `Locked`). It returned exactly those two logs with every field the route decodes.
+
+```bash
+node scripts/quicknode-stream.mjs test              # run the filter on QuickNode against a real block
+node scripts/quicknode-stream.mjs create --url https://<your-app>/api/streams          # dry run
+node scripts/quicknode-stream.mjs create --url https://<your-app>/api/streams --yes    # create it
+node scripts/quicknode-stream.mjs status
+```
+
+`create` saves the generated security token to `web/.env.local` as `QUICKNODE_STREAM_TOKEN` without printing it, and needs `QUICKNODE_API_KEY` there too. The API key is only for this setup and is not needed on Vercel.
+
+> TODO before submit: the live Stream's name and ID, and a screenshot or log of a real `Paid` event reaching the progress bar. The Stream has not been created yet, because it needs the deployed app's public URL.
 
 ## Running it locally
 
@@ -148,7 +169,7 @@ web/         Next.js app (App Router, TypeScript, Tailwind, shadcn/ui, viem)
   app/api/     route handlers: pots, wallet, streams
   lib/         pot ABI and chain config, Circle and relayer helpers
 supabase/    migrations
-scripts/     demo funding, event replay (backfill)
+scripts/     demo funding, event replay (backfill), QuickNode Stream setup
 docs/        brief, approved design spec and amendments, handoffs, merge log
 ```
 
