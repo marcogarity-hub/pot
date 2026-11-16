@@ -8,12 +8,22 @@ export type DecodedEvent = {
   blockNumber: string; args: Record<string, string | string[]>;
 };
 
+/** Streams may deliver the log array as {data: [...]}, as a bare top-level
+ * array, or as {data: {data: [...]}, metadata}. Returns the log array or throws. */
+function logArray(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    const outer = payload.data;
+    if (Array.isArray(outer)) return outer;
+    if (outer && typeof outer === 'object' && 'data' in outer && Array.isArray(outer.data)) return outer.data;
+  }
+  throw new Error('Expected a Streams data array');
+}
+
 /** Accept the raw EVM logs dataset (data[block][receipt][log]) or arrays
  * flattened by the Stream's address/topic filter. ABI is supplied by the caller. */
 export function decodePotLogs(payload: unknown, abi: Abi, potAddress: string): DecodedEvent[] {
-  if (!payload || typeof payload !== 'object' || !('data' in payload) || !Array.isArray(payload.data)) {
-    throw new Error('Expected a Streams data array');
-  }
+  const batch = logArray(payload);
   const events: DecodedEvent[] = [];
   function visit(value: unknown): void {
     if (Array.isArray(value)) { value.forEach(visit); return; }
@@ -33,6 +43,6 @@ export function decodePotLogs(payload: unknown, abi: Abi, potAddress: string): D
     if (!Number.isSafeInteger(logIndex) || logIndex < 0 || BigInt(blockNumber) < 0 || typeof args.potId !== 'string' || !/^\d+$/.test(args.potId) || typeof log.transactionHash !== 'string' || !/^0x[\da-f]{64}$/i.test(log.transactionHash)) throw new Error('Invalid log identity');
     events.push({ potId: args.potId, name: name as PotEventName, txHash: log.transactionHash.toLowerCase(), logIndex, blockNumber, args });
   }
-  payload.data.forEach(visit);
+  batch.forEach(visit);
   return events;
 }

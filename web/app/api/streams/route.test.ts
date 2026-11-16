@@ -192,3 +192,74 @@ describe('stores', () => {
     await expect(store.insertEvents([created])).rejects.toThrow('insert failed');
   });
 });
+describe('Streams payload shapes and rejection logging', () => {
+  it('returns 200 for a correctly signed bare-array body and for {data: {data: [...]}}', async () => {
+    const logs = allEventsFixture.data[0][0].slice(0, 2);
+    for (const payload of [logs, { data: { data: logs }, metadata: { network: 'arc-testnet' } }]) {
+      const store = memoryStore();
+      const response = await handler(store)(request(payload));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ events: 2, pots: 1 });
+      expect(store.projections.get('1')?.pot.payments_count).toBe(1);
+    }
+  });
+  it('returns 400 for a correctly signed garbage body', async () => {
+    const store = memoryStore();
+    const response = await handler(store)(request({ foo: 'bar' }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Invalid Streams logs payload' });
+    expect(store.events.size).toBe(0);
+  });
+  it('logs one shape summary without log values on a 400 and keeps the body unchanged', async () => {
+    const fixtureLog = allEventsFixture.data[0][0][0];
+    const payload = { data: { logs: [fixtureLog] }, metadata: { network: 'arc-testnet' } };
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await handler(memoryStore())(request(payload));
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid Streams logs payload' });
+      expect(error).toHaveBeenCalledTimes(1);
+      const line = String(error.mock.calls[0][0]);
+      expect(line.startsWith('[api/streams] payload rejected:')).toBe(true);
+      expect(line).not.toContain('\n');
+      expect(line).toContain('"logs"');
+      expect(line).toContain('"metadata"');
+      expect(line).toContain('"address"');
+      expect(line).not.toContain(fixtureLog.address);
+      expect(line).not.toContain(fixtureLog.address.toLowerCase());
+      expect(line).not.toContain(fixtureLog.topics[0]);
+      expect(line).not.toContain(fixtureLog.data);
+      expect(line).not.toContain('arc-testnet');
+    } finally { error.mockRestore(); }
+  });
+  it('logs "not json" with the byte length for an unparseable body', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect((await handler(memoryStore())(request('{bad'))).status).toBe(400);
+      expect(error).toHaveBeenCalledTimes(1);
+      const line = String(error.mock.calls[0][0]);
+      expect(line).toContain('payload rejected:');
+      expect(line).toContain('not json');
+      expect(line).toContain('4');
+      expect(line).not.toContain('bad');
+    } finally { error.mockRestore(); }
+  });
+  it('logs the redacted projection failure with name and message on a 500', async () => {
+    vi.stubEnv('SUPABASE_SECRET_KEY', 'sb-secret-value-123');
+    vi.stubEnv('QUICKNODE_STREAM_TOKEN', 'short');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const store = memoryStore();
+      store.insertEvents = vi.fn().mockRejectedValue(new Error('db down sb-secret-value-123 and short'));
+      const response = await handler(store)(request());
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'Projection failed; retry delivery' });
+      const line = error.mock.calls.map(call => String(call[0])).find(text => text.startsWith('[api/streams] projection failed:'));
+      expect(line).toBeDefined();
+      expect(line).toContain('Error');
+      expect(line).toContain('[redacted]');
+      expect(line).not.toContain('sb-secret-value-123');
+      expect(line).toContain('short');
+    } finally { error.mockRestore(); vi.unstubAllEnvs(); }
+  });
+});
