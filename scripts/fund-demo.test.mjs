@@ -6,6 +6,7 @@ import {
   validateAddresses,
   checkBudget,
   idempotencyKeyFor,
+  matchEmailAddresses,
 } from './fund-demo.mjs';
 
 const ONE = BigInt(10) ** BigInt(18);
@@ -135,4 +136,23 @@ test('--run-id changes the idempotency key and defaults to empty', () => {
     idempotencyKeyFor(A, ONE, '2026-11-15', 'rehearsal-3'),
   );
   assert.throws(() => parseArgs(['--to', A, '--run-id']), /needs a value/);
+});
+
+test('matchEmailAddresses resolves emails case-insensitively and counts the ones without a wallet', () => {
+  const rows = [
+    { email: 'A@x.com', wallet_address: '0x' + 'a'.repeat(40) },
+    { email: 'b@x.com', wallet_address: '0x' + 'b'.repeat(40) },
+    { email: 'c@x.com', wallet_address: null },
+    { email: 'd@x.com', wallet_address: 'not-an-address' },
+  ];
+  const r = matchEmailAddresses(['a@X.com', ' b@x.com ', 'c@x.com', 'd@x.com', 'nobody@x.com'], rows);
+  assert.deepEqual([...r.addresses], ['0x' + 'a'.repeat(40), '0x' + 'b'.repeat(40)]);
+  assert.equal(r.missing, 3);
+});
+
+test('parseArgs collects repeated --email', () => {
+  const a = parseArgs(['--email', 'a@x.com', '--email', 'b@x.com', '--amount', '2']);
+  assert.deepEqual([...a.emails], ['a@x.com', 'b@x.com']);
+  assert.deepEqual([...a.to], []);
+  assert.throws(() => parseArgs(['--email']), /needs a value/);
 });

@@ -170,8 +170,9 @@ Secrets live only in `.env.local` (git-ignored) and in the Vercel project settin
 Before a demo, give each demo wallet its share. The script defaults to a dry run:
 
 ```bash
-node scripts/fund-demo.mjs --to 0xMemberOne --to 0xMemberTwo --to 0xMemberThree --amount 2
-node scripts/fund-demo.mjs --to ... --amount 2 --yes     # actually send
+node scripts/fund-demo.mjs --email one@example.com --email two@example.com --email three@example.com --amount 2
+node scripts/fund-demo.mjs --to 0xMemberOne --to 0xMemberTwo --to 0xMemberThree --amount 2    # or by wallet address
+node scripts/fund-demo.mjs --email ... --amount 2 --yes     # actually send
 ```
 
 Re-running the same recipient and amount on the same day is deduplicated by Circle, which makes a retry after a failure safe. To deliberately fund the same wallet again that day, add `--run-id <any new text>`. Script tests: `node --test scripts/*.test.mjs`.

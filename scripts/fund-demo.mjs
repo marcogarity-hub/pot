@@ -2,7 +2,7 @@
 // Demo funding (spec amendment A10): sends native testnet USDC from the Circle
 // treasury to demo wallets before a live demo.
 //
-// Usage: node scripts/fund-demo.mjs --to 0xAddr [--to 0xAddr ...] [--amount 2] [--max-total <n>] [--run-id <text>] [--yes]
+// Usage: node scripts/fund-demo.mjs [--to 0xAddr ...] [--email member@example.com ...] [--amount 2] [--max-total <n>] [--run-id <text>] [--yes]
 //
 // Dry run unless --yes is passed. Re-running the same recipient and amount on the same UTC day is
 // deduplicated by Circle (safe after a failure); to deliberately send again that day, pass a new
@@ -29,7 +29,7 @@ const TERMINAL_FAILURES = new Set(['FAILED', 'CANCELLED', 'DENIED', 'STUCK']);
 const POLL_MS = 3000;
 const CONFIRM_TIMEOUT_MS = 120000;
 const USAGE =
-  'Usage: node scripts/fund-demo.mjs --to 0xAddr [--to 0xAddr ...] [--amount 2] [--max-total <n>] [--run-id <text>] [--yes]';
+  'Usage: node scripts/fund-demo.mjs [--to 0xAddr ...] [--email member@example.com ...] [--amount 2] [--max-total <n>] [--run-id <text>] [--yes]';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webDir = path.resolve(here, '..', 'web');
@@ -67,9 +67,22 @@ function gweiToWei(value) {
   return BigInt(whole || '0') * BigInt('1000000000') + BigInt((frac + '000000000').slice(0, 9));
 }
 
+/** Matches requested emails to wallet rows (case-insensitive). Pure, for tests. Never returns or logs emails. */
+export function matchEmailAddresses(emails, rows) {
+  const byEmail = new Map(rows.map(r => [String(r.email ?? '').trim().toLowerCase(), r.wallet_address]));
+  const addresses = [];
+  let missing = 0;
+  for (const email of emails) {
+    const wallet = byEmail.get(String(email).trim().toLowerCase());
+    if (typeof wallet === 'string' && ADDRESS_RE.test(wallet)) addresses.push(wallet);
+    else missing += 1;
+  }
+  return { addresses, missing };
+}
+
 /** Parses the argument list. Repeated --to accumulates; defaults amount to "2". */
 export function parseArgs(argv) {
-  const args = { to: [], amount: '2', maxTotal: undefined, runId: '', yes: false, help: false };
+  const args = { to: [], emails: [], amount: '2', maxTotal: undefined, runId: '', yes: false, help: false };
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
     const eq = token.startsWith('--') ? token.indexOf('=') : -1;
@@ -85,6 +98,9 @@ export function parseArgs(argv) {
     switch (flag) {
       case '--to':
         args.to.push(value());
+        break;
+      case '--email':
+        args.emails.push(value());
         break;
       case '--amount':
         args.amount = value();
@@ -246,6 +262,18 @@ export async function run(argv) {
     loadEnv();
     const treasury = process.env.TREASURY_ADDRESS ?? '';
     if (!ADDRESS_RE.test(treasury)) throw new Error('TREASURY_ADDRESS is missing or is not a valid 0x address');
+    if (args.emails.length > 0) {
+      const { createClient } = requireFromWeb('@supabase/supabase-js');
+      const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
+      const normalized = args.emails.map(e => e.trim().toLowerCase());
+      const found = await db.from('users').select('email,wallet_address').in('email', normalized);
+      if (found.error) throw new Error(`Could not look up wallets: ${found.error.message}`);
+      const { addresses, missing } = matchEmailAddresses(args.emails, found.data);
+      if (missing > 0) throw new Error(`${missing} of ${args.emails.length} email(s) have no wallet yet. Create the pot first so wallets are provisioned, then fund.`);
+      const known = new Set(args.to.map(a => a.toLowerCase()));
+      args.to = [...args.to, ...addresses.filter(a => !known.has(a.toLowerCase()))];
+      console.log(`Resolved ${addresses.length} email(s) to wallet address(es).`);
+    }
     validateAddresses(args.to, treasury);
     const amountWei = parseAmountToWei(args.amount);
     const maxTotal = args.maxTotal === undefined ? undefined : parseAmountToWei(args.maxTotal);
