@@ -17,7 +17,7 @@ const WRONG_CODE = 'That code is wrong or has expired. Check the newest email, o
 const CLAIM_FAILED = 'We could not finish signing you in. Please try again.';
 
 /**
- * Email sign-in. Step 1 sends a 6-digit code and a link; step 2 takes the code typed in.
+ * Email sign-in. Step 1 sends a code and a link; step 2 takes the code typed in.
  * The link still works as a fallback, and `next` is kept through the callback (e.g. /join/<token>).
  */
 export function SignInForm({ next }: { next: string }) {
@@ -81,7 +81,7 @@ export function SignInForm({ next }: { next: string }) {
     e.preventDefault();
     if (!sentTo || busy) return;
     if (code.length < MIN_CODE_LENGTH) {
-      setError(`Enter the ${MIN_CODE_LENGTH}-digit code from the email.`);
+      setError('Enter the code from the email.');
       return;
     }
     setBusy(true);
@@ -132,14 +132,14 @@ export function SignInForm({ next }: { next: string }) {
         <div className="flex flex-col items-center gap-2 text-center">
           <MailCheck className="size-10 text-primary" aria-hidden />
           <p className="font-medium">Check your email</p>
-          <p className="text-sm text-muted-foreground">We emailed you a 6-digit code. Enter it below.</p>
+          <p className="text-sm text-muted-foreground">We emailed you a code. Enter it below.</p>
           <p className="text-sm text-muted-foreground">Sent to <span className="font-medium text-foreground">{sentTo}</span>. Or click the link in the email, in this same browser.</p>
         </div>
         <form onSubmit={onVerify} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="sign-in-code">Sign-in code</Label>
             <Input id="sign-in-code" type="text" inputMode="numeric" autoComplete="one-time-code"
-              placeholder="123456" maxLength={MAX_CODE_LENGTH} value={code}
+              placeholder="Enter code" maxLength={MAX_CODE_LENGTH} value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, MAX_CODE_LENGTH))} />
           </div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
