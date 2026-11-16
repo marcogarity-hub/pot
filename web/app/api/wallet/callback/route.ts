@@ -14,9 +14,19 @@ const MAX_SUPABASE_CODE_LENGTH = 40;
 function shortCode(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 && value.length <= MAX_SUPABASE_CODE_LENGTH ? value : null;
 }
-/** Logs one redacted line (reason and short Supabase code only) and sends the user back to the sign-in page. */
-function signInFailed(request: Request, reason: 'missing_code' | 'provider_error' | 'exchange_failed' | 'unverified_session', supabaseCode: string | null, next: string | null): Response {
-  console.error('[api/wallet/callback] sign-in failed:', JSON.stringify({ reason, supabaseCode }));
+const MAX_DETAIL_LENGTH = 160;
+/**
+ * A short copy of Supabase's error_description for the log, so a failed Google sign-in can be diagnosed.
+ * Email addresses and long token-like strings (one-time codes, JWTs) are masked before it is cut to length.
+ */
+function shortDetail(value: string | null): string | null {
+  if (!value) return null;
+  const cleaned = value.replace(/\S+@\S+/g, '[email]').replace(/[A-Za-z0-9/_.\-+=]{24,}/g, '[x]').replace(/\s+/g, ' ').trim();
+  return cleaned ? cleaned.slice(0, MAX_DETAIL_LENGTH) : null;
+}
+/** Logs one redacted line (reason, short Supabase code and, for provider errors, a masked reason) and sends the user back to the sign-in page. */
+function signInFailed(request: Request, reason: 'missing_code' | 'provider_error' | 'exchange_failed' | 'unverified_session', supabaseCode: string | null, next: string | null, detail: string | null = null): Response {
+  console.error('[api/wallet/callback] sign-in failed:', JSON.stringify({ reason, supabaseCode, ...(detail ? { detail } : {}) }));
   const target = new URL('/sign-in', request.url);
   target.searchParams.set('error', 'link');
   if (next) target.searchParams.set('next', next);
@@ -27,7 +37,7 @@ export async function GET(request: Request) {
   const nextParam = url.searchParams.get('next');
   const validNext = nextParam !== null && safeNext(nextParam) === nextParam ? nextParam : null;
   if (PROVIDER_ERROR_PARAMS.some(p => url.searchParams.has(p))) {
-    return signInFailed(request, 'provider_error', shortCode(url.searchParams.get('error_code')), validNext);
+    return signInFailed(request, 'provider_error', shortCode(url.searchParams.get('error_code')), validNext, shortDetail(url.searchParams.get('error_description')));
   }
   const code = url.searchParams.get('code');
   if (!code) return signInFailed(request, 'missing_code', null, validNext);
