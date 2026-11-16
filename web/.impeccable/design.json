@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-16T12:00:00Z",
+  "title": "Design System: Pot Grid",
+  "extensions": {
+    "colorMeta": {
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "oklch(100.0% 0.000 90)", "tonalRamp": ["#0b0b0b", "#252525", "#424242", "#616161", "#828282", "#a5a5a5", "#c9c9c9", "#eeeeee"] },
+      "field": { "role": "neutral", "displayName": "Pale Field", "canonical": "oklch(97.6% 0.011 270)", "tonalRamp": ["#0b0b0d", "#242528", "#404247", "#5f6168", "#808288", "#a3a5a9", "#c8c9cb", "#eeeeef"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(17.7% 0.034 270)", "tonalRamp": ["#090b10", "#21252e", "#3c4250", "#596175", "#7c8293", "#a0a5b1", "#c6c9d1", "#edeef2"] },
+      "ink-muted": { "role": "neutral", "displayName": "Ink Muted", "canonical": "oklch(44.8% 0.054 272)", "tonalRamp": ["#090b12", "#202433", "#3a4158", "#566080", "#79819c", "#9ea4b9", "#c5c9d5", "#eceef4"] },
+      "blue": { "role": "primary", "displayName": "Electric Blue", "canonical": "oklch(54.7% 0.250 266)", "tonalRamp": ["#01062a", "#071964", "#122fa4", "#1f46ea", "#4a77f6", "#7ba1fc", "#b0c9ff", "#e3efff"] },
+      "blue-deep": { "role": "primary", "displayName": "Deep Blue", "canonical": "oklch(46.1% 0.231 265)", "tonalRamp": ["#010728", "#071b5f", "#13339d", "#204cdf", "#4c7aee", "#7da3f6", "#b1c9fc", "#e3efff"] },
+      "blue-wash": { "role": "secondary", "displayName": "Blue Wash", "canonical": "oklch(94.6% 0.025 269)", "tonalRamp": ["#0a0b0e", "#22252c", "#3e424d", "#5b6170", "#7d828f", "#a1a5ae", "#c7c9cf", "#edeef1"] },
+      "blue-mist": { "role": "neutral", "displayName": "Blue Mist", "canonical": "oklch(95.5% 0.021 268)", "tonalRamp": ["#0a0b0e", "#23252b", "#3e424b", "#5c616e", "#7e828d", "#a2a5ad", "#c7c9ce", "#edeef1"] },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "oklch(87.6% 0.061 274)", "tonalRamp": ["#090b13", "#202435", "#3a405b", "#565f84", "#7981a0", "#9ea4bb", "#c5c9d7", "#eceef5"] },
+      "grid-line": { "role": "neutral", "displayName": "Grid Line", "canonical": "oklch(91.8% 0.039 273)", "tonalRamp": ["#090b10", "#22252f", "#3d4152", "#5a6078", "#7c8295", "#a0a4b3", "#c6c9d2", "#edeef2"] },
+      "input-stroke": { "role": "neutral", "displayName": "Input Stroke", "canonical": "oklch(59.1% 0.071 273)", "tonalRamp": ["#080b14", "#1f2437", "#38405f", "#545f89", "#7781a4", "#9ca4be", "#c4c9d9", "#eceef6"] },
+      "amber": { "role": "warning", "displayName": "Amber Ink", "canonical": "oklch(49.4% 0.109 67)", "tonalRamp": ["#140800", "#371e01", "#5f3801", "#895303", "#a57848", "#bf9e7c", "#dac5b1", "#f6ede3"] },
+      "amber-wash": { "role": "warning", "displayName": "Amber Wash", "canonical": "oklch(96.2% 0.038 84)", "tonalRamp": ["#0d0b06", "#2a241a", "#494130", "#6c6049", "#8b816e", "#aba496", "#cdc9c0", "#f0eeea"] },
+      "green": { "role": "success", "displayName": "Released Green", "canonical": "oklch(46.9% 0.113 153)", "tonalRamp": ["#010f05", "#072d16", "#134f2b", "#207341", "#569269", "#87b192", "#b8d1be", "#e6f2e9"] },
+      "green-wash": { "role": "success", "displayName": "Green Wash", "canonical": "oklch(94.6% 0.031 159)", "tonalRamp": ["#080c0a", "#1f2822", "#38463e", "#53675b", "#77877d", "#9da8a1", "#c4cbc7", "#ecefed"] },
+      "red": { "role": "danger", "displayName": "Danger Red", "canonical": "oklch(50.0% 0.182 30)", "tonalRamp": ["#1d0101", "#490804", "#7b140d", "#b02217", "#ca5c4d", "#dd8c80", "#eebbb3", "#ffe8e4"] },
+      "red-wash": { "role": "danger", "displayName": "Red Wash", "canonical": "oklch(94.5% 0.024 27)", "tonalRamp": ["#0e0a09", "#2b2322", "#4b3e3d", "#6e5c5a", "#8e7e7c", "#ada2a0", "#cec7c6", "#f1eded"] }
+    },
+    "typographyMeta": {
+      "figure": { "displayName": "Figure", "purpose": "The one big money figure on the dashboard. 96px desktop, 48px phone. Archivo wdth 125." },
+      "display": { "displayName": "Display", "purpose": "Signed-out headline and pot title on desktop." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles such as Start a pot." },
+      "title": { "displayName": "Title", "purpose": "Section headings (h2) such as Needs you and Your pots." },
+      "body": { "displayName": "Body", "purpose": "Paragraphs and copy. Keep line length near 65 to 75 characters." },
+      "label": { "displayName": "Label", "purpose": "State labels and small captions. Sentence case." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Colour transitions on buttons, inputs and list rows (transition-colors, 150ms)." },
+      { "name": "progress-fill", "value": "transition-all (Tailwind default, 150ms ease)", "purpose": "Width change of the paid-share progress indicator." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one solid electric blue action per screen. 40px high, square.",
+      "html": "<button class=\"ds-btn-primary\">Start a pot</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; background: #2b59ff; color: #ffffff; border: 1px solid transparent; border-radius: 0; font: 600 14px/1 Geist, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: color-mix(in oklch, #2b59ff, black 16%); } .ds-btn-primary:focus-visible { outline: 2px solid #2b59ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The second action beside a primary. Paper ground, hairline stroke.",
+      "html": "<button class=\"ds-btn-outline\">Sign in</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; background: #ffffff; color: #0b1020; border: 1px solid #6f7ba8; border-radius: 0; font: 600 14px/1 Geist, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outline:hover { background: #eaf0ff; } .ds-btn-outline:focus-visible { outline: 2px solid #2b59ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Square paper field, 44px high, input-stroke border, blue focus.",
+      "html": "<input class=\"ds-input\" placeholder=\"Pot title\" />",
+      "css": ".ds-input { box-sizing: border-box; width: 100%; height: 44px; padding: 0 12px; background: #ffffff; color: #0b1020; border: 1px solid #6f7ba8; border-radius: 0; font: 400 16px/1.5 Geist, system-ui, sans-serif; outline: none; transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-input::placeholder { color: #4a5373; } .ds-input:focus-visible { border-color: #2b59ff; outline: 2px solid #2b59ff; outline-offset: 0; }"
+    },
+    {
+      "name": "State Label",
+      "kind": "custom",
+      "refersTo": "state-label-warning",
+      "description": "A pot state as text on a tinted ground with a square marker. Text is mandatory.",
+      "html": "<span class=\"ds-state ds-state-warning\"><span class=\"ds-state-mark\" aria-hidden></span>Payout requested</span>",
+      "css": ".ds-state { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; font: 600 12px/1 Geist, system-ui, sans-serif; white-space: nowrap; border-radius: 0; } .ds-state-mark { width: 8px; height: 8px; background: currentColor; } .ds-state-warning { background: #fff1d6; color: #8a5300; } .ds-state-accent { background: #e6edff; color: #1740d6; } .ds-state-success { background: #ddf4e6; color: #136c3a; } .ds-state-danger { background: #fde7e4; color: #b42318; } .ds-state-neutral { background: #eaf0ff; color: #0b1020; }"
+    },
+    {
+      "name": "Member Cells",
+      "kind": "custom",
+      "refersTo": "member-cell-paid",
+      "description": "The signature: one square per active member. Blue when paid, outlined with a diagonal slash when refunded. Carries a text summary.",
+      "html": "<span class=\"ds-cells\" role=\"img\" aria-label=\"2 of 4 paid\"><span class=\"ds-cell ds-cell-paid\"></span><span class=\"ds-cell ds-cell-paid\"></span><span class=\"ds-cell\"></span><span class=\"ds-cell ds-cell-refunded\"></span></span><span class=\"ds-cells-label\">2 of 4 paid</span>",
+      "css": ".ds-cells { display: inline-grid; grid-template-columns: repeat(4, 14px); gap: 4px; vertical-align: middle; } .ds-cell { display: block; width: 14px; height: 14px; box-sizing: border-box; background: #ffffff; border: 1px solid #6f7ba8; } .ds-cell-paid { background: #2b59ff; border-color: #2b59ff; } .ds-cell-refunded { background: linear-gradient(to top right, transparent 45%, #6f7ba8 45%, #6f7ba8 55%, transparent 55%); } .ds-cells-label { margin-left: 8px; font: 400 14px/1.5 Geist, system-ui, sans-serif; color: #4a5373; }"
+    },
+    {
+      "name": "Module With Registration Tick",
+      "kind": "custom",
+      "refersTo": "member-cell-unpaid",
+      "description": "A paper module on the grid, with a Geist Mono registration plus at its top-left corner. The tick is the only place Geist Mono appears.",
+      "html": "<section class=\"ds-module ds-tick\"><p class=\"ds-figure\">1,234.50<span class=\"ds-unit\">USDC</span></p></section>",
+      "css": ".ds-module { position: relative; background: #ffffff; border: 1px solid #c9d4ff; padding: 32px; } .ds-tick { position: relative; } .ds-tick::after { content: '+'; position: absolute; top: -0.62em; left: -0.36em; font: 400 14px/1 'Geist Mono', ui-monospace, monospace; color: #2b59ff; pointer-events: none; } .ds-figure { margin: 0; font-family: Archivo, system-ui, sans-serif; font-variation-settings: 'wdth' 125; font-weight: 600; font-size: 96px; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: #0b1020; } .ds-unit { margin-left: 12px; font: 500 24px/1 Geist, system-ui, sans-serif; color: #4a5373; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Filled Seat",
+    "overview": "Pot is an ordinary fintech tool drawn on a visible construction grid. Every pot is a row of square cells, one per member, filled blue only when that member's money is locked. White modules sit on a pale-blue field and meet on shared 1px hairlines instead of floating on shadows. Corners are square everywhere. One electric blue is spent on the single primary action per screen. State colours appear only where they carry meaning and always travel with a text label.",
+    "keyCharacteristics": [
+      "Square cells as the signature: one per member, filled when locked.",
+      "Visible construction grid: hairlines at 4 (phone) and 12 (desktop) columns, registration ticks.",
+      "Zero radius, modules joined by 1px hairlines, no elevation shadows.",
+      "One electric blue, used for the single primary action and for paid cells.",
+      "State is always text plus a tinted ground."
+    ],
+    "rules": [
+      { "name": "The Filled Seat Rule", "body": "A member cell is blue only when that member's money is locked. Blue is never used to decorate a cell that has not paid.", "section": "colors" },
+      { "name": "The One Blue Rule", "body": "The solid electric blue action is used once per screen. Its scarcity is what makes the primary action findable.", "section": "colors" },
+      { "name": "The Money Is Tabular Rule", "body": "Every amount, count and deadline uses the money class (tabular numerals) so figures align and do not shift.", "section": "typography" },
+      { "name": "The Hairline Join Rule", "body": "Modules share an edge and a 1px line. Cards do not float, and no shadow is used to lift one.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do fill a member cell blue only when that member's money is locked, and say the count in text beside it (for example \"3 of 4 paid\").",
+      "Do set one solid electric blue primary action per screen (bg-primary, #2b59ff).",
+      "Do pair every state colour with a text label in a StateLabel-style tinted ground.",
+      "Do keep controls at 40px (h-10) minimum, 44px (h-11) for inputs, and 48px for the large variant.",
+      "Do join modules with 1px hairlines and draw the 4-column (phone) or 12-column (desktop) armature behind content.",
+      "Do set every amount, count and deadline with tabular numerals (money).",
+      "Do use Archivo at wdth 125 for headings and the one big figure, Geist for interface text."
+    ],
+    "donts": [
+      "Don't round corners. Radius is 0 everywhere, including on buttons, inputs and modules.",
+      "Don't add drop shadows as depth. Modules are separated by hairlines, not lifted.",
+      "Don't use colour alone to signal state; a state with no text label is a defect.",
+      "Don't use Geist Mono outside the registration tick.",
+      "Don't add glyph icons as decoration or as state markers; state is carried by squares, labels and rules.",
+      "Don't add eyebrow or kicker labels above headings.",
+      "Don't set headings in a system display face.",
+      "Don't spend the solid blue on more than one action per screen."
+    ]
+  }
+}
