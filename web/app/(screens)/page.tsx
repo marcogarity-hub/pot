@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getVerifiedUser } from '@/lib/supabase/verified-user';
 import { linkButton } from '@/components/pot/linkButton';
 import { PotList, type PotSummary } from '@/components/pot/PotList';
 import { Screen } from '@/components/pot/Screen';
@@ -20,8 +21,8 @@ export default function Home() {
 // Reads the session cookie, so it streams in behind the Suspense boundary.
 async function HomeContent() {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return <SignedOut />;
+  const user = await getVerifiedUser(supabase);
+  if (!user) return <SignedOut />;
 
   const { data: rows } = await supabase
     .from('pot_status')
@@ -36,7 +37,7 @@ async function HomeContent() {
       </div>
       <PotList pots={(rows ?? []) as unknown as PotSummary[]} />
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span className="truncate">{data.user.email}</span>
+        <span className="truncate">{user.email}</span>
         <SignOutButton />
       </div>
     </div>
