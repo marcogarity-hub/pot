@@ -1,10 +1,11 @@
 vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib/pot')>(), get POT_ADDRESS() { return process.env.NEXT_PUBLIC_POT_ADDRESS; } }));
 import { beforeEach, expect, it, vi } from 'vitest';
 import { keccak256, parseUnits, toBytes } from 'viem';
-const m = vi.hoisted(() => ({ server: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), getWalletUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
+const m = vi.hoisted(() => ({ server: vi.fn(), verified: vi.fn(), admin: vi.fn(), ensureUser: vi.fn(), getWalletUser: vi.fn(), callPot: vi.fn(), finalize: vi.fn(), read: vi.fn(), block: vi.fn(), from: vi.fn(), update: vi.fn(), upsert: vi.fn(), saved: vi.fn(), leaver: vi.fn() }));
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: m.server }));
 vi.mock('@/lib/supabase/admin', () => ({ createAdminSupabase: m.admin }));
+vi.mock('@/lib/supabase/verified-user', () => ({ getVerifiedUser: m.verified }));
 vi.mock('@/lib/circle/identity', () => ({ ensureUser: m.ensureUser, getWalletUser: m.getWalletUser }));
 vi.mock('@/lib/circle/tx', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/circle/tx')>(), callPot: m.callPot }));
 vi.mock('@/lib/relayer', () => ({ relayerFinalize: m.finalize }));
@@ -27,7 +28,8 @@ type Handler = typeof pay;
 const post = (handler: Handler, body?: unknown, potId = '42') => handler(new Request('https://pot.test/api/pots/42', { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), { params: Promise.resolve({ potId }) });
 beforeEach(() => {
  vi.resetAllMocks();  process.env.NEXT_PUBLIC_POT_ADDRESS = org;
- m.server.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: 'auth', email: ' Organizer@x.com ' } }, error: null }) } });
+ m.server.mockResolvedValue({});
+ m.verified.mockResolvedValue({ id: 'auth', email: ' Organizer@x.com ' });
  m.ensureUser.mockImplementation(async (email: string) => ({ circle_wallet_id: email === 'replacement@x.com' ? 'replacement-wallet' : 'caller-wallet', wallet_address: email === 'replacement@x.com' ? replacement : org }));
  m.getWalletUser.mockResolvedValue({ circle_wallet_id: 'caller-wallet', wallet_address: org });
  m.read.mockResolvedValue(pot()); m.block.mockResolvedValue({ timestamp: BigInt(1000) });
@@ -47,8 +49,16 @@ it.each([['AlreadyPaid', "You've already paid into this pot."], ['DeadlinePassed
  m.callPot.mockRejectedValue(new PotRevertError(code)); const response = await post(pay); expect(response.status).toBe(409); expect(await response.json()).toEqual({ error: code, message });
 });
 it.each([pay, refund, object, expire, release, swap])('requires authentication before wallet calls', async handler => {
- m.server.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: null } }) } });
- expect((await post(handler)).status).toBe(401); expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled();
+ m.verified.mockResolvedValue(null);
+ expect((await post(handler, { receiptText: 'receipt', leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' })).status).toBe(401);
+ expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.callPot).not.toHaveBeenCalled();
+});
+it.each([pay, refund, object, expire, release, swap])('answers 401 and skips wallet lookup, chain reads, writes and provisioning on %s when getVerifiedUser refuses', async handler => {
+ m.verified.mockResolvedValue(null);
+ const response = await post(handler, { receiptText: 'receipt', leaverEmail: 'old@x.com', replacementEmail: 'replacement@x.com' });
+ expect(response.status).toBe(401); expect(await response.json()).toEqual({ error: 'Unauthorized' });
+ expect(m.getWalletUser).not.toHaveBeenCalled(); expect(m.ensureUser).not.toHaveBeenCalled(); expect(m.read).not.toHaveBeenCalled();
+ expect(m.callPot).not.toHaveBeenCalled(); expect(m.admin).not.toHaveBeenCalled(); expect(m.upsert).not.toHaveBeenCalled(); expect(m.update).not.toHaveBeenCalled();
 });
 it.each([pay, refund, object, expire])('does not provision or prefund a caller on %s', async handler => {
  const response = await post(handler);

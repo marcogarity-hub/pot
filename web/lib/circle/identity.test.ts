@@ -1,10 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const m = vi.hoisted(() => ({ createWallet: vi.fn(), prefund: vi.fn(), admin: vi.fn(), server: vi.fn(), deleteReserved: vi.fn(), getBalance: vi.fn() }));
+const m = vi.hoisted(() => ({ createWallet: vi.fn(), prefund: vi.fn(), admin: vi.fn(), server: vi.fn(), verified: vi.fn(), deleteReserved: vi.fn(), getBalance: vi.fn() }));
 vi.mock('viem', async importOriginal => ({ ...(await importOriginal<typeof import('viem')>()), createPublicClient: () => ({ getBalance: m.getBalance }), http: () => ({}) }));
 vi.mock('./wallets',()=>({createWallet:m.createWallet}));
 vi.mock('../relayer',()=>({prefund:m.prefund, PrefundRefusedError: class PrefundRefusedError extends Error {}}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
+vi.mock('@/lib/supabase/verified-user',()=>({getVerifiedUser:m.verified}));
 import { ensureUser, getWalletUser, claimUser, normalizeEmail } from './identity';
 import { GET as callback } from '@/app/api/wallet/callback/route';
 import { GET as me } from '@/app/api/wallet/me/route';
@@ -23,7 +24,8 @@ beforeEach(()=>{
    }
   };return q;
  }}));
- m.server.mockResolvedValue({auth:{exchangeCodeForSession:vi.fn().mockResolvedValue({error:null}),getUser:vi.fn().mockResolvedValue({data:{user:{id:'auth-id',email:'A@x.com'}}})}});
+ m.server.mockResolvedValue({auth:{exchangeCodeForSession:vi.fn().mockResolvedValue({error:null})}});
+ m.verified.mockResolvedValue({id:'auth-id',email:'A@x.com'});
 });
 it('normalizes email',()=>expect(normalizeEmail(' Alice@X.com ')).toBe('alice@x.com'));
 it('concurrent mixed-case ensures provision and fund exactly once',async()=>{
@@ -44,7 +46,7 @@ it('callback preserves a join invite path',async()=>{
 });
 it('me returns normalized identity',async()=>{rows.push({id:'internal-id',email:'a@x.com',auth_user_id:'auth-id',circle_wallet_id:'wallet',wallet_address:'0x1111111111111111111111111111111111111111'});const response=await me();expect(await response.json()).toEqual({email:'a@x.com',wallet_address:'0x1111111111111111111111111111111111111111'});expect(m.createWallet).not.toHaveBeenCalled();});
 it('me returns NoWallet without provisioning a signed-in email',async()=>{const response=await me();expect(response.status).toBe(404);expect(await response.json()).toEqual({error:'NoWallet'});expect(m.createWallet).not.toHaveBeenCalled();expect(m.prefund).not.toHaveBeenCalled();});
-it('me rejects unauthenticated callers',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await me()).status).toBe(401);});
+it('me rejects unauthenticated callers',async()=>{m.verified.mockResolvedValue(null);expect((await me()).status).toBe(401);});
 it('times out waiting for an already-reserved identity without provisioning again',async()=>{
  vi.useFakeTimers();
  try { rows.push({id:'pending',email:'a@x.com',auth_user_id:null});const pending=expect(ensureUser('a@x.com')).rejects.toThrow('provisioning pending');await vi.advanceTimersByTimeAsync(10000);await pending;expect(m.createWallet).not.toHaveBeenCalled();expect(m.prefund).not.toHaveBeenCalled(); } finally {vi.useRealTimers();}

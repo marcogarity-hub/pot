@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const m=vi.hoisted(()=>({server:vi.fn(),claimUser:vi.fn(),exchange:vi.fn(),getUser:vi.fn()}));
+const m=vi.hoisted(()=>({server:vi.fn(),claimUser:vi.fn(),exchange:vi.fn(),verified:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 vi.mock('@/lib/circle/identity',()=>({claimUser:m.claimUser}));
+vi.mock('@/lib/supabase/verified-user',()=>({getVerifiedUser:m.verified}));
 vi.mock('server-only',()=>({}));
 import { GET } from './route';
 const origin='https://pot.test';
@@ -12,9 +13,9 @@ const logged=()=>errSpy.mock.calls.flat().map(String).join(' ');
 beforeEach(()=>{
  vi.clearAllMocks();
  errSpy=vi.spyOn(console,'error').mockImplementation(()=>{});
- m.server.mockResolvedValue({auth:{exchangeCodeForSession:m.exchange,getUser:m.getUser}});
+ m.server.mockResolvedValue({auth:{exchangeCodeForSession:m.exchange}});
  m.exchange.mockResolvedValue({error:null});
- m.getUser.mockResolvedValue({data:{user:{id:'auth-id',email:'a@x.com'}},error:null});
+ m.verified.mockResolvedValue({id:'auth-id',email:'a@x.com'});
  m.claimUser.mockResolvedValue(undefined);
 });
 afterEach(()=>{errSpy.mockRestore();});
@@ -103,6 +104,17 @@ it('keeps the successful path: code -> session -> claim -> redirect to next',asy
  expect(m.exchange).toHaveBeenCalledWith('abc');
  expect(m.claimUser).toHaveBeenCalledWith('auth-id','a@x.com');
  expect(errSpy).not.toHaveBeenCalled();
+});
+
+it('redirects to /sign-in?error=link and does not claim when getVerifiedUser refuses the exchanged session',async()=>{
+ m.verified.mockResolvedValue(null);
+ const response=await get('?code=abc&next=/join/abc');
+ expect(m.exchange).toHaveBeenCalledWith('abc');
+ expect(response.status).toBe(302);
+ expect(response.headers.get('location')).toBe(`${origin}/sign-in?error=link&next=%2Fjoin%2Fabc`);
+ expect(m.claimUser).not.toHaveBeenCalled();
+ expect(errSpy).toHaveBeenCalledWith('[api/wallet/callback] sign-in failed:',JSON.stringify({reason:'unverified_session',supabaseCode:null}));
+ expect(logged()).not.toContain('a@x.com');
 });
 
 it('keeps the successful path default redirect to / when next is unsafe',async()=>{

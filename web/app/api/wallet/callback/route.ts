@@ -1,5 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { claimUser } from '@/lib/circle/identity';
+import { getVerifiedUser } from '@/lib/supabase/verified-user';
 function safeNext(input: string | null): string {
   if (!input || !input.startsWith('/') || input.startsWith('//') || /[\\\u0000- ]/.test(input)) return '/';
   try {
@@ -14,7 +15,7 @@ function shortCode(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 && value.length <= MAX_SUPABASE_CODE_LENGTH ? value : null;
 }
 /** Logs one redacted line (reason and short Supabase code only) and sends the user back to the sign-in page. */
-function signInFailed(request: Request, reason: 'missing_code' | 'provider_error' | 'exchange_failed', supabaseCode: string | null, next: string | null): Response {
+function signInFailed(request: Request, reason: 'missing_code' | 'provider_error' | 'exchange_failed' | 'unverified_session', supabaseCode: string | null, next: string | null): Response {
   console.error('[api/wallet/callback] sign-in failed:', JSON.stringify({ reason, supabaseCode }));
   const target = new URL('/sign-in', request.url);
   target.searchParams.set('error', 'link');
@@ -38,9 +39,10 @@ export async function GET(request: Request) {
     return signInFailed(request, 'exchange_failed', null, validNext);
   }
   if (exchanged.error) return signInFailed(request, 'exchange_failed', shortCode(exchanged.error.code), validNext);
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user?.email) return Response.json({ error: 'Sign-in failed' },{status:401});
-  try { await claimUser(data.user.id,data.user.email); }
+  // Only a session Supabase vouches for, with a confirmed email and an OTP (not password) method, may claim a wallet.
+  const user = await getVerifiedUser(supabase);
+  if (!user) return signInFailed(request, 'unverified_session', null, validNext);
+  try { await claimUser(user.id,user.email); }
   catch { return Response.json({ error: 'Wallet provisioning pending. Please retry shortly.' },{status:503}); }
   return Response.redirect(new URL(safeNext(url.searchParams.get('next')),url.origin),303);
 }

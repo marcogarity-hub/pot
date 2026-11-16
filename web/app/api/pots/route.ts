@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { parseEventLogs, parseUnits, type Hex } from 'viem';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase/admin';
+import { getVerifiedUser } from '@/lib/supabase/verified-user';
 import { claimUser, ensureUser } from '@/lib/circle/identity';
 import { callPot, CircleTimeoutError, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
@@ -10,25 +11,25 @@ import { createPotLimiter } from './limiter';
 import { logApiError, toHttp, validationMessage } from './errors';
 export async function POST(request: Request) {
   const supabase = await createServerSupabase();
-  const session = await supabase.auth.getUser();
-  if (session.error || !session.data.user?.email) return Response.json({error:'Unauthorized'},{status:401});
+  const user = await getVerifiedUser(supabase);
+  if (!user) return Response.json({error:'Unauthorized'},{status:401});
   let raw: unknown;
   try { raw = await request.json(); } catch { return Response.json({message:'Invalid JSON body'},{status:400}); }
   const validated = createPotSchema.safeParse(raw);
   if (!validated.success) return Response.json({message:validationMessage(validated.error.issues[0])},{status:400});
   const body = validated.data;
   try { potAddress(); } catch (error) { return toHttp(error); }
-  if (!createPotLimiter.take(session.data.user.id)) return Response.json({message:'You can create at most 5 pots per hour. Please try again later.'},{status:429,headers:{'Retry-After':'3600'}});
+  if (!createPotLimiter.take(user.id)) return Response.json({message:'You can create at most 5 pots per hour. Please try again later.'},{status:429,headers:{'Retry-After':'3600'}});
   let addresses: Hex[];
   let organizer: Awaited<ReturnType<typeof ensureUser>>;
   try {
-    organizer = await ensureUser(session.data.user.email.trim().toLowerCase());
-    await claimUser(session.data.user.id, session.data.user.email.trim().toLowerCase());
+    organizer = await ensureUser(user.email.trim().toLowerCase());
+    await claimUser(user.id, user.email.trim().toLowerCase());
     const members = await Promise.all(body.memberEmails.map(email=>ensureUser(email)));
     // Provisioning is separate from validation: never submit zero or duplicate wallets.
     try {
       validAddress(organizer.wallet_address);
-      addresses = members.map(user=>validAddress(user.wallet_address));
+      addresses = members.map(member=>validAddress(member.wallet_address));
       if (new Set(addresses).size !== addresses.length) throw new Error('Duplicate member wallets');
     } catch { return Response.json({message:'Invalid or duplicate wallet address'},{status:400}); }
   } catch (error) {

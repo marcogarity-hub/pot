@@ -2,9 +2,10 @@ vi.mock('@/lib/pot', async original => ({ ...await original<typeof import('@/lib
 import { beforeEach, expect, it, vi } from 'vitest';
 import { encodeAbiParameters, encodeEventTopics } from 'viem';
 import { potAbi } from '@/lib/pot';
-const m=vi.hoisted(()=>({server:vi.fn(),admin:vi.fn(),getWalletUser:vi.fn(),getTransaction:vi.fn(),receipt:vi.fn(),readPot:vi.fn(),insert:vi.fn(),select:vi.fn(),maybeSingle:vi.fn()}));
+const m=vi.hoisted(()=>({server:vi.fn(),verified:vi.fn(),admin:vi.fn(),getWalletUser:vi.fn(),getTransaction:vi.fn(),receipt:vi.fn(),readPot:vi.fn(),insert:vi.fn(),select:vi.fn(),maybeSingle:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createServerSupabase:m.server}));
 vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:m.admin}));
+vi.mock('@/lib/supabase/verified-user',()=>({getVerifiedUser:m.verified}));
 vi.mock('@/lib/circle/identity',()=>({getWalletUser:m.getWalletUser}));
 vi.mock('@/lib/circle/transactions',()=>({getCircleTransaction:m.getTransaction}));
 vi.mock('@/lib/circle/receipt',()=>({getPotReceipt:m.receipt}));
@@ -18,7 +19,8 @@ const post=(data:unknown)=>POST(new Request('https://pot.test/api/pots/reconcile
 const eventReceipt=()=>({status:'success',logs:[{address,topics:encodeEventTopics({abi:potAbi,eventName:'PotCreated',args:{potId:BigInt(77),organizer:address}}),data:encodeAbiParameters([{type:'address[]'},{type:'uint256'},{type:'uint256'},{type:'uint256'},{type:'uint256'},{type:'uint256'},{type:'uint256'}],[[address],BigInt(2),BigInt(1),BigInt(1),BigInt(1),BigInt(60),BigInt(60)])}]});
 beforeEach(()=>{
  vi.clearAllMocks();process.env.NEXT_PUBLIC_POT_ADDRESS=address;
- m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:{id:'auth',email:'org@x.com'}}})}});
+ m.server.mockResolvedValue({});
+ m.verified.mockResolvedValue({id:'auth',email:'org@x.com'});
  m.getWalletUser.mockImplementation(async(email:string)=>({id:email,circle_wallet_id:email==='org@x.com'?'org-wallet':email,wallet_address:email==='org@x.com'?address:`0x${(members.indexOf(email)+2).toString(16).padStart(40,'0')}`}));
  m.getTransaction.mockResolvedValue({state:'COMPLETE',walletId:'org-wallet',txHash:`0x${'a'.repeat(64)}`});
  m.receipt.mockResolvedValue(eventReceipt());m.readPot.mockResolvedValue({organizer:address,members:[`0x${'2'.padStart(40,'0')}`,`0x${'3'.padStart(40,'0')}`]});
@@ -26,7 +28,14 @@ beforeEach(()=>{
  m.insert.mockResolvedValue({error:null});
  m.admin.mockReturnValue({from:()=>({select:m.select,insert:m.insert})});
 });
-it('requires a session and never resolves wallets',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await post({...body(),transactionHash:`0x${'a'.repeat(64)}`})).status).toBe(401);expect(m.getWalletUser).not.toHaveBeenCalled();});
+it('requires a session and never resolves wallets',async()=>{m.verified.mockResolvedValue(null);expect((await post({...body(),transactionHash:`0x${'a'.repeat(64)}`})).status).toBe(401);expect(m.getWalletUser).not.toHaveBeenCalled();});
+it('answers 401 and reads no transaction, receipt, pot or database row when getVerifiedUser refuses the session',async()=>{
+ m.verified.mockResolvedValue(null);
+ const response=await post({...body(),circleTransactionId:'id'});
+ expect(response.status).toBe(401);expect(await response.json()).toEqual({error:'Unauthorized'});
+ expect(m.getWalletUser).not.toHaveBeenCalled();expect(m.getTransaction).not.toHaveBeenCalled();expect(m.receipt).not.toHaveBeenCalled();expect(m.readPot).not.toHaveBeenCalled();
+ expect(m.admin).not.toHaveBeenCalled();expect(m.insert).not.toHaveBeenCalled();
+});
 it.each([{}, {circleTransactionId:'id',transactionHash:`0x${'a'.repeat(64)}`}])('requires exactly one recovery id %j',async(patch)=>{expect((await post({...body(),...patch})).status).toBe(400);});
 it('keeps the no-path recovery validation message unprefixed',async()=>{const response=await post(body());expect(response.status).toBe(400);expect(await response.json()).toEqual({message:'Provide exactly one of circleTransactionId or transactionHash'});});
 it('rejects a Circle transaction owned by another wallet',async()=>{m.getTransaction.mockResolvedValue({state:'COMPLETE',walletId:'other',txHash:`0x${'a'.repeat(64)}`});expect((await post({...body(),circleTransactionId:'id'})).status).toBe(403);});
