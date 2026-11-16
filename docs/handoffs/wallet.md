@@ -902,3 +902,40 @@ $ npm run build
 ƒ  (Dynamic)            server-rendered on demand
 exit 0
 ```
+
+## 2026-11-16: POST /api/wallet/claim for code sign-in
+
+Done: `web/app/api/wallet/claim/route.ts` exports `POST`. The browser calls it right after a 6-digit code is verified, so the signed-in user is linked to their wallet row (`claimUser`) before pot data is read under RLS. The route never provisions wallets and never calls prefund or Circle. `claimUser` is a no-op when no `users` row exists for the email.
+
+Endpoint contract (no request body; the session cookie identifies the user):
+
+| Case | Status | Body |
+|---|---|---|
+| No session, or session user has no email | 401 | `{"error":"Unauthorized"}` |
+| `claimUser` succeeds | 200 | `{"ok":true}` |
+| `claimUser` throws `Identity already linked to another account` | 409 | `{"error":"IdentityConflict","message":"This email is linked to a different sign-in."}` |
+| Any other failure | 503 | `{"message":"Could not finish signing you in. Please try again."}` |
+
+Logging: on 503 only, `console.error('[api/wallet/claim] failed:', JSON.stringify({ name }))`. Only the error name is logged; never the message, email, ids or tokens.
+
+Files changed: `web/app/api/wallet/claim/route.ts` (new), `web/app/api/wallet/claim/route.test.ts` (new, 5 tests), this handoff.
+
+Not changed: callback route, `web/lib/circle/*`, `web/lib/relayer/*`, package or config files.
+
+Gates (run from web/, fresh):
+```text
+$ npx vitest run
+ Test Files  33 passed (33)
+      Tests  420 passed (420)
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+> web@0.1.0 lint
+> eslint
+exit 0
+$ npm run build
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+exit 0
+```
