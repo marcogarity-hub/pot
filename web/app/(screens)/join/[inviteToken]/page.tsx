@@ -1,21 +1,16 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { getVerifiedUser } from '@/lib/supabase/verified-user';
-import { linkButton } from '@/components/pot/linkButton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { resolveInvite } from '@/components/pot/auth';
 import { inviteTitle, lookupInvite, potSummary } from '@/components/pot/invite.server';
 import { claimUser } from '@/lib/circle/identity';
 import { JoinPreview } from '@/components/pot/JoinPreview';
 import { Screen } from '@/components/pot/Screen';
-import { LinkNotice } from '@/components/pot/LinkNotice';
-import { SignInForm } from '@/components/pot/SignInForm';
-import { SignOutButton } from '@/components/pot/SignOutButton';
+import { InviteNotFound, NoLongerMember, SignedOutInvite, WrongEmail } from './JoinStates';
 
 export default function JoinPage({ params, searchParams }: PageProps<'/join/[inviteToken]'>) {
   return (
-    <Screen>
+    <Screen width="narrow">
       <Suspense fallback={<p className="text-sm text-muted-foreground">Checking your invite…</p>}>
         {Promise.all([params, searchParams]).then(([{ inviteToken }, sp]) => (
           <JoinGate token={inviteToken} linkFailed={sp.error === 'link'} />
@@ -32,16 +27,8 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
 
   if (!user) {
     const title = await inviteTitle(token);
-    if (title === undefined) return <NotFound />;
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle as="h1">You&apos;re invited{title ? ` to ${title}` : ''}</CardTitle>
-          <CardDescription>Sign in with the email your organizer invited to see the pot and pay your share.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">{linkFailed && <LinkNotice />}<SignInForm next={next} /></CardContent>
-      </Card>
-    );
+    if (title === undefined) return <InviteNotFound />;
+    return <SignedOutInvite title={title} linkFailed={linkFailed} next={next} />;
   }
 
   const outcome = resolveInvite(await lookupInvite(token, user.email));
@@ -57,42 +44,7 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
         organizerEmail={summary.organizerEmail} email={user.email} />
     );
   }
-  if (outcome.kind === 'not-found') return <NotFound />;
+  if (outcome.kind === 'not-found') return <InviteNotFound />;
   if (outcome.kind === 'left') return <NoLongerMember />;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h1">This invite isn&apos;t for your email</CardTitle>
-        <CardDescription>You&apos;re signed in as {user.email}. Ask the organizer to add this address, or sign in with the one they invited.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex gap-2">
-        <SignOutButton />
-        <Link href="/" className={linkButton({ variant: 'outline', size: 'sm' })}>Go home</Link>
-      </CardContent>
-    </Card>
-  );
-}
-
-function NoLongerMember() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h1">You&apos;re no longer in this pot.</CardTitle>
-        <CardDescription>Your seat was given to someone else. Ask the organizer if you think this is a mistake.</CardDescription>
-      </CardHeader>
-      <CardContent><Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link></CardContent>
-    </Card>
-  );
-}
-
-function NotFound() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h1">Invite not found</CardTitle>
-        <CardDescription>This link may be mistyped or the pot may still be confirming. Ask the organizer to send it again.</CardDescription>
-      </CardHeader>
-      <CardContent><Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link></CardContent>
-    </Card>
-  );
+  return <WrongEmail email={user.email} />;
 }

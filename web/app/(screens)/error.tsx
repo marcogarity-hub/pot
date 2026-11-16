@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { linkButton } from '@/components/pot/linkButton';
+import { PotMark } from '@/components/pot/PotMark';
 import { Screen } from '@/components/pot/Screen';
 
 /**
@@ -13,16 +13,17 @@ import { Screen } from '@/components/pot/Screen';
 export default function ScreenError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <Screen>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h1" className="font-heading text-xl">Something went wrong</CardTitle>
-          <CardDescription>We couldn&apos;t load this page. Try again in a moment.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button onClick={() => reset()}>Try again</Button>
-          <Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link>
-        </CardContent>
-      </Card>
+      <section className="min-w-0 space-y-6 border border-border bg-card p-5 md:p-8">
+        <PotMark className="size-8 text-primary" />
+        <div className="space-y-3">
+          <h1 className="font-heading text-4xl font-semibold leading-tight tracking-tight">Something went wrong</h1>
+          <p className="text-base text-muted-foreground">We couldn&apos;t load this page. Try again in a moment.</p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button size="lg" onClick={() => reset()}>Try again</Button>
+          <Link href="/" className={linkButton({ size: 'lg', variant: 'outline' })}>Go home</Link>
+        </div>
+      </section>
     </Screen>
   );
 }

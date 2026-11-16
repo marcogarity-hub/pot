@@ -20,7 +20,7 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
   const choice = showCustom ? 'custom' : String(match.seconds);
   const items = [...presets.map(p => ({ value: String(p.seconds), label: p.label })), { value: 'custom', label: 'Custom' }];
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       <Label htmlFor={`${id}-trigger`}>{label}</Label>
       <Select
         items={items}
@@ -60,7 +60,7 @@ export function WindowField({ id, label, hint, presets, seconds, onChange, error
           <span className="text-sm text-muted-foreground">minutes</span>
         </div>
       )}
-      <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p>
+      <p id={`${id}-hint`} className="text-sm text-muted-foreground">{hint}</p>
       {error && <p id={`${id}-error`} className="text-sm text-destructive">{error}</p>}
     </div>
   );

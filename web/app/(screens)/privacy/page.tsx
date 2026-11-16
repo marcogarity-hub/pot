@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { linkButton } from '@/components/pot/linkButton';
 import { Screen } from '@/components/pot/Screen';
 
@@ -13,21 +12,20 @@ const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
 
 export default function PrivacyPage() {
   return (
-    <Screen>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h1" className="font-heading text-xl">Privacy</CardTitle>
-          <CardDescription>Last updated {UPDATED}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm leading-relaxed">
+    <Screen width="narrow">
+      <article className="min-w-0 max-w-[65ch] space-y-8 text-base leading-relaxed">
+        <header className="space-y-2 pb-2">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight">Privacy</h1>
+          <p className="text-sm text-muted-foreground">Last updated {UPDATED}</p>
+        </header>
           <p>
             Pot is a hackathon demo of group payments on a <strong>test network</strong> (Arc testnet). It uses test USDC, which has no
             real-world value. Please don&apos;t use it for real money.
           </p>
 
-          <section className="space-y-2">
-            <h2 className="font-heading text-base font-semibold">What we collect</h2>
-            <ul className="list-disc space-y-1 pl-5">
+          <section className="space-y-3 border-t border-border pt-6">
+            <h2 className="font-heading text-xl font-semibold tracking-tight">What we collect</h2>
+            <ul className="list-disc space-y-2 pl-5">
               <li><strong>Your email address.</strong> You give it when you sign in, or a pot organizer types it to invite you.</li>
               <li>
                 <strong>If you sign in with Google:</strong> the email address on your Google account. Google also sends your name and
@@ -40,22 +38,22 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="font-heading text-base font-semibold">How we use it</h2>
+          <section className="space-y-3 border-t border-border pt-6">
+            <h2 className="font-heading text-xl font-semibold tracking-tight">How we use it</h2>
             <p>Only to run pots: to sign you in, show you your pots, move the test money, and send your sign-in code. We don&apos;t sell your information and we don&apos;t use it for advertising.</p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="font-heading text-base font-semibold">What is public</h2>
+          <section className="space-y-3 border-t border-border pt-6">
+            <h2 className="font-heading text-xl font-semibold tracking-tight">What is public</h2>
             <p>
               Payments, wallet addresses and pot IDs are written to a public blockchain. Anyone can see them, and they can&apos;t be edited or
               deleted by us or anyone else. Your email address is not written to the blockchain.
             </p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="font-heading text-base font-semibold">Who handles it for us</h2>
-            <ul className="list-disc space-y-1 pl-5">
+          <section className="space-y-3 border-t border-border pt-6">
+            <h2 className="font-heading text-xl font-semibold tracking-tight">Who handles it for us</h2>
+            <ul className="list-disc space-y-2 pl-5">
               <li><strong>Supabase:</strong> accounts, sign-in and our database.</li>
               <li><strong>Circle:</strong> creates and signs for member wallets.</li>
               <li><strong>Vercel:</strong> hosts the app.</li>
@@ -65,20 +63,19 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="font-heading text-base font-semibold">Deleting your data</h2>
+          <section className="space-y-3 border-t border-border pt-6">
+            <h2 className="font-heading text-xl font-semibold tracking-tight">Deleting your data</h2>
             <p>
               This is a demo, so we keep account and pot records only as long as the demo runs. To ask us to delete yours,{' '}
               {CONTACT_EMAIL
-                ? <>email <a className="underline underline-offset-2" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</>
+                ? <>email <a className="underline underline-offset-4" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</>
                 : <>open an issue on the project&apos;s GitHub page.</>}{' '}
               Records already on the blockchain can&apos;t be removed.
             </p>
           </section>
 
-          <Link href="/" className={linkButton({ variant: 'outline' })}>Back to Pot</Link>
-        </CardContent>
-      </Card>
+          <div className="border-t border-border pt-6"><Link href="/" className={linkButton({ variant: 'outline' })}>Back to Pot</Link></div>
+      </article>
     </Screen>
   );
 }

@@ -1,20 +1,19 @@
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { linkButton } from '@/components/pot/linkButton';
+import { PotMark } from '@/components/pot/PotMark';
 import { Screen } from '@/components/pot/Screen';
 
 export default function NotFound() {
   return (
     <Screen>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h1" className="font-heading text-xl">Page not found</CardTitle>
-          <CardDescription>This page doesn&apos;t exist or has moved.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link>
-        </CardContent>
-      </Card>
+      <section className="min-w-0 space-y-6 border border-border bg-card p-5 md:p-8">
+        <PotMark className="size-8 text-primary" />
+        <div className="space-y-3">
+          <h1 className="font-heading text-4xl font-semibold leading-tight tracking-tight">Page not found</h1>
+          <p className="text-base text-muted-foreground">This page doesn&apos;t exist or has moved.</p>
+        </div>
+        <Link href="/" className={linkButton({ size: 'lg' })}>Go home</Link>
+      </section>
     </Screen>
   );
 }
