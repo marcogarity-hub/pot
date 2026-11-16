@@ -25,7 +25,8 @@ beforeEach(()=>{
 });
 it('requires a session',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await post(body())).status).toBe(401);expect(m.ensureUser).not.toHaveBeenCalled();});
 it('rejects the sixth create in an hour',async()=>{for(let i=0;i<5;i++)expect((await post(body())).status).toBe(201);expect((await post(body())).status).toBe(429);expect(m.callPot).toHaveBeenCalledTimes(5);});
-it('requires an evenly divisible total',async()=>{const response=await post({...body(),total:'100',memberEmails:members.slice(0,3),threshold:2});expect(response.status).toBe(400);expect(await response.json()).toMatchObject({message:'Total must divide evenly by the number of members'});expect(m.ensureUser).not.toHaveBeenCalled();});
+it('requires an evenly divisible total',async()=>{const response=await post({...body(),total:'100',memberEmails:members.slice(0,3),threshold:2});expect(response.status).toBe(400);expect(await response.json()).toMatchObject({message:'Total: Total must divide evenly by the number of members'});expect(m.ensureUser).not.toHaveBeenCalled();});
+it.each([{field:'title',value:'',expected:'Name: Too small: expected string to have >=1 characters'},{field:'total',value:'abc',expected:'Total: Use a USDC amount with at most 18 decimal places'}])('labels create validation errors',async({field,value,expected})=>{const response=await post({...body(),[field]:value});expect(response.status).toBe(400);expect(await response.json()).toEqual({message:expected});});
 it('rejects normalized duplicates before provisioning',async()=>{expect((await post({...body(),memberEmails:[' A@x.com ','a@x.com'],threshold:1})).status).toBe(400);expect(m.ensureUser).not.toHaveBeenCalled();});
 it.each([
  {memberEmails:Array.from({length:21},(_,i)=>`a${i}@x.com`)}, {memberEmails:[]}, {total:'0'}, {total:'-1'}, {total:'1.0000000000000000001'}, {threshold:0}, {threshold:9}, {threshold:1.5}, {deadline:'2000-01-01T00:00:00Z'}, {objectionWindowSeconds:59}, {objectionWindowSeconds:604801}, {requestWindowSeconds:59}, {requestWindowSeconds:2592001},
@@ -48,7 +49,7 @@ it('does not write invites when metadata fails',async()=>{m.insert.mockResolvedV
 it('maps create contract reverts to 409 with code',async()=>{
  const {PotRevertError}=await import('@/lib/circle/tx');
  m.callPot.mockRejectedValue(new PotRevertError('InvalidParams'));
- const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'InvalidParams',message:'InvalidParams'});
+ const response=await post(body());expect(response.status).toBe(409);expect(await response.json()).toEqual({error:'InvalidParams',message:'Check the pot details and try again.'});
 });
 it('maps a Circle timeout to a pending response with reconciliation id',async()=>{
  const {CircleTimeoutError}=await import('@/lib/circle/tx');m.callPot.mockRejectedValue(new CircleTimeoutError('circle-id'));

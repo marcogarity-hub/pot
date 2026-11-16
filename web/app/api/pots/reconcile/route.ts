@@ -8,6 +8,7 @@ import { getPotReceipt } from '@/lib/circle/receipt';
 import { readPot } from '@/lib/circle/read';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { reconcilePotSchema } from '../schema';
+import { validationMessage } from '../errors';
 
 const pending = () => Response.json({ error: 'StillPending', message: 'Still confirming. Checking again shortly.' }, { status: 202 });
 const failed = () => Response.json({ error: 'CreateFailed', message: 'The pot was not created. It is safe to try again.' }, { status: 409 });
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   let raw: unknown;
   try { raw = await request.json(); } catch { return Response.json({ message: 'Invalid JSON body' }, { status: 400 }); }
   const parsed = reconcilePotSchema.safeParse(raw);
-  if (!parsed.success) return Response.json({ message: parsed.error.issues[0].message }, { status: 400 });
+  if (!parsed.success) return Response.json({ message: validationMessage(parsed.error.issues[0]) }, { status: 400 });
   const body = parsed.data;
 
   let caller;
