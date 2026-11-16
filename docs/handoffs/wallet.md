@@ -988,3 +988,45 @@ $ npm run build
 
 exit 0
 ```
+
+## 2026-11-16: Review fixes, items 1, 4 and 5 (Lane 2)
+
+Done:
+- A. Swap validates before any provisioning. Refusals return 409 through `toHttp`: `WrongState` (pot not Funding), `DeadlinePassed` (chain time at or after `deadline`), `NotMember` (leaver wallet not in `members`), `DuplicateMember` (replacement equals leaver, or already a member). Each refusal makes no `ensureUser`, `prefund` or `callPot` call. The replacement's existing wallet is read with read-only `getWalletUser`. A valid swap still calls `ensureUser` and `callPot` as before. `readPot` now validates `deadline`.
+- B. Reconcile on an existing `pot_meta` upserts the verified `pot_invites` rows (`onConflict: 'pot_id,address'`, `ignoreDuplicates: true`) and then returns 200 with the existing token. An upsert error returns the existing 503.
+- C. `GET /api/wallet/me` selects `auth_user_id`. When it is null, it calls `claimUser(verified.id, verified.email)` in a try/catch that logs only the error name. The response is unchanged.
+
+Files changed: `web/app/api/pots/actions.ts`, `web/app/api/pots/actions.test.ts`, `web/app/api/pots/reconcile/route.ts`, `web/app/api/pots/reconcile.test.ts`, `web/app/api/wallet/me/route.ts`, `web/app/api/wallet/me/route.test.ts`, `web/lib/circle/read.ts`, `docs/handoffs/wallet.md`.
+
+Not changed: `web/lib/supabase/`, `supabase/`, `package.json`, config files, `web/lib/relayer/`.
+
+TDD: new tests failed first (5 swap refusals, 2 reconcile backfill cases, 2 claim cases, plus the reconcile 503 case); each then passed after the change.
+
+Gates (run from web/, fresh, 2026-11-16):
+```text
+$ npx vitest run
+ Test Files  43 passed (43)
+      Tests  498 passed (498)
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+> web@0.1.0 lint
+> eslint
+exit 0
+$ npm run build
+├ ƒ /api/wallet/me
+├   /join/[inviteToken]
+│ └ ◐ /join/[inviteToken]
+├ ○ /new
+├   /pots/[potId]
+│ └ ◐ /pots/[potId]
+└ ◐ /sign-in
+
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+exit 0
+```

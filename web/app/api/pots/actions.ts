@@ -105,13 +105,24 @@ export function actionHandler(action: Action) {
       const leaver = await admin.from('users').select('wallet_address').eq('email', leaverEmail).maybeSingle();
       if (leaver.error) throw new Error('Leaver lookup failed');
       if (!leaver.data?.wallet_address) return Response.json({ error: 'UnknownLeaver' }, { status: 400 });
-      const replacement = await ensureUser(replacementEmail);
       let leaverAddress: string;
+      try { leaverAddress = validAddress(leaver.data.wallet_address); }
+      catch { return Response.json({ error: 'InvalidWalletAddress' }, { status: 400 }); }
+      // Validate everything that can refuse the swap before any wallet is provisioned or signed.
+      const members = (pot.members ?? []).map(member => member.toLowerCase());
+      if (pot.state !== 0) return toHttp(new PotRevertError('WrongState'));
+      if (await chainTimestamp() >= pot.deadline) return toHttp(new PotRevertError('DeadlinePassed'));
+      if (!members.includes(leaverAddress)) return toHttp(new PotRevertError('NotMember'));
+      if (replacementEmail === leaverEmail) return toHttp(new PotRevertError('DuplicateMember'));
+      // Read-only: a replacement without a wallet yet cannot already be a member.
+      const existingReplacement = await getWalletUser(replacementEmail);
+      if (existingReplacement && members.includes(existingReplacement.wallet_address.toLowerCase())) {
+        return toHttp(new PotRevertError('DuplicateMember'));
+      }
+      const replacement = await ensureUser(replacementEmail);
       let replacementAddress: string;
-      try {
-        leaverAddress = validAddress(leaver.data.wallet_address);
-        replacementAddress = validAddress(replacement.wallet_address);
-      } catch { return Response.json({ error: 'InvalidWalletAddress' }, { status: 400 }); }
+      try { replacementAddress = validAddress(replacement.wallet_address); }
+      catch { return Response.json({ error: 'InvalidWalletAddress' }, { status: 400 }); }
       const receipt = await callPot(caller.circle_wallet_id, 'swapSeat', [potId, leaverAddress, replacementAddress]);
       try {
         const saved = await admin.from('pot_invites').upsert({ pot_id: id, address: replacementAddress, email: replacementEmail }, { onConflict: 'pot_id,address' });
