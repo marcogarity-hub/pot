@@ -7,7 +7,7 @@ Built for the UBC 2026 hackathon (Consumer track) on **Arc testnet**, with **Qui
 | | |
 |---|---|
 | Contract | [`0xf842F699128A2e575d20BcC92F0472C7ad59e5C8`](https://explorer.testnet.arc.io/address/0xf842F699128A2e575d20BcC92F0472C7ad59e5C8) on Arc testnet (chain id 5042002), source verified on Blockscout |
-| Live app | > TODO before submit: Vercel URL |
+| Live app | https://pot-pink.vercel.app |
 | Demo video | > TODO before submit: link |
 
 ## How it works
@@ -113,7 +113,21 @@ node scripts/quicknode-stream.mjs status
 
 `create` saves the generated security token to `web/.env.local` as `QUICKNODE_STREAM_TOKEN` without printing it, and needs `QUICKNODE_API_KEY` there too. The API key is only for this setup and is not needed on Vercel.
 
-> TODO before submit: the live Stream's name and ID, and a screenshot or log of a real `Paid` event reaching the progress bar. The Stream has not been created yet, because it needs the deployed app's public URL.
+**Live verification (2026-11-16).** The Stream is named `pot-events` (id `a7e51fb2-c47b-4e5f-ae70-9cbce90119df`) and delivers to the deployed app. A pot was created and driven through its whole life through the deployed app with no replay and no manual posting to the route. All seven events were delivered by the Stream and stored:
+
+| Event | Stored by the time the app's own response returned |
+|---|---|
+| `PotCreated` | yes |
+| `Paid` (3 members) | yes, each |
+| `Locked` | yes |
+| `PayoutRequested` | yes |
+| `Released` | yes |
+
+No `(transaction hash, log index)` pair was stored twice, and the pot's row ended in state *Released* with 3 payments. The projected pot row can trail the event row by a moment, because the route stores events first and then refolds the pot.
+
+The route accepts the Stream's body as a bare array of logs or wrapped as `{ "data": [...] }`, and when it rejects a payload it logs only the payload's structure, never its contents. A first live delivery was rejected before this was added, which taught us that our own copy of QuickNode's format had differed from the real one. QuickNode stopped the Stream after repeated rejections, and `node scripts/quicknode-stream.mjs activate` restarts it.
+
+> TODO before submit: add a screenshot or terminal capture of the Stream's delivery log (or the progress bar moving) to the repository.
 
 ## Running it locally
 

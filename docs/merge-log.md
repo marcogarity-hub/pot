@@ -121,3 +121,11 @@
 - Landed: 365-day deadline cap in API (lane/wallet, schema.ts) and create form (lane/ui, validate.ts + datetime max); RequestWindowClosed message pre-added. Gates: vitest 364/364, tsc, lint, build OK on main. Conductor review APPROVE. Workers: Codex gpt-6-luna (API), Claude Haiku (form).
 - Candidate contract fixes for findings 2 and 3 parked, unverified, on branch candidate/contract-fixes-unverified in the pot-contract worktree. Not merged, not deployed.
 - OPEN: live Vercel app has NEXT_PUBLIC_SUPABASE_URL set to the Supabase dashboard URL (found by e2e); sign-in and Stream writes on the live site fail until corrected. Live e2e (pot via deployed app + QuickNode delivery) pending that fix.
+
+## 2026-11-16 — Vercel/Circle/QuickNode live path fixed; live Stream e2e PASS
+- Found by the live e2e: Vercel's NEXT_PUBLIC_SUPABASE_URL was the Supabase dashboard URL (fixed, now a Config variable); CIRCLE_API_KEY on Vercel was rejected by Circle (401 "Invalid credentials"; re-added after a wrong clipboard value); QuickNode's real delivery body was rejected by /api/streams with 400 (we had only tested our own copy of the format), so QuickNode terminated the Stream.
+- Landed: redacted error logging for POST /api/pots (lane/wallet, Haiku); /api/streams accepts bare, {data:[...]} and {data:{data:[...]}} bodies and logs value-free shape summaries on rejection (lane/events-data, Haiku); quicknode-stream.mjs activate. Gates: vitest 402/402, tsc, lint, build OK; script tests 41/41.
+- Stream pot-events restarted with `activate` (token unchanged); it redelivered pot 2's PotCreated and the row appeared within 12 s.
+- Live e2e PASS (pot 3, deployed app, no replay): create, 3 pays, lock, request release, finalize → 7 events delivered by the live Stream, 0 duplicates, pot row Released with 3 payments. The pots row can trail the event row briefly (events are stored before the refold).
+- QA pot 2 (member: Marco's email + two test accounts) is created for the Grok run.
+- Test data to clean before the demo: pots 0-3, e2e users/wallets (@pot-e2e.test), pot_meta/pot_invites rows.
