@@ -13,6 +13,9 @@ export function Screen({ title, children }: { title?: string; children: ReactNod
       </header>
       {title && <h1 className="mb-6 font-heading text-3xl font-semibold tracking-tight">{title}</h1>}
       {children}
+      <footer className="mt-12 text-center text-xs text-muted-foreground">
+        <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>
+      </footer>
     </main>
   );
 }
