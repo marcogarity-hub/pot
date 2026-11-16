@@ -12,7 +12,7 @@ export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
       <Card>
         <CardHeader>
           <CardTitle as="h1" className="font-heading text-xl">Sign in to Pot</CardTitle>
-          <CardDescription>We&apos;ll email you a link. Use the address your organizer invited.</CardDescription>
+          <CardDescription>Sign in with the email address your organizer invited.</CardDescription>
         </CardHeader>
         <CardContent>
           {/* searchParams are runtime data under Cache Components. The fallback must not be interactive. */}

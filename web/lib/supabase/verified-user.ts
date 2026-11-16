@@ -3,8 +3,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type VerifiedUser = { id: string; email: string };
 
 /**
- * Sign-in methods that do not prove the person controls the email address. The app only ever signs people
- * in with an emailed one-time code (or the emailed link), whose sessions carry method "otp". A password
+ * Sign-in methods that do not prove the person controls the email address. The app signs people in with an
+ * emailed one-time code or link (method "otp") or with Google or Apple (method "oauth", accepted only when the
+ * provider confirmed the email, which getVerifiedUser also requires). A password
  * session can exist for someone else's address: an attacker can pre-register a victim's email with their own
  * password, and when the victim later signs in with a code the account becomes confirmed while the
  * attacker's password keeps working. Such sessions must never act for the address.

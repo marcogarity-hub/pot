@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { magicLinkRedirect, resolveInvite, safeNext } from './auth';
+import { magicLinkRedirect, parseOAuthProviders, resolveInvite, safeNext } from './auth';
 
 describe('safeNext', () => {
   it('keeps same-origin relative paths', () => {
@@ -47,5 +47,20 @@ describe('resolveInvite', () => {
   });
   it('reports an unknown token', () => {
     expect(resolveInvite(null)).toEqual({ kind: 'not-found' });
+  });
+});
+
+describe('parseOAuthProviders', () => {
+  it('returns no providers when unset or empty', () => {
+    expect(parseOAuthProviders(undefined)).toEqual([]);
+    expect(parseOAuthProviders('')).toEqual([]);
+    expect(parseOAuthProviders(' , ')).toEqual([]);
+  });
+  it('reads names case-insensitively with spaces, in a fixed order', () => {
+    expect(parseOAuthProviders('google')).toEqual(['google']);
+    expect(parseOAuthProviders(' Apple , GOOGLE ')).toEqual(['google', 'apple']);
+  });
+  it('drops unknown names and repeats', () => {
+    expect(parseOAuthProviders('github,google,google,facebook')).toEqual(['google']);
   });
 });
