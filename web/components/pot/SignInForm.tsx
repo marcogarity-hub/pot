@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { magicLinkRedirect, safeNext } from './auth';
+import { postJson } from './api';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 const MIN_CODE_LENGTH = 6;
 const MAX_CODE_LENGTH = 10;
 const WRONG_CODE = 'That code is wrong or has expired. Check the newest email, or send a new code.';
+const CLAIM_FAILED = 'We could not finish signing you in. Please try again.';
 
 /**
  * Email sign-in. Step 1 sends a 6-digit code and a link; step 2 takes the code typed in.
@@ -91,8 +93,27 @@ export function SignInForm({ next }: { next: string }) {
       setError(WRONG_CODE);
       return;
     }
+    // The emailed link ties the account to the member's wallet row; the code path must do the same.
+    const claimed = await claimWallet();
+    if (!claimed.ok) {
+      setBusy(false);
+      setError(claimed.message);
+      return;
+    }
     router.replace(safeNext(next));
     router.refresh();
+  }
+
+  /** Ties the signed-in account to the member's wallet row. Any failure, including a network error, is reported. */
+  async function claimWallet(): Promise<{ ok: true } | { ok: false; message: string }> {
+    try {
+      const res = await postJson('/api/wallet/claim', {});
+      if (res.ok) return { ok: true };
+      const message = typeof res.body.message === 'string' ? res.body.message : CLAIM_FAILED;
+      return { ok: false, message };
+    } catch {
+      return { ok: false, message: CLAIM_FAILED };
+    }
   }
 
   function useDifferentEmail() {

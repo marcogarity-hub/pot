@@ -8,10 +8,14 @@ import SignInPage from '@/app/(screens)/sign-in/page';
 const nav = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: nav.replace, refresh: nav.refresh }) }));
 vi.mock('@/lib/supabase/browser', () => ({ createBrowserSupabase: vi.fn() }));
+const api = vi.hoisted(() => ({ postJson: vi.fn() }));
+vi.mock('./api', () => ({ postJson: api.postJson }));
 
 const WRONG_CODE = 'That code is wrong or has expired. Check the newest email, or send a new code.';
+const CLAIM_FAILED = 'We could not finish signing you in. Please try again.';
 const signInWithOtp = vi.fn();
 const verifyOtp = vi.fn();
+const claimOk = { ok: true, status: 200, data: { ok: true } };
 
 /** Lets pending mocked promises settle inside act(), without relying on timers. */
 async function settle() {
@@ -34,6 +38,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   signInWithOtp.mockResolvedValue({ error: null });
   verifyOtp.mockResolvedValue({ error: null });
+  api.postJson.mockReset();
+  api.postJson.mockResolvedValue(claimOk);
   vi.mocked(createBrowserSupabase).mockReturnValue({ auth: { signInWithOtp, verifyOtp } } as unknown as ReturnType<typeof createBrowserSupabase>);
 });
 
@@ -151,6 +157,82 @@ describe('SignInForm resend', () => {
     expect(codeInput().value).toBe('');
     expect(screen.getByText('New code sent')).toBeTruthy();
     expect(resend().disabled).toBe(true);
+  });
+});
+
+describe('SignInForm wallet claim after verify', () => {
+  async function verifyCode(next = '/join/tok_1') {
+    render(<SignInForm next={next} />);
+    await requestCode();
+    fireEvent.change(codeInput(), { target: { value: '482913' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    await settle();
+  }
+
+  it('calls the claim endpoint once with an empty body, after verifyOtp and before navigation, then navigates', async () => {
+    await verifyCode();
+    expect(api.postJson).toHaveBeenCalledTimes(1);
+    expect(api.postJson).toHaveBeenCalledWith('/api/wallet/claim', {});
+    const verifyAt = verifyOtp.mock.invocationCallOrder[0];
+    const claimAt = api.postJson.mock.invocationCallOrder[0];
+    const replaceAt = nav.replace.mock.invocationCallOrder[0];
+    expect(verifyAt).toBeLessThan(claimAt);
+    expect(claimAt).toBeLessThan(replaceAt);
+    expect(nav.replace).toHaveBeenCalledWith('/join/tok_1');
+    expect(nav.refresh).toHaveBeenCalled();
+  });
+
+  it('shows the 409 conflict message, stays on the code step, re-enables Verify and does not navigate', async () => {
+    api.postJson.mockResolvedValue({
+      ok: false, status: 409, message: 'This email is linked to a different sign-in.',
+      body: { error: 'IdentityConflict', message: 'This email is linked to a different sign-in.' },
+    });
+    await verifyCode();
+    expect(screen.getByRole('alert').textContent).toBe('This email is linked to a different sign-in.');
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(nav.refresh).not.toHaveBeenCalled();
+    expect(screen.getByText('We emailed you a 6-digit code. Enter it below.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the 503 message and does not navigate', async () => {
+    api.postJson.mockResolvedValue({
+      ok: false, status: 503, message: 'Could not finish signing you in. Please try again.',
+      body: { message: 'Could not finish signing you in. Please try again.' },
+    });
+    await verifyCode();
+    expect(screen.getByRole('alert').textContent).toBe('Could not finish signing you in. Please try again.');
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the generic message for a 401 without a message, and does not navigate', async () => {
+    api.postJson.mockResolvedValue({ ok: false, status: 401, message: 'Please sign in again.', body: { error: 'Unauthorized' } });
+    await verifyCode();
+    expect(screen.getByRole('alert').textContent).toBe(CLAIM_FAILED);
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it('shows the generic message on a network failure and does not navigate', async () => {
+    api.postJson.mockResolvedValue({ ok: false, status: 0, message: 'Network error. Check your connection and try again.', body: {} });
+    await verifyCode();
+    expect(screen.getByRole('alert').textContent).toBe(CLAIM_FAILED);
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect((screen.getByRole('button', { name: 'Verify' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the generic message if the claim call throws, and does not navigate', async () => {
+    api.postJson.mockRejectedValue(new Error('boom'));
+    await verifyCode();
+    expect(screen.getByRole('alert').textContent).toBe(CLAIM_FAILED);
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it('does not call the claim endpoint when verifyOtp fails', async () => {
+    verifyOtp.mockResolvedValue({ error: { message: 'Token has expired or is invalid' } });
+    await verifyCode();
+    expect(api.postJson).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toBe(WRONG_CODE);
   });
 });
 

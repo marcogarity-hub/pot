@@ -247,3 +247,27 @@ Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-
 ### Notes
 - The old test "Check your email … Open it on this device" is replaced by "We emailed you a 6-digit code" with "or click the link in the email, in this same browser".
 - Testing note: the sign-in page's Suspense child only mounts inside `act`. Tests that render it wrap the render in `await act(...)`.
+
+## 2026-11-16: Wallet claim on the code sign-in path (Lane 4)
+
+### Done
+- `SignInForm.onVerify` now calls `postJson('/api/wallet/claim', {})` after `verifyOtp` succeeds and before `router.replace`/`router.refresh`. Success continues exactly as before.
+- On failure it shows the response's `message` when it is a string (409 IdentityConflict, 503), otherwise "We could not finish signing you in. Please try again." It stays on the code step, re-enables Verify, and does not navigate. Network errors and thrown errors show the generic message.
+- A failed `verifyOtp` does not call the claim endpoint. Nothing logs the code or the email.
+
+### Files changed
+- `web/components/pot/SignInForm.tsx`
+- `web/components/pot/SignInForm.test.tsx` (mocks `./api` `postJson`; 6 new claim tests, including the call-order assertion)
+
+### Gates (fresh run)
+```
+$ npx vitest run     # exit 0
+  Tests  421 passed (421)
+$ npx tsc --noEmit   # exit 0
+$ npm run lint       # exit 0
+$ npm run build      # exit 0
+```
+Raw output: `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4-vitest.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4-tsc.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4-lint.txt`, `/private/tmp/claude-501/-Users-marcogarity/8c8abe4d-5c15-4fec-8eb4-f26778972824/scratchpad/ui4-build.txt`.
+
+### Needs another lane (Lane 2, wallet)
+- `POST /api/wallet/claim` must exist and answer as the contract says: 200 `{ok:true}`; 401 `{error:'Unauthorized'}`; 409 `{error:'IdentityConflict', message}`; 503 `{message}`. Until it exists the code path will show the generic failure message.
