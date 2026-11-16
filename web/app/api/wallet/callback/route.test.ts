@@ -33,14 +33,25 @@ it('redirects an expired link (error_code=otp_expired, no code) to /sign-in?erro
  expect(response.status).toBe(302);
  expect(response.headers.get('location')).toBe(`${origin}${expired}`);
  expect(m.exchange).not.toHaveBeenCalled();
- expect(errSpy).toHaveBeenCalledWith('[api/wallet/callback] sign-in failed:',JSON.stringify({reason:'provider_error',supabaseCode:'otp_expired'}));
- expect(logged()).not.toContain('invalid or has expired');
+ expect(errSpy).toHaveBeenCalledWith('[api/wallet/callback] sign-in failed:',JSON.stringify({reason:'provider_error',supabaseCode:'otp_expired',detail:'Email link is invalid or has expired'}));
+});
+
+it('logs a masked reason for a failed provider exchange: no emails, no long tokens, cut to 160 characters',async()=>{
+ const token='4/0AeaYSHDoNotLogThisOneTimeCodeAbcdef0123456789';
+ await get(`?error=server_error&error_code=unexpected_failure&error_description=${encodeURIComponent(`Unable to exchange external code: ${token} for ada@example.com`)}`);
+ expect(errSpy).toHaveBeenCalledWith('[api/wallet/callback] sign-in failed:',JSON.stringify({reason:'provider_error',supabaseCode:'unexpected_failure',detail:'Unable to exchange external code: [x] for [email]'}));
+ expect(logged()).not.toContain('DoNotLogThisOneTimeCode');
+ expect(logged()).not.toContain('ada@example.com');
+ errSpy.mockClear();
+ await get(`?error=server_error&error_description=${'word '.repeat(80)}`);
+ const detail=JSON.parse(String(errSpy.mock.calls[0][1])).detail as string;
+ expect(detail.length).toBeLessThanOrEqual(160);
 });
 
 it('treats error_description alone as a provider error',async()=>{
  const response=await get('?error_description=oops');
  expect(response.headers.get('location')).toBe(`${origin}${expired}`);
- expect(errSpy).toHaveBeenCalledWith('[api/wallet/callback] sign-in failed:',JSON.stringify({reason:'provider_error',supabaseCode:null}));
+ expect(errSpy).toHaveBeenCalledWith('[api/wallet/callback] sign-in failed:',JSON.stringify({reason:'provider_error',supabaseCode:null,detail:'oops'}));
 });
 
 it('keeps a valid next target on the failure redirect',async()=>{
