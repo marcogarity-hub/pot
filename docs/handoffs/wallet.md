@@ -878,3 +878,27 @@ $ npm run build
 ƒ  (Dynamic)            server-rendered on demand
 exit 0
 ```
+
+## 2026-11-16: Email sign-in callback failures redirect to sign-in
+
+Done: `web/app/api/wallet/callback/route.ts` now answers failed or expired sign-in links with a 302 to `/sign-in?error=link` (plus `&next=` when the `next` target is valid) instead of JSON. Three failure reasons: `missing_code`, `provider_error` (any of `error`, `error_code`, `error_description` in the query; checked first), `exchange_failed` (exchange returns an error or throws). Each failure logs one line: `[api/wallet/callback] sign-in failed: {"reason":...,"supabaseCode":...}`. `supabaseCode` is the `error_code` param (provider) or the exchange error `code`, only if 1-40 characters; never the code, tokens, email or URL. `next` uses the same rule as `safeNext` in `web/components/pot/auth.ts` (the route keeps its own copy, which also checks the decoded value, so the success path is unchanged). Success path unchanged.
+
+Not changed (outside the three listed cases): `getUser` failure and `claimUser` 503 still return JSON.
+
+Files changed: `web/app/api/wallet/callback/route.ts`, `web/app/api/wallet/callback/route.test.ts` (new, 13 tests).
+
+Gates (run from web/):
+```text
+$ npx vitest run
+ Test Files  32 passed (32)
+      Tests  415 passed (415)
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+exit 0
+$ npm run build
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+exit 0
+```
