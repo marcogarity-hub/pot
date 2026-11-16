@@ -134,7 +134,7 @@ it.each(['-1', '1.5', 'abc', (BigInt(2) ** BigInt(256)).toString()])('rejects in
 it('hides unexpected provider errors', async () => {
  const response = toHttp(new Error('secret')); expect(response.status).toBe(500); expect(JSON.stringify(await response.json())).not.toContain('secret');
 });
-it.each([['WindowClosed', 'The objection window has closed.'], ['FormerMember', 'That person has already left this pot.'], ['WrongState', 'WrongState']])('maps %s centrally', async (code, message) => {
+it.each([['WindowClosed', 'The objection window has closed.'], ['FormerMember', 'That person has already left this pot.'], ['WrongState', "That action isn't available at this stage of the pot."]])('maps %s centrally', async (code, message) => {
  const response = toHttp(new PotRevertError(code)); expect(response.status).toBe(409); expect(await response.json()).toEqual({ error: code, message });
 });
 
@@ -197,7 +197,7 @@ it('returns alreadyFinalized when a competing finalize wins before the relayer r
  expect(m.finalize).toHaveBeenCalledTimes(1);
 });
 it.each([
- [new PotRevertError('WrongState'), 409, { error: 'WrongState', message: 'WrongState' }],
+ [new PotRevertError('WrongState'), 409, { error: 'WrongState', message: "That action isn't available at this stage of the pot." }],
  [new Error('secret'), 500, { error: 'InternalServerError', message: 'The request could not be completed.' }],
 ] as const)('preserves error mapping after a failed finalize if the pot is still unreleased', async (error, status, body) => {
  m.read.mockResolvedValue({ ...pot(), state: 2 });
@@ -212,7 +212,7 @@ it('preserves the relayer error when the finalize re-read fails', async () => {
  m.finalize.mockRejectedValueOnce(new PotRevertError('WrongState'));
  const response = await post(finalize);
  expect(response.status).toBe(409);
- expect(await response.json()).toEqual({ error: 'WrongState', message: 'WrongState' });
+ expect(await response.json()).toEqual({ error: 'WrongState', message: "That action isn't available at this stage of the pot." });
  expect(m.read).toHaveBeenCalledTimes(2);
 });
 

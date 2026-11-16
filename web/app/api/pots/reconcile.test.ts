@@ -28,6 +28,7 @@ beforeEach(()=>{
 });
 it('requires a session and never resolves wallets',async()=>{m.server.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})}});expect((await post({...body(),transactionHash:`0x${'a'.repeat(64)}`})).status).toBe(401);expect(m.getWalletUser).not.toHaveBeenCalled();});
 it.each([{}, {circleTransactionId:'id',transactionHash:`0x${'a'.repeat(64)}`}])('requires exactly one recovery id %j',async(patch)=>{expect((await post({...body(),...patch})).status).toBe(400);});
+it('keeps the no-path recovery validation message unprefixed',async()=>{const response=await post(body());expect(response.status).toBe(400);expect(await response.json()).toEqual({message:'Provide exactly one of circleTransactionId or transactionHash'});});
 it('rejects a Circle transaction owned by another wallet',async()=>{m.getTransaction.mockResolvedValue({state:'COMPLETE',walletId:'other',txHash:`0x${'a'.repeat(64)}`});expect((await post({...body(),circleTransactionId:'id'})).status).toBe(403);});
 it('returns pending for nonterminal Circle state',async()=>{m.getTransaction.mockResolvedValue({state:'SENT',walletId:'org-wallet'});const r=await post({...body(),circleTransactionId:'id'});expect(r.status).toBe(202);expect(await r.json()).toEqual({error:'StillPending',message:'Still confirming. Checking again shortly.'});});
 it('returns failed for terminal Circle failure',async()=>{m.getTransaction.mockResolvedValue({state:'FAILED',walletId:'org-wallet'});expect((await post({...body(),circleTransactionId:'id'})).status).toBe(409);});

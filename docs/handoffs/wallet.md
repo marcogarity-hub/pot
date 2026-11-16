@@ -763,3 +763,54 @@ Added regression coverage for lookup and RPC failures.
 
 Validation: `cd web && npx vitest run && npx tsc --noEmit && npm run lint`
 passed (23 files, 318 tests; no TypeScript diagnostics; ESLint exit 0).
+
+## Error and validation copy (2026-11-15)
+
+Done: every error name in the generated `potAbi` has a plain user-facing sentence; contract and app error codes/statuses are retained. Create and reconcile validation messages now prefix the first issue with a field label, except pathless cross-field errors. Regression tests require complete ABI coverage and exercise title/total and pathless validation.
+
+Contract error code → message:
+
+| Code | Message |
+|---|---|
+| AlreadyObjected | You've already objected. |
+| AlreadyPaid | You've already paid into this pot. |
+| AlreadyRefunded | You've already been refunded. |
+| DeadlineNotPassed | The deadline hasn't passed yet. |
+| DeadlinePassed | The deadline has passed. |
+| DuplicateMember | Each member must have a different email address. |
+| FormerMember | That person has already left this pot. |
+| InvalidParams | Check the pot details and try again. |
+| NotImplemented | That action is not available yet. |
+| NotMember | You're not part of this pot. |
+| NotOrganizer | Only the organizer can do that. |
+| NotRefundable | There's nothing for you to refund here. |
+| ReentrancyGuardReentrantCall | That action is already being processed. |
+| RequestWindowOpen | The organizer still has time to request the payout. |
+| TransferFailed | The payment was rejected by the receiving address. |
+| WindowClosed | The objection window has closed. |
+| WindowOpen | The objection window is still open. |
+| WrongAmount | That isn't your share of this pot. |
+| WrongState | That action isn't available at this stage of the pot. |
+| ZeroAddress | A wallet address is missing or invalid. |
+
+Files: `web/app/api/pots/errors.ts`, `errors.test.ts`, `route.ts`, `route.test.ts`, `reconcile/route.ts`, `reconcile.test.ts`, `actions.test.ts`.
+
+TDD: the new regressions first failed for missing error wording and unlabelled create validation; the focused suite passed after implementation. Full gate command output:
+
+```text
+$ cd web && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+Test Files  30 passed (30)
+Tests  351 passed (351)
+TypeScript: exit 0, no diagnostics
+Lint: exit 0, no diagnostics
+Build: FAILED (exit 1)
+Turbopack build encountered 1 warning:
+[next]/internal/font/google/bricolage_grotesque_d13dde08.module.css
+Warning: Error while requesting resource
+There was an issue establishing a connection while requesting https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@200..800&display=swap
+Error: next/font: error:
+Failed to fetch Bricolage Grotesque from Google Fonts.
+If you are offline or behind a proxy, self-host the font with next/font/local, or set HTTP_PROXY/HTTPS_PROXY so Next.js can reach fonts.googleapis.com.
+```
+
+Blocker: build depends on network access to Google Fonts, unavailable in this environment. No changes outside Lane 2 ownership; no merge or push.

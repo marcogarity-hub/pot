@@ -7,7 +7,7 @@ import { callPot, CircleTimeoutError, PotRevertError } from '@/lib/circle/tx';
 import { potAddress, potInterface, validAddress } from '@/lib/circle/contract';
 import { createPotSchema } from './schema';
 import { createPotLimiter } from './limiter';
-import { toHttp } from './errors';
+import { toHttp, validationMessage } from './errors';
 export async function POST(request: Request) {
   const supabase = await createServerSupabase();
   const session = await supabase.auth.getUser();
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   let raw: unknown;
   try { raw = await request.json(); } catch { return Response.json({message:'Invalid JSON body'},{status:400}); }
   const validated = createPotSchema.safeParse(raw);
-  if (!validated.success) return Response.json({message:validated.error.issues[0].message},{status:400});
+  if (!validated.success) return Response.json({message:validationMessage(validated.error.issues[0])},{status:400});
   const body = validated.data;
   try { potAddress(); } catch (error) { return toHttp(error); }
   if (!createPotLimiter.take(session.data.user.id)) return Response.json({message:'You can create at most 5 pots per hour. Please try again later.'},{status:429,headers:{'Retry-After':'3600'}});
