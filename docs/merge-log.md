@@ -108,3 +108,10 @@
 - Landed: theme (warm off-white, deep green primary, success/warning tokens, AA), Bricolage Grotesque headings + Geist body, tabular money; status screen header/bar/member chips/state sentence; join preview ("You'll join as…", client-only "You're in", no on-chain effect); receipt card with explorer link; CreatePotForm polls /api/pots/reconcile on 502 CreatePending or 503 {potId, transactionHash}, locks on stop/timeout.
 - Gates: vitest 347/347, tsc, lint, build OK on main. Conductor (Opus) review APPROVE (Expired label = Frozen without receipt_hash, verified against Pot.expire). Worker: Claude Haiku.
 - Follow-ups: create's generic 502 {transactionHash} (receipt parse failure) isn't auto-recovered; real 375px check and signed-in screens need the e2e run; dark mode not reviewed.
+
+## 2026-11-15 — e2e phase A (live contract) + lane/wallet message fix + replay tool
+- E2E (Haiku test worker, local app, real Supabase/Circle, live Pot): create → 3 pays → Locked → requestRelease → early finalize refused (409) → finalize after window → Released, organizer +0.03 exactly. Negatives: outsider 403, pay-after-Released 409, no session 401, bad body 400. Pot 1; Released tx 0x4a19e0e9…4212.
+- Findings (severity confusing): bare "WrongState" message; unlabelled zod text. Fixed by lane/wallet: every potAbi custom error has plain wording (test fails if one is missing), validation messages are field-labelled. Gates: vitest 351/351, tsc, lint, build OK on main. Conductor review APPROVE. Worker: Codex gpt-6-luna.
+- Not covered: first-time member sign-in claim via emailed code; browser UI; real QuickNode Stream.
+- scripts/replay-stream.mjs (Haiku): replays Pot logs to /api/streams, signed; 12 logs, 2×200, idempotent on rerun; pots/members/events match chain (pot 1 Released, 3 paid). Caveat: it exercises our handler with our own payload shape, so QuickNode's real payload is still unverified until the live Stream.
+- Test data left in Supabase/Circle: 4 e2e wallets + users (@pot-e2e.test), pot 1 meta/invites; clean before the demo.
