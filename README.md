@@ -83,6 +83,15 @@ The full function-by-function walkthrough, with who may call each and which test
 
 The **Stream** watches Arc testnet logs, filtered to the Pot contract address and its event topics, and delivers them to `POST /api/streams`. The route checks the Stream's security token, decodes each log against the contract ABI, and writes it to Supabase in one atomic projection step, so a replay is idempotent.
 
+**Backfill and local testing.** Supabase is only a cache of chain state, so it can always be rebuilt. `scripts/replay-stream.mjs` reads the Pot contract's past logs from Arc testnet and POSTs them to `/api/streams`, signed the way QuickNode signs them. Replays are idempotent, so running it twice changes nothing. It needs the same `QUICKNODE_STREAM_TOKEN` as the target server:
+
+```bash
+node scripts/replay-stream.mjs --dry-run                                  # count what would be sent
+QUICKNODE_STREAM_TOKEN=... node scripts/replay-stream.mjs --url https://<your-app>/api/streams
+```
+
+Script tests: `node --test scripts/*.test.mjs`.
+
 > TODO before submit: Stream name and ID, the exact filter, the destination URL, and a screenshot or log of a live `Paid` event reaching the progress bar. The route is built and tested against a fixture generated from the deployed contract's ABI; the live Stream has not been created yet.
 
 ## Running it locally
@@ -139,7 +148,7 @@ web/         Next.js app (App Router, TypeScript, Tailwind, shadcn/ui, viem)
   app/api/     route handlers: pots, wallet, streams
   lib/         pot ABI and chain config, Circle and relayer helpers
 supabase/    migrations
-scripts/     demo funding
+scripts/     demo funding, event replay (backfill)
 docs/        brief, approved design spec and amendments, handoffs, merge log
 ```
 
