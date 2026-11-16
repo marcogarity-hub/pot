@@ -115,3 +115,9 @@
 - Not covered: first-time member sign-in claim via emailed code; browser UI; real QuickNode Stream.
 - scripts/replay-stream.mjs (Haiku): replays Pot logs to /api/streams, signed; 12 logs, 2×200, idempotent on rerun; pots/members/events match chain (pot 1 Released, 3 paid). Caveat: it exercises our handler with our own payload shape, so QuickNode's real payload is still unverified until the live Stream.
 - Test data left in Supabase/Circle: 4 e2e wallets + users (@pot-e2e.test), pot 1 meta/invites; clean before the demo.
+
+## 2026-11-16 — Cursor security review, triage, Option A (A17), deadline cap
+- Cursor review (Ask mode) saved verbatim in docs/handoffs/contract-cursor-review.md with conductor triage: findings 1 and 4 ignore (accepted, unreachable in app), 2 and 3 fix. Marco chose Option A: no redeploy (spec A17).
+- Landed: 365-day deadline cap in API (lane/wallet, schema.ts) and create form (lane/ui, validate.ts + datetime max); RequestWindowClosed message pre-added. Gates: vitest 364/364, tsc, lint, build OK on main. Conductor review APPROVE. Workers: Codex gpt-6-luna (API), Claude Haiku (form).
+- Candidate contract fixes for findings 2 and 3 parked, unverified, on branch candidate/contract-fixes-unverified in the pot-contract worktree. Not merged, not deployed.
+- OPEN: live Vercel app has NEXT_PUBLIC_SUPABASE_URL set to the Supabase dashboard URL (found by e2e); sign-in and Stream writes on the live site fail until corrected. Live e2e (pot via deployed app + QuickNode delivery) pending that fix.
