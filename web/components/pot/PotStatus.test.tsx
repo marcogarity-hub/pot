@@ -21,8 +21,8 @@ const status: PotStatusRow = {
   release_eligible_at: null, updated_at: FUTURE, title: 'Trip', invite_token: 'tok',
   receipt_text: null, created_at: FUTURE, is_organizer: null,
   members: [
-    { address: ME_ADDRESS, email: 'a@example.com', has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: false },
-    { address: ORG, email: null, has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: true },
+    { address: ME_ADDRESS, email: 'a@example.com', name: null, has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: false },
+    { address: ORG, email: null, name: null, has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: true },
   ],
 };
 

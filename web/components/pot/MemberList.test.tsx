@@ -34,4 +34,31 @@ describe('MemberList', () => {
     render(<MemberList status={status} myAddress={null} />);
     expect(screen.getByText('Organizer')).toBeInTheDocument();
   });
+
+  describe('names', () => {
+    const base = { has_paid: false, has_objected: false, has_refunded: false, active: true };
+    const named = (members: Array<Record<string, unknown>>) => ({ share: '100000000000000000000', members }) as unknown as PotStatusRow;
+
+    it('shows the name instead of the email when a member has set one', () => {
+      render(<MemberList myAddress={null} status={named([{ ...base, address: PAID, email: 'ana@example.com', name: 'Ana R.', is_organizer: true }])} />);
+      expect(screen.getByText('Ana R.')).toBeInTheDocument();
+      expect(screen.queryByText('ana@example.com')).toBeNull();
+    });
+
+    it('falls back to the email, which the server only sends for the viewer and the organizer', () => {
+      render(<MemberList myAddress={PAID} status={named([{ ...base, address: PAID, email: 'ana@example.com', name: null, is_organizer: false }])} />);
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    });
+
+    it('labels members with neither as Member N by seat, never by wallet address', () => {
+      render(<MemberList myAddress={null} status={named([
+        { ...base, address: PAID, email: null, name: null, is_organizer: true },
+        { ...base, address: UNPAID, email: null, name: 'Bo', is_organizer: false },
+        { ...base, address: GONE, email: null, name: null, is_organizer: false, active: false },
+      ])} />);
+      expect(screen.getByText('Member 1')).toBeInTheDocument();
+      expect(screen.getByText('Member 3')).toBeInTheDocument();
+      expect(screen.queryByText(/0x/)).toBeNull();
+    });
+  });
 });

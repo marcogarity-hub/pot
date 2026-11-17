@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DisplayNameForm } from './DisplayNameForm';
 import { linkButton } from './linkButton';
 import { MemberCells, type CellMember } from './MemberCells';
 import { StateLabel } from './StateLabel';
@@ -14,8 +15,10 @@ import type { StateInfo } from './potState';
  * Joining records nothing on-chain. The seat already exists once the organizer creates the pot.
  * `members`, `state` and `deadline` are optional: they render only when the caller has them.
  */
-export function JoinPreview({ potId, title, amount, organizerEmail, email, members, state, deadline }: {
-  potId: string; title: string; amount: string | null; organizerEmail: string | null; email: string;
+export function JoinPreview({ potId, title, amount, organizerEmail, organizerName, email, name, members, state, deadline }: {
+  potId: string; title: string; amount: string | null; organizerEmail: string | null; organizerName?: string | null; email: string;
+  /** The signed-in member's saved display name, if any. */
+  name?: string | null;
   members?: CellMember[]; state?: Pick<StateInfo, 'label' | 'tone'>; deadline?: string;
 }) {
   const [joined, setJoined] = useState(false);
@@ -54,10 +57,10 @@ export function JoinPreview({ potId, title, amount, organizerEmail, email, membe
               <dd className="money font-semibold">{`${amount} USDC`}</dd>
             </div>
           )}
-          {organizerEmail && (
+          {(organizerName || organizerEmail) && (
             <div className="grid min-w-0 grid-cols-1 gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
               <dt className="text-muted-foreground">Organized by</dt>
-              <dd className="min-w-0 break-all font-medium">{organizerEmail}</dd>
+              <dd className="min-w-0 break-words font-medium">{organizerName ?? organizerEmail}</dd>
             </div>
           )}
           {members && (
@@ -88,6 +91,8 @@ export function JoinPreview({ potId, title, amount, organizerEmail, email, membe
         )}
 
         <p className="text-sm text-muted-foreground">You&apos;ll join as <span className="font-medium text-foreground">{email}</span></p>
+
+        <DisplayNameForm initialName={name ?? null} id="join-display-name" />
 
         <Button size="lg" className="w-full text-base" onClick={() => setJoined(true)}>Join pot</Button>
       </div>

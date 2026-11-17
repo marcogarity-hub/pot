@@ -23,7 +23,7 @@ const TOTAL = '6000000000000000000'; // 6 USDC
 
 function member(address: string, over: Partial<DashboardMember> = {}): DashboardMember {
   return {
-    address, email: null, has_paid: false, has_objected: false, has_refunded: false,
+    address, email: null, name: null, has_paid: false, has_objected: false, has_refunded: false,
     active: true, is_organizer: false, ...over,
   };
 }

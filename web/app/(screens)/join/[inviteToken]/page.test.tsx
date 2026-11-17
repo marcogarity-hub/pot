@@ -36,7 +36,9 @@ async function renderJoin(token = 'tok-1') {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(createServerSupabase).mockResolvedValue({} as unknown as Supabase);
+  // JoinGate reads the member's own saved name with the session client: from('users').select().eq().maybeSingle().
+  const own = { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { display_name: null }, error: null }) }) }) };
+  vi.mocked(createServerSupabase).mockResolvedValue({ from: () => own } as unknown as Supabase);
 });
 
 afterEach(() => cleanup());
@@ -55,7 +57,7 @@ describe('JoinPage (JoinGate)', () => {
   it('looks up the invite with the verified email and shows the join preview when verified', async () => {
     vi.mocked(getVerifiedUser).mockResolvedValue({ id: 'user-1', email: 'ana@example.com' });
     vi.mocked(lookupInvite).mockResolvedValue({ potId: '7', invited: true, isOrganizer: false, memberState: 'unknown' });
-    vi.mocked(potSummary).mockResolvedValue({ title: 'Cabin weekend', amount: '300', organizerEmail: 'host@example.com' });
+    vi.mocked(potSummary).mockResolvedValue({ title: 'Cabin weekend', amount: '300', organizerEmail: 'host@example.com', organizerName: null });
     await renderJoin('tok-2');
     expect(lookupInvite).toHaveBeenCalledWith('tok-2', 'ana@example.com');
     expect(screen.getByRole('heading', { name: /cabin weekend/i })).toBeInTheDocument();
@@ -66,7 +68,7 @@ describe('JoinPage (JoinGate)', () => {
     beforeEach(() => {
       vi.mocked(getVerifiedUser).mockResolvedValue({ id: 'user-9', email: 'ben@example.com' });
       vi.mocked(lookupInvite).mockResolvedValue({ potId: '8', invited: true, isOrganizer: false, memberState: 'unknown' });
-      vi.mocked(potSummary).mockResolvedValue({ title: 'Ski trip', amount: '120', organizerEmail: 'host@example.com' });
+      vi.mocked(potSummary).mockResolvedValue({ title: 'Ski trip', amount: '120', organizerEmail: 'host@example.com', organizerName: null });
       vi.mocked(claimUser).mockResolvedValue(undefined);
     });
 

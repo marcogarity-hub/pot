@@ -35,20 +35,21 @@ export async function inviteTitle(token: string): Promise<string | null | undefi
   return data ? (data as { title: string | null }).title : undefined;
 }
 
-/** Pot name, share and organizer email for the join preview. Any field the projection hasn't filled is null. */
-export async function potSummary(potId: string): Promise<{ title: string | null; amount: string | null; organizerEmail: string | null }> {
+/** Pot name, share and organizer for the join preview. The organizer shows by name when they set one, else by the email they invited with. Any field the projection hasn't filled is null. */
+export async function potSummary(potId: string): Promise<{ title: string | null; amount: string | null; organizerEmail: string | null; organizerName: string | null }> {
   const db = createAdminSupabase();
   const [{ data: status }, { data: meta }] = await Promise.all([
     db.from('pot_status').select('share::text,organizer_address').eq('pot_id', potId).maybeSingle(),
     db.from('pot_meta').select('title').eq('pot_id', potId).maybeSingle(),
   ]);
   const row = status as { share: string; organizer_address: string } | null;
-  const organizerEmail = row?.organizer_address
-    ? ((await db.from('users').select('email').ilike('wallet_address', row.organizer_address).maybeSingle()).data as { email: string } | null)?.email ?? null
+  const organizer = row?.organizer_address
+    ? ((await db.from('users').select('email,display_name').ilike('wallet_address', row.organizer_address).maybeSingle()).data as { email: string; display_name: string | null } | null)
     : null;
   return {
     title: (meta as { title: string | null } | null)?.title ?? null,
     amount: row?.share ? formatUnits(BigInt(row.share), 18) : null,
-    organizerEmail,
+    organizerEmail: organizer?.email ?? null,
+    organizerName: organizer?.display_name ?? null,
   };
 }

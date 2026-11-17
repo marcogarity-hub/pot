@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { JoinPreview } from './JoinPreview';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
 
 afterEach(() => cleanup());
 
@@ -27,5 +29,20 @@ describe('JoinPreview', () => {
     expect(screen.queryByText(/you're in/i)).toBeNull();
     expect(screen.getByRole('link', { name: /go to pot/i })).toHaveAttribute('href', '/pots/7');
     expect(screen.queryByRole('button', { name: /join pot/i })).toBeNull();
+  });
+
+  it('shows the organizer by name when they set one, and falls back to their email', () => {
+    const { rerender } = render(<JoinPreview {...props} organizerName="Hannah" />);
+    expect(screen.getByText('Hannah')).toBeInTheDocument();
+    expect(screen.queryByText('host@example.com')).toBeNull();
+    rerender(<JoinPreview {...props} organizerName={null} />);
+    expect(screen.getByText('host@example.com')).toBeInTheDocument();
+  });
+
+  it('offers an optional name field, filled with the saved name, that does not block joining', () => {
+    render(<JoinPreview {...props} name="Ana R." />);
+    expect(screen.getByLabelText('Your name')).toHaveValue('Ana R.');
+    expect(screen.getByText(/other members see this instead of your email/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /join pot/i })).toBeEnabled();
   });
 });

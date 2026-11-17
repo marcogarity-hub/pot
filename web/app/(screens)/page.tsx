@@ -32,22 +32,23 @@ async function HomeContent() {
 
   const [{ data: potRows }, { data: me }, { data: eventRows }] = await Promise.all([
     supabase.from('pot_status').select(DASHBOARD_POT_COLUMNS).order('created_at', { ascending: false }),
-    supabase.from('users').select('wallet_address').eq('auth_user_id', user.id).maybeSingle(),
+    supabase.from('users').select('wallet_address,display_name').eq('auth_user_id', user.id).maybeSingle(),
     supabase.from('pot_events').select('id,pot_id::text,event_name,args').order('id', { ascending: false }).limit(40),
   ]);
   const pots = (potRows ?? []) as unknown as DashboardPot[];
   const myAddress = (me as { wallet_address: string | null } | null)?.wallet_address ?? null;
+  const myName = (me as { display_name: string | null } | null)?.display_name ?? null;
 
   const titles: Record<string, string> = {};
-  const emails: Record<string, string> = {};
+  const names: Record<string, string> = {};
   for (const p of pots) {
     titles[p.pot_id] = p.title ?? `Pot #${p.pot_id}`;
-    for (const m of p.members) if (m.email) emails[m.address.toLowerCase()] = m.email;
+    for (const m of p.members) { const shown = m.name ?? m.email; if (shown) names[m.address.toLowerCase()] = shown; }
   }
   const queue = needsYou(pots, myAddress, requestTime());
-  const activity = activityItems((eventRows ?? []) as unknown as ActivityEvent[], titles, myAddress, 12, emails);
+  const activity = activityItems((eventRows ?? []) as unknown as ActivityEvent[], titles, myAddress, 12, names);
 
-  return <DashboardView email={user.email} pots={pots} queue={queue} activity={activity} />;
+  return <DashboardView email={user.email} name={myName} pots={pots} queue={queue} activity={activity} />;
 }
 
 const GUARANTEES = [

@@ -7,7 +7,7 @@ export type { PotRow, MemberRow } from '@/app/api/streams/fold';
 export type PotStatusRow = PotRow & {
   updated_at: string; title: string | null; invite_token: string | null;
   receipt_text: string | null; created_at: string | null; is_organizer: boolean | null;
-  members: Array<Omit<MemberRow, 'pot_id'> & { email: string | null; is_organizer: boolean }>;
+  members: Array<Omit<MemberRow, 'pot_id'> & { email: string | null; name: string | null; is_organizer: boolean }>;
 };
 // PostgREST numeric columns must be cast to text before JSON serialization.
 const columns = 'pot_id::text,organizer_address,total::text,share::text,deadline,threshold,objection_window_seconds,request_window_seconds,locked_at,state,payments_count,objections_count,receipt_hash,release_eligible_at,updated_at,title,invite_token,receipt_text,created_at,is_organizer,members';

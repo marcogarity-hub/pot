@@ -2,12 +2,11 @@ import { cn } from 'cn';
 import { formatUnits } from 'viem';
 import type { PotStatusRow } from '@/lib/realtime/usePot';
 
-const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-
-/** Ruled rows, one per member: a 14px cell, the name or email, small text tags, and the paid status as text. */
+/** Ruled rows, one per member: a 14px cell, the member's name, small text tags, and the paid status as text. */
 export function MemberList({ status, myAddress }: { status: PotStatusRow; myAddress: string | null }) {
   const share = formatUnits(BigInt(status.share), 18);
   const me = myAddress?.toLowerCase();
+  const seatNumber = new Map(status.members.map((m, i) => [m.address, i + 1]));
   const members = [...status.members].sort((a, b) => Number(b.active) - Number(a.active));
   return (
     <ul className="divide-y divide-border border border-border">
@@ -20,7 +19,7 @@ export function MemberList({ status, myAddress }: { status: PotStatusRow; myAddr
             <span aria-hidden className={cn('block size-[14px] shrink-0 border', paid ? 'border-primary bg-primary' : 'border-input bg-card')} />
             <div className="min-w-0 flex-1 space-y-1">
               <p className="flex min-w-0 flex-wrap items-center gap-2 font-medium">
-                <span className="min-w-0 truncate">{m.email ?? short(m.address)}</span>
+                <span className="min-w-0 truncate">{m.name ?? m.email ?? `Member ${seatNumber.get(m.address)}`}</span>
                 {isMe && <span className="bg-muted px-1.5 text-xs font-semibold">You</span>}
                 {m.is_organizer && <span className="bg-muted px-1.5 text-xs font-semibold">Organizer</span>}
               </p>

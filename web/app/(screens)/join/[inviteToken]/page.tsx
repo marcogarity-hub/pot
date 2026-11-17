@@ -38,10 +38,14 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
     } catch (err) {
       console.error('[join] claim skipped:', JSON.stringify({ name: err instanceof Error ? err.name : 'UnknownError' }));
     }
-    const summary = await potSummary(outcome.potId);
+    const [summary, { data: me }] = await Promise.all([
+      potSummary(outcome.potId),
+      supabase.from('users').select('display_name').eq('auth_user_id', user.id).maybeSingle(),
+    ]);
     return (
       <JoinPreview potId={outcome.potId} title={summary.title ?? 'a pot'} amount={summary.amount}
-        organizerEmail={summary.organizerEmail} email={user.email} />
+        organizerEmail={summary.organizerEmail} organizerName={summary.organizerName}
+        email={user.email} name={(me as { display_name: string | null } | null)?.display_name ?? null} />
     );
   }
   if (outcome.kind === 'not-found') return <InviteNotFound />;

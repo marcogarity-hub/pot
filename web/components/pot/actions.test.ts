@@ -11,7 +11,7 @@ const at = (offsetSec: number) => new Date(Date.parse(T0) + offsetSec * 1000);
 
 type Member = PotStatusRow['members'][number];
 const member = (address: string, over: Partial<Member> = {}): Member => ({
-  address, email: null, has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: false, ...over,
+  address, email: null, name: null, has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: false, ...over,
 });
 const pot = (over: Partial<PotStatusRow> = {}): PotStatusRow => ({
   pot_id: '1', organizer_address: ORG, total: '200', share: '100', deadline: T0, threshold: 1,

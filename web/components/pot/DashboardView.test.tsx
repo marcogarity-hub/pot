@@ -37,12 +37,12 @@ const activity: ActivityItem[] = [
 
 describe('DashboardView', () => {
   it('shows the signed-in email in the app bar', () => {
-    render(<DashboardView email="ana@example.com" pots={[pot]} queue={queue} activity={activity} />);
+    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
     expect(screen.getByRole('navigation', { name: 'Account' })).toHaveTextContent('ana@example.com');
   });
 
   it('renders the held summary, the queue, the pots and the activity from the fixture', () => {
-    render(<DashboardView email="ana@example.com" pots={[pot]} queue={queue} activity={activity} />);
+    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
     expect(screen.getByText('Held in escrow')).toBeInTheDocument();
     expect(screen.getByText('1 pot, 1 needs you.', { exact: false })).toBeInTheDocument();
 
@@ -61,10 +61,26 @@ describe('DashboardView', () => {
   });
 
   it('keeps the start tiles and New pot link pointing at the create flow', () => {
-    render(<DashboardView email="ana@example.com" pots={[]} queue={[]} activity={[]} />);
+    render(<DashboardView email="ana@example.com" name={null} pots={[]} queue={[]} activity={[]} />);
     expect(screen.getByRole('link', { name: /new pot/i })).toHaveAttribute('href', '/new');
     expect(screen.getByRole('link', { name: /plan a real booking/i })).toHaveAttribute('href', '/new?preset=booking');
     expect(screen.getByText('Nothing needs you right now.')).toBeInTheDocument();
     expect(screen.getByText('Payments and payouts in your pots show up here.')).toBeInTheDocument();
+  });
+
+  it('shows the name instead of the email in the app bar once one is set, and no prompt', () => {
+    render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
+    const nav = screen.getByRole('navigation', { name: 'Account' });
+    expect(nav).toHaveTextContent('Ana R.');
+    expect(nav).not.toHaveTextContent('ana@example.com');
+    expect(screen.queryByText(/can't tell who you are/i)).toBeNull();
+    expect(screen.getByLabelText('Your name')).toHaveValue('Ana R.');
+  });
+
+  it('prompts for a name until one is set, linking to the name field', () => {
+    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
+    expect(screen.getByText(/can't tell who you are/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /add your name/i })).toHaveAttribute('href', '#your-name');
+    expect(screen.getByLabelText('Your name')).toHaveValue('');
   });
 });

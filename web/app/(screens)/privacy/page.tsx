@@ -29,8 +29,12 @@ export default function PrivacyPage() {
               <li><strong>Your email address.</strong> You give it when you sign in, or a pot organizer types it to invite you.</li>
               <li>
                 <strong>If you sign in with Google:</strong> the email address on your Google account. Google also sends your name and
-                profile picture, which our sign-in provider stores with your account. We only use your email address. We never read your
-                Google mail, contacts, files or anything else.
+                profile picture, which our sign-in provider stores with your account. We only use your email address; we do not copy your Google
+                name into Pot. We never read your Google mail, contacts, files or anything else.
+              </li>
+              <li>
+                <strong>A display name, if you choose to set one.</strong> The other members of your pots see it instead of your email address.
+                Only a pot&apos;s organizer sees the email addresses they invited. You can change or remove your name any time.
               </li>
               <li><strong>A wallet we create for you.</strong> Each member gets a wallet address tied to their email, so you never handle keys or gas.</li>
               <li><strong>Pot records:</strong> pot titles, amounts, deadlines, the member list, payments and actions (pay, object, refund, release), and any receipt text an organizer enters.</li>

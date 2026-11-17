@@ -459,3 +459,11 @@ $ npm run build       # exit 0
 ƒ  (Dynamic)            server-rendered on demand
 
 ```
+
+## Display names (2026-11-17, branch `display-names`, not merged)
+Done: members can set an optional display name. Other members see it instead of their email.
+- DB: `supabase/migrations/20261117000000_display_names.sql` adds `users.display_name` (1 to 40 chars), `private.member_name()`, and replaces `pot_status`. In `members[]`, `name` is new and `email` is now returned only to the pot's organizer and to the member it belongs to (null for everyone else).
+- API: `POST /api/profile/name` ({ name }, blank clears it). Rules in `web/lib/profile/displayName.ts` (trim, collapse spaces, 40 chars, no "@", no control characters).
+- UI: `DisplayNameForm` on the dashboard (aside, plus a prompt banner while unset) and on the join preview. `MemberList` shows name, then email (viewer and organizer only), then "Member N". Activity feed and the join preview's "Organized by" prefer the name.
+- Order matters: apply the migration to the database BEFORE deploying this code. The code selects `users.display_name`, which does not exist until the migration runs. The migration alone is safe with the old code (non-organizers just lose other members' emails, and the old list falls back to wallet addresses).
+- Checked: the full migration chain ran on a real Postgres (PGlite) with 16 checks: masking per role, RLS for outsiders, service_role unaffected, column limits, anon blocked from the function. Not yet run on the real Supabase project.

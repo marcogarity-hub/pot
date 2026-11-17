@@ -15,6 +15,7 @@ export const DASHBOARD_POT_COLUMNS =
 export type DashboardMember = {
   address: string;
   email: string | null;
+  name: string | null;
   has_paid: boolean;
   has_objected: boolean;
   has_refunded: boolean;
@@ -222,12 +223,12 @@ type Described = { text: string; tone: ActivityItem['tone'] };
  * One plain sentence per known event. Verbs are past tense so they read the same after "You" or "A member".
  * Returns null for event names this module does not know, so the caller skips them.
  */
-function describe(e: ActivityEvent, me: string | null, emails: Record<string, string>): Described | null {
+function describe(e: ActivityEvent, me: string | null, names: Record<string, string>): Described | null {
   const args = e.args ?? {};
   const who = (addr: unknown): string => {
     const a = typeof addr === 'string' ? addr.toLowerCase() : '';
     if (me !== null && a === me) return 'You';
-    return a && emails[a] ? emails[a] : 'A member';
+    return a && names[a] ? names[a] : 'A member';
   };
   const amount = usdcOrNull(args.amount);
 
@@ -259,14 +260,14 @@ function describe(e: ActivityEvent, me: string | null, emails: Record<string, st
 
 /**
  * Recent pot activity, newest first by event id, capped at `limit`. Unknown event names are skipped.
- * `emails` maps lowercase addresses to a known member email. Without an entry the actor shows as "A member".
+ * `names` maps lowercase addresses to the name to show for that member. Without an entry the actor shows as "A member".
  */
 export function activityItems(
   events: ActivityEvent[],
   potTitles: Record<string, string>,
   myAddress: string | null,
   limit = 12,
-  emails: Record<string, string> = {},
+  names: Record<string, string> = {},
 ): ActivityItem[] {
   const me = myAddress ? myAddress.toLowerCase() : null;
   const ordered = [...events].sort((a, b) => {
@@ -277,7 +278,7 @@ export function activityItems(
   const out: ActivityItem[] = [];
   for (const e of ordered) {
     if (out.length >= limit) break;
-    const described = describe(e, me, emails);
+    const described = describe(e, me, names);
     if (!described) continue;
     out.push({
       id: String(e.id),
