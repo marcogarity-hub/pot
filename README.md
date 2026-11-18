@@ -2,13 +2,42 @@
 
 **Group payments that nobody can run off with.** A pot collects an equal share of USDC from everyone in a group. The money stays locked in a smart contract until the organizer asks for it, members get a window to object, and if the pot doesn't fill, everyone who paid gets their money back.
 
+### [**Open the live demo →**](https://pot-pink.vercel.app/demo)
+
+No sign-in and no wallet. You land on a dashboard that is already full of plans and payments, so you can click around.
+
+[![Pot dashboard in the demo: "Hey Alex", three things that need you, plans closing soon, payment history and a card for each plan](docs/screenshots/demo-dashboard.jpg)](https://pot-pink.vercel.app/demo)
+
 Built for the UBC 2026 hackathon (Consumer track) on **Arc testnet**, with **QuickNode Streams** driving the live progress bar.
 
 | | |
 |---|---|
+| **Demo (start here)** | https://pot-pink.vercel.app/demo: no sign-in, sample data |
 | Contract | [`0xf842F699128A2e575d20BcC92F0472C7ad59e5C8`](https://explorer.testnet.arc.io/address/0xf842F699128A2e575d20BcC92F0472C7ad59e5C8) on Arc testnet (chain id 5042002), source verified on Blockscout |
-| Live app | https://pot-pink.vercel.app |
+| Live app | https://pot-pink.vercel.app (the real app on Arc testnet; sign in with an email) |
 | Demo video | > TODO before submit: link |
+
+## What's in the demo
+
+You are **Alex Morgan**, with seven sample plans that each sit at a different point in a plan's life. Open any of them:
+
+| Plan | Where it is | What to look at |
+|---|---|---|
+| [Lake house, August](https://pot-pink.vercel.app/demo/pots/lake-house) | Funding | You haven't paid yet. Three of four have, the deadline is close, and **Pay $600** is the one thing to do |
+| [Whistler ski trip](https://pot-pink.vercel.app/demo/pots/whistler) | Locked | Everyone paid and the money is locked. You organize, so you can request the payout with a receipt |
+| [Maya's birthday dinner](https://pot-pink.vercel.app/demo/pots/birthday-dinner) | Payout requested | The receipt, the objection window counting down, and **Object** |
+| [Cabin weekend](https://pot-pink.vercel.app/demo/pots/cabin-weekend) | Funding | You've paid and the plan waits on one more person |
+| [Camping permits](https://pot-pink.vercel.app/demo/pots/camping-permits) | Released | A finished plan: the money went to the organizer |
+| [Chapter hoodie order](https://pot-pink.vercel.app/demo/pots/hoodie-order) | Released | Twelve people and you organized it. Its card on Home has a **Run it again** button |
+| [Concert tickets](https://pot-pink.vercel.app/demo/pots/concert-tickets) | Frozen | Two members objected, so the payout froze and you took your share back |
+
+History, Wallet and Help are in the sidebar. Every date is set relative to when you open the page, so "closes in 30 hours" stays true.
+
+The demo shows the same screens as the signed-in app, fed with made-up people and test-money amounts. Buttons such as Pay and Object pretend to succeed. Nothing is sent anywhere, nothing touches the chain, and starting a new plan needs the live app.
+
+![Pot on a phone: the dashboard, paying a share, and reviewing a payout request](docs/screenshots/demo-phone.jpg)
+
+![A plan page in the demo: Maya's birthday dinner, with the receipt, the objection window and the group](docs/screenshots/demo-plan-review.jpg)
 
 ## How it works
 
