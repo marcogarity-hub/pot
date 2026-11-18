@@ -16,7 +16,7 @@
   --color-grid: var(--grid-line);
   --color-field: var(--field);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -55,91 +55,69 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-group: 26px;
+  --radius-sheet: 38px;
+  --radius-thumb: 8px;
+  --color-pine: var(--pine);
+  --color-face-ink: var(--face-ink);
 }
 
-/* Pot Grid: white modules on a pale-blue field, one electric blue, square corners, hairline joins.
-   Text pairs meet WCAG AA. State colours carry meaning only, and always travel with a text label. */
+/* Trip-first Glass (docs/design/trip-first-glass/tokens.json): a warm page, white grouped cells,
+   one coral action per screen, black and white chrome. Text pairs meet WCAG AA. State colours carry
+   meaning only and always travel with a text label. The app is light only. */
 :root {
-  --background: #f4f7ff;
-  --field: #f4f7ff;
-  --foreground: #0b1020;
+  --background: #f6f2ec;
+  --field: rgba(120, 120, 128, 0.12);
+  --foreground: #000000;
   --card: #ffffff;
-  --card-foreground: #0b1020;
+  --card-foreground: #000000;
   --popover: #ffffff;
-  --popover-foreground: #0b1020;
-  --primary: #2b59ff;
+  --popover-foreground: #000000;
+  --primary: #c8402b;
   --primary-foreground: #ffffff;
-  --secondary: #e6edff;
-  --secondary-foreground: #0b1020;
-  --muted: #eaf0ff;
-  --muted-foreground: #4a5373;
-  --accent: #e6edff;
-  --accent-foreground: #1740d6;
-  --destructive: #b42318;
-  --destructive-soft: #fde7e4;
-  --border: #c9d4ff;
-  --grid-line: #dbe3ff;
-  --input: #6f7ba8;
-  --ring: #2b59ff;
-  --success: #136c3a;
+  --secondary: #ebe7e1;
+  --secondary-foreground: #000000;
+  --muted: #ebe7e1;
+  --muted-foreground: #6e6e73;
+  --accent: #ebe7e1;
+  --accent-foreground: #000000;
+  --destructive: #d70015;
+  --destructive-soft: #fde6e9;
+  --border: rgba(60, 60, 67, 0.18);
+  --grid-line: rgba(60, 60, 67, 0.18);
+  --input: #8e8e93;
+  --ring: #000000;
+  --success: #1e7b34;
   --success-foreground: #ffffff;
-  --success-soft: #ddf4e6;
-  --warning: #8a5300;
+  --success-soft: #e3f3e7;
+  --warning: #9a5b00;
   --warning-foreground: #ffffff;
-  --warning-soft: #fff1d6;
-  --chart-1: #2b59ff;
-  --chart-2: #1740d6;
-  --chart-3: #8a5300;
-  --chart-4: #4a5373;
-  --chart-5: #b42318;
-  --radius: 0rem;
+  --warning-soft: #fdf0d8;
+  --chart-1: #c8402b;
+  --chart-2: #1f4d3a;
+  --chart-3: #9a5b00;
+  --chart-4: #6e6e73;
+  --chart-5: #d70015;
+  --radius: 1.16rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0b1020;
-  --sidebar-primary: #2b59ff;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #c8402b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e6edff;
-  --sidebar-accent-foreground: #1740d6;
-  --sidebar-border: #c9d4ff;
-  --sidebar-ring: #2b59ff;
-}
+  --sidebar-accent: #ebe7e1;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: rgba(60, 60, 67, 0.18);
+  --sidebar-ring: #000000;
 
-/* Dark mode is opt-in (.dark or data-theme="dark"). It does not follow the OS setting yet. */
-.dark, :root[data-theme="dark"] {
-  --background: #070b18;
-  --field: #070b18;
-  --foreground: #eef2ff;
-  --card: #0e1530;
-  --card-foreground: #eef2ff;
-  --popover: #0e1530;
-  --popover-foreground: #eef2ff;
-  --primary: #7c98ff;
-  --primary-foreground: #070b18;
-  --secondary: #18214a;
-  --secondary-foreground: #eef2ff;
-  --muted: #18214a;
-  --muted-foreground: #a5b0d6;
-  --accent: #18214a;
-  --accent-foreground: #c9d4ff;
-  --destructive: #ff8b7b;
-  --destructive-soft: #3a1612;
-  --border: #26305a;
-  --grid-line: #18214a;
-  --input: #6f7ba8;
-  --ring: #7c98ff;
-  --success: #5fd391;
-  --success-foreground: #070b18;
-  --success-soft: #11301f;
-  --warning: #f5b94a;
-  --warning-foreground: #070b18;
-  --warning-soft: #3a2c10;
-  --sidebar: #0e1530;
-  --sidebar-foreground: #eef2ff;
-  --sidebar-primary: #7c98ff;
-  --sidebar-primary-foreground: #070b18;
-  --sidebar-accent: #18214a;
-  --sidebar-accent-foreground: #c9d4ff;
-  --sidebar-border: #26305a;
-  --sidebar-ring: #7c98ff;
+  /* Paid friends: pine badge. Faces: six pastel fills with ink initials. Unpaid: white, dashed. */
+  --pine: #1f4d3a;
+  --face-1: #f6c9b8;
+  --face-2: #cfe3d3;
+  --face-3: #f7dfa0;
+  --face-4: #d6d3f0;
+  --face-5: #bfdceb;
+  --face-6: #f2c6d8;
+  --face-ink: #1f1a17;
+  --face-empty-border: #b9a99b;
 }
 
 @layer base {
@@ -148,18 +126,20 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
   }
   html {
     @apply font-sans;
     scrollbar-width: thin;
     scrollbar-color: var(--input) transparent;
+    -webkit-text-size-adjust: 100%;
   }
-  h1, h2, h3, .font-heading {
+  /* Bricolage is for big titles only: screen titles, trip names, the share amount. Opt in with .font-heading. */
+  .font-heading {
     font-family: var(--font-heading);
-    font-variation-settings: "wdth" 125;
-    letter-spacing: -0.01em;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
-  /* Browser surfaces that ship with defaults belong to the design too. */
   ::selection {
     background: var(--primary);
     color: var(--primary-foreground);
@@ -169,7 +149,6 @@
     accent-color: var(--primary);
   }
   :root { color-scheme: light; }
-  .dark, :root[data-theme="dark"] { color-scheme: dark; }
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
@@ -184,38 +163,52 @@
 }
 
 @layer components {
-  /* The construction grid: twelve columns on desktop, four on phones, drawn as hairlines
-     behind a container. Content modules sit on top and cover it. */
-  .grid-armature {
-    position: relative;
-    isolation: isolate;
+  /* Glass is only for things you tap that float above content: tab bar, nav buttons, toolbars, sheets.
+     Never on cards, list rows or backgrounds. Recipes come from tokens.json (glass.*). */
+  .glass {
+    background: rgba(255, 255, 255, 0.56);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: inset 1.5px 1.5px 1px rgba(255, 255, 255, 0.75), inset -1px -1px 1px rgba(255, 255, 255, 0.4),
+      0 0 0 0.5px rgba(0, 0, 0, 0.07), 0 6px 20px rgba(0, 0, 0, 0.1);
   }
-  .grid-armature::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px);
-    background-size: calc(100% / 4) 100%;
-    border-right: 1px solid var(--grid-line);
+  .glass-sheet {
+    background: rgba(250, 250, 252, 0.84);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: inset 1.5px 1.5px 1px rgba(255, 255, 255, 0.8), inset -1px -1px 1px rgba(255, 255, 255, 0.5),
+      0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 -8px 40px rgba(0, 0, 0, 0.18);
   }
-  @media (min-width: 768px) {
-    .grid-armature::before {
-      background-size: calc(100% / 12) 100%;
-    }
+  /* Controls sitting on the trip art: dark clear glass so white labels stay readable on a bright sky. */
+  .glass-art {
+    background: rgba(20, 16, 30, 0.35);
+    color: #ffffff;
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    backdrop-filter: blur(10px) saturate(160%);
+    box-shadow: inset 1px 1px 0.5px rgba(255, 255, 255, 0.45), inset -0.5px -0.5px 0.5px rgba(255, 255, 255, 0.2),
+      0 4px 14px rgba(0, 0, 0, 0.12);
   }
-  /* Registration ticks: a small "+" marks a grid intersection, set on a module corner. */
-  .tick {
-    position: relative;
+  /* The one main action per screen. */
+  .glass-prominent {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: inset 1.5px 1.5px 1px rgba(255, 255, 255, 0.35), inset -1px -1px 1px rgba(255, 255, 255, 0.15),
+      0 6px 18px rgba(200, 64, 43, 0.32);
   }
-  .tick::after {
-    content: "+";
-    position: absolute;
-    top: -0.62em;
-    left: -0.36em;
-    font: 400 14px/1 var(--font-geist-mono);
-    color: var(--primary);
-    pointer-events: none;
+  /* Solid fallbacks: no backdrop-filter support, or the person asked for reduced transparency. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass { background: rgba(255, 255, 255, 0.95); }
+    .glass-sheet { background: rgba(250, 250, 252, 0.98); }
+    .glass-art { background: rgba(20, 16, 30, 0.7); }
   }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass { background: rgba(255, 255, 255, 0.95); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .glass-sheet { background: rgba(250, 250, 252, 0.98); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .glass-art { background: rgba(20, 16, 30, 0.7); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+
+  /* Home-screen web app: keep content clear of the notch, the home indicator and rounded corners. */
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .px-safe { padding-inline: max(1rem, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)); }
 }
