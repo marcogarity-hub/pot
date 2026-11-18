@@ -54,14 +54,14 @@ export function DashboardView({ email, name, pots, queue, activity }: {
           <div className={SIDE}>
             <NeedsYou items={queue} />
           </div>
-          <div className={cn(SIDE, 'space-y-8')}>
-            <StartTiles primary={queue.length === 0} />
-            <HeldSummary held={heldAmount(pots)} potCount={pots.length} needsCount={queue.length} counts={stateCounts(pots)} />
-          </div>
           <section aria-labelledby="your-trips" className="min-w-0 space-y-3 md:col-span-7 md:col-start-1 md:row-span-full md:row-start-1">
             <h2 id="your-trips" className="text-[22px] font-semibold">Your trips</h2>
             <PotList pots={pots} />
           </section>
+          <div className={cn(SIDE, 'space-y-8')}>
+            <StartTiles primary={queue.length === 0} />
+            <HeldSummary held={heldAmount(pots)} potCount={pots.length} needsCount={queue.length} counts={stateCounts(pots)} />
+          </div>
           <div className={cn(SIDE, 'space-y-8')}>
             <ActivityFeed items={activity} />
           </div>

@@ -52,15 +52,24 @@ export function FaceDot({ face, size = 'md', showCheck = false, className }: {
 
 /**
  * A row of overlapping friends that fills in as people pay. It is announced as one picture
- * ("4 of 6 paid"); the names and states live in the list next to it.
+ * ("4 of 6 paid"); the names and states live in the list next to it. With `max`, extra friends
+ * collapse into a "+N" chip so a big group never pushes the amount out of its card.
  */
-export function Faces({ faces, size = 'md', className }: { faces: Face[]; size?: keyof typeof SIZES; className?: string }) {
+export function Faces({ faces, size = 'md', max, className }: { faces: Face[]; size?: keyof typeof SIZES; max?: number; className?: string }) {
   const paid = faces.filter(f => f.paid).length;
+  const shown = max && faces.length > max ? faces.slice(0, max - 1) : faces;
+  const extra = faces.length - shown.length;
+  const s = SIZES[size];
   return (
     <span role="img" aria-label={`${paid} of ${faces.length} paid`} className={cn('inline-flex items-center', className)}>
-      {faces.map((face, i) => (
-        <FaceDot key={face.seat} face={face} size={size} className={i > 0 ? SIZES[size].step : undefined} />
+      {shown.map((face, i) => (
+        <FaceDot key={face.seat} face={face} size={size} className={i > 0 ? s.step : undefined} />
       ))}
+      {extra > 0 && (
+        <span aria-hidden className={cn('inline-flex items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground ring-2 ring-background', s.box, s.step)}>
+          +{extra}
+        </span>
+      )}
     </span>
   );
 }

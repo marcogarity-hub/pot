@@ -50,7 +50,7 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
                   <div className="h-full rounded-full bg-pine" style={{ width: `${pct}%` }} />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Faces faces={faces} size="sm" />
+                  <Faces faces={faces} size="sm" max={6} />
                   <p className="money whitespace-nowrap text-[15px] text-muted-foreground">
                     <span className="font-semibold text-foreground">{formatDollars(BigInt(p.share) * BigInt(paid))}</span> of {formatDollars(p.total)}
                   </p>

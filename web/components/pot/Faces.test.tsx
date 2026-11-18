@@ -36,4 +36,10 @@ describe('Faces', () => {
     rerender(<FaceDot face={faces[0]} />);
     expect((container.firstElementChild?.firstElementChild as HTMLElement).style.background).toContain('--face-1');
   });
+  it('collapses a big group into a +N chip but still announces everyone', () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({ seat: i + 1, name: `P${i}`, paid: i < 3 }));
+    render(<Faces faces={many} max={6} />);
+    expect(screen.getByRole('img', { name: '3 of 8 paid' })).toBeInTheDocument();
+    expect(screen.getByText('+3')).toBeInTheDocument();
+  });
 });
