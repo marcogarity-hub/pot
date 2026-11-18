@@ -146,14 +146,18 @@ export function CreatePotForm({ preset }: { preset?: string }) {
   return (
     <form onSubmit={onSubmit} noValidate>
       {/* The sheet. Glass here holds text, so it is the only blur on the page. The submit bar sits outside it: a backdrop filter would trap the bar's fixed position. */}
-      <div className="glass-sheet mx-auto min-h-[calc(100dvh-2.5rem)] w-full max-w-xl rounded-t-[38px] px-4 pb-40 pt-2 md:my-12 md:min-h-0 md:rounded-[38px] md:px-6 md:pb-10">
-        <div aria-hidden className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-black/20" />
-        <Link href="/" aria-label="Close" className={linkButton({ variant: 'glass', size: 'icon' })}>
-          <X strokeWidth={2} />
-        </Link>
-        <h1 className="mt-4 font-heading text-[34px] leading-[1.05]">Start a pot</h1>
+      <div className="glass-sheet mx-auto min-h-[calc(100dvh-2.5rem)] w-full max-w-xl rounded-t-[38px] px-4 pb-40 pt-2 md:my-12 md:min-h-0 md:max-w-7xl md:rounded-[38px] md:px-10 md:pb-10 md:pt-8">
+        <div aria-hidden className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-black/20 md:hidden" />
+        <div className="md:flex md:items-center md:gap-5">
+          <Link href="/" aria-label="Close" className={linkButton({ variant: 'glass', size: 'icon' })}>
+            <X strokeWidth={2} />
+          </Link>
+          <h1 className="mt-4 font-heading text-[34px] leading-[1.05] md:mt-0 md:text-[40px]">Start a pot</h1>
+        </div>
 
-        <section aria-labelledby="pot-heading" className="mt-6 space-y-2">
+        <div className="md:mt-8 md:grid md:grid-cols-2 md:items-start md:gap-x-10">
+        <div className="min-w-0">
+        <section aria-labelledby="pot-heading" className="mt-6 space-y-2 md:mt-0">
           <h2 id="pot-heading" className="px-1 text-[22px] font-semibold tracking-tight">The pot</h2>
           <div className="divide-y divide-border overflow-hidden rounded-group bg-card">
             <Field id="title" label="Name" error={errors.title}>
@@ -188,8 +192,10 @@ export function CreatePotForm({ preset }: { preset?: string }) {
           onRemove={i => setEmails(list => list.filter((_, j) => j !== i))}
           onAdd={() => setEmails(list => [...list, ''])}
         />
+        </div>
 
-        <section aria-labelledby="rules-heading" className="mt-8 space-y-2">
+        <div className="min-w-0">
+        <section aria-labelledby="rules-heading" className="mt-8 space-y-2 md:mt-0">
           <h2 id="rules-heading" className="px-1 text-[22px] font-semibold tracking-tight">Rules</h2>
           <div className="divide-y divide-border overflow-hidden rounded-group bg-card">
             <Field id="threshold" label="Objections needed to block the payout" error={errors.threshold}>
@@ -225,11 +231,14 @@ export function CreatePotForm({ preset }: { preset?: string }) {
             Test money only. <Link href="/privacy" className="underline">Privacy</Link>
           </p>
         </div>
+        </div>
+        </div>
       </div>
 
-      <div className="glass fixed inset-x-0 bottom-0 z-20 pb-safe">
-        <div className="mx-auto max-w-xl px-4 pb-3 pt-3 md:px-6">
-          <Button type="submit" size="lg" className="w-full" disabled={submitting || stuckMessage !== null}>
+      {/* Phone: a floating bar over the sheet. Desktop: a plain footer row under the sheet, not glass. */}
+      <div className="glass fixed inset-x-0 bottom-0 z-20 pb-safe md:static md:z-auto md:[background:none] md:[backdrop-filter:none] md:[box-shadow:none]">
+        <div className="mx-auto max-w-xl px-4 pb-3 pt-3 md:max-w-7xl md:px-10 md:pb-12 md:pt-0 md:text-right">
+          <Button type="submit" size="lg" className="w-full md:w-auto md:min-w-56" disabled={submitting || stuckMessage !== null}>
             {finishing ? 'Finishing up your pot…' : submitting ? 'Creating pot…' : 'Create pot'}
           </Button>
         </div>

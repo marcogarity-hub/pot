@@ -11,9 +11,9 @@ export function ProgressBar({ paidCount, memberCount, collected, total, faces, f
 }) {
   const pct = memberCount === 0 ? 0 : Math.round((paidCount / memberCount) * 100);
   return (
-    <div className="space-y-4 rounded-group bg-card p-5">
+    <div className="space-y-4 rounded-group bg-card p-5 md:p-7">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="money font-heading text-[34px] leading-none tracking-tight">
+        <p className="money font-heading text-[34px] leading-none tracking-tight md:text-[44px]">
           {collected}
           <span className="ml-2 font-sans text-[17px] font-normal tracking-normal text-muted-foreground">of {total}</span>
         </p>

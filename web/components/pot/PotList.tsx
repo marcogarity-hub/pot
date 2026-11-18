@@ -26,7 +26,7 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
     );
   }
   return (
-    <ul className="grid gap-4 md:grid-cols-2">
+    <ul className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
       {pots.map(p => {
         const faces: Face[] = p.members
           .filter(m => m.active)

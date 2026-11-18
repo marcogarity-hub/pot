@@ -84,7 +84,7 @@ export function JoinPreview({ potId, title, amount, organizerEmail, organizerNam
             <h2 id="join-whos-in" className="text-[22px] font-semibold tracking-tight">Who&apos;s in</h2>
             <p className="money text-[15px] font-medium text-success">{`${paid} of ${seats.length} paid`}</p>
           </div>
-          <ul className="mt-4 grid grid-cols-3 gap-x-2 gap-y-5">
+          <ul className="mt-4 grid grid-cols-3 gap-x-2 gap-y-5 md:grid-cols-6 md:gap-x-1">
             {seats.map((m, i) => {
               const isPaid = m.has_paid && !m.has_refunded;
               return (
@@ -136,8 +136,8 @@ function Frame({ potId, children }: { potId: string; children: ReactNode }) {
         >
           <X aria-hidden className="size-5" strokeWidth={2} />
         </Link>
-        <div className="relative mx-2.5 mt-[34dvh] md:mx-auto md:max-w-md">
-          <section className="glass-sheet rounded-t-[38px] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pt-6">
+        <div className="relative mx-2.5 mt-[34dvh] md:mx-auto md:mt-[14dvh] md:mb-16 md:max-w-[600px]">
+          <section className="glass-sheet rounded-t-[38px] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pt-6 md:rounded-sheet md:px-8 md:pb-8 md:pt-8">
             {children}
           </section>
         </div>

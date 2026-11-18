@@ -63,7 +63,7 @@ export function PotStatus({ potId }: { potId: string }) {
 function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="pt-safe">
-      <div className="mx-auto w-full max-w-2xl space-y-3 px-4 py-6 md:px-6">
+      <div className="mx-auto w-full max-w-2xl space-y-3 px-4 py-6 md:max-w-5xl md:px-10">
         <Link href="/" className="text-[15px] font-medium underline underline-offset-4">Back to trips</Link>
         {children}
       </div>

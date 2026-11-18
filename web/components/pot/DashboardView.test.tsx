@@ -86,7 +86,9 @@ describe('DashboardView', () => {
 
   it('keeps the start tiles and New pot link pointing at the create flow', () => {
     render(<DashboardView email="ana@example.com" name={null} pots={[]} queue={[]} activity={[]} />);
-    expect(screen.getByRole('link', { name: /new pot/i })).toHaveAttribute('href', '/new');
+    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
+    expect(within(sidebar).getByRole('link', { name: /new pot/i })).toHaveAttribute('href', '/new');
+    expect(screen.getAllByRole('link', { name: /new pot/i }).every(l => l.getAttribute('href') === '/new')).toBe(true);
     expect(screen.getByRole('link', { name: /plan a real booking/i })).toHaveAttribute('href', '/new?preset=booking');
     expect(screen.getByText('Nothing needs you right now.')).toBeInTheDocument();
     expect(screen.getByText('Payments and payouts in your pots show up here.')).toBeInTheDocument();
@@ -105,5 +107,21 @@ describe('DashboardView', () => {
     expect(screen.getByText(/can't tell who you are/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /add your name/i })).toHaveAttribute('href', '#your-name');
     expect(screen.getByLabelText('Your name')).toHaveValue('');
+  });
+
+  it('puts the desktop sidebar beside the content: sections, the viewer\'s pots and one New pot', () => {
+    render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
+    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
+    expect(within(sidebar).getByRole('link', { name: 'Activity' })).toHaveAttribute('href', '#activity');
+    expect(within(sidebar).getByRole('link', { name: 'You' })).toHaveAttribute('href', '#you');
+    expect(within(sidebar).getByRole('link', { name: 'Cabin weekend' })).toHaveAttribute('href', '/pots/7');
+    expect(within(sidebar).getByRole('link', { name: /ana r\./i })).toHaveAttribute('href', '#you');
+  });
+
+  it('leaves out features that do not exist yet', () => {
+    render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /nudge|review request/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /nudge|review request/i })).toBeNull();
   });
 });

@@ -29,7 +29,7 @@ async function HomeContent() {
   const supabase = await createServerSupabase();
   const user = await getVerifiedUser(supabase);
   if (!user) {
-    return <Screen nav={<Link href="/sign-in" className={linkButton({ variant: "glass" })}>Sign in</Link>}><SignedOut /></Screen>;
+    return <Screen width="wide" nav={<Link href="/sign-in" className={linkButton({ variant: "glass" })}>Sign in</Link>}><SignedOut /></Screen>;
   }
 
   const [{ data: potRows }, { data: me }, { data: eventRows }] = await Promise.all([
@@ -70,10 +70,11 @@ const EXAMPLE_FACES: Face[] = [
 function SignedOut() {
   const paid = EXAMPLE_FACES.filter(f => f.paid).length;
   return (
-    <div className="space-y-8">
-      <section aria-label="Example pot">
-        <TripCover potId="home-example" className="h-64 rounded-group md:h-80" />
-        <div className="relative -mt-14 mx-3 space-y-3 rounded-group bg-card p-5">
+    <div className="space-y-8 md:space-y-12">
+      {/* Phone: cover, then the example card and copy stacked. Desktop: the cover is a wide panel with the copy and the example card on it. */}
+      <section aria-label="Example pot" className="relative">
+        <TripCover potId="home-example" className="h-64 rounded-group md:h-[30rem]" />
+        <div className="relative -mt-14 mx-3 space-y-3 rounded-group bg-card p-5 md:absolute md:bottom-8 md:right-8 md:mx-0 md:mt-0 md:w-80">
           <p className="text-[17px] font-semibold">Cabin weekend</p>
           <Faces faces={EXAMPLE_FACES} />
           <p className="money text-[15px]">
@@ -81,22 +82,22 @@ function SignedOut() {
             <span className="text-muted-foreground">· waiting on one more share</span>
           </p>
         </div>
-      </section>
-      <div className="space-y-5 px-1">
-        <h1 className="font-heading text-[34px] leading-[1.05]">Nobody is in until their money is locked in.</h1>
-        <p className="text-[17px] text-muted-foreground">
-          Pot collects an equal share from everyone and holds it until the whole group has paid. The pot locks only when every member has paid.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link href="/sign-in" className={linkButton({ size: 'lg', className: 'w-full sm:w-auto' })}>Sign in</Link>
-          <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg', variant: 'outline', className: 'w-full sm:w-auto' })}>Start a pot</Link>
+        <div className="mt-8 space-y-5 px-1 md:absolute md:left-8 md:top-8 md:mt-0 md:w-[32rem] md:space-y-6 md:rounded-group md:bg-card md:p-8">
+          <h1 className="font-heading text-[34px] leading-[1.05] md:text-[52px] md:leading-[1.02]">Nobody is in until their money is locked in.</h1>
+          <p className="text-[17px] text-muted-foreground">
+            Pot collects an equal share from everyone and holds it until the whole group has paid. The pot locks only when every member has paid.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/sign-in" className={linkButton({ size: 'lg', className: 'w-full sm:w-auto' })}>Sign in</Link>
+            <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg', variant: 'outline', className: 'w-full sm:w-auto' })}>Start a pot</Link>
+          </div>
         </div>
-      </div>
-      <ul className="divide-y divide-border rounded-group bg-card px-4">
+      </section>
+      <ul className="divide-y divide-border rounded-group bg-card px-4 md:grid md:grid-cols-3 md:gap-6 md:divide-y-0 md:bg-transparent md:px-0">
         {GUARANTEES.map(([head, body]) => (
-          <li key={head} className="flex gap-3 py-3">
+          <li key={head} className="flex gap-3 py-3 md:flex-col md:gap-4 md:rounded-group md:bg-card md:p-6">
             <PotMark className="mt-0.5 size-5 shrink-0" />
-            <p className="text-[15px]"><span className="font-semibold">{head}</span> <span className="text-muted-foreground">{body}</span></p>
+            <p className="text-[15px] md:text-[17px]"><span className="font-semibold">{head}</span> <span className="text-muted-foreground">{body}</span></p>
           </li>
         ))}
       </ul>

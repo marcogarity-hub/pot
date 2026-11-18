@@ -16,9 +16,10 @@ const GUARANTEES = [
 /** Sign in as a glass sheet rising over the trip cover. The sheet holds text, so it gets the opaque glass. */
 export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
   return (
-    <Screen width="narrow">
-      <TripCover potId="sign-in" className="h-44 rounded-group md:h-56" />
-      <section className="glass-sheet relative -mt-12 space-y-6 rounded-sheet p-6 md:p-8">
+    <Screen width="wide">
+      <TripCover potId="sign-in" className="h-44 rounded-group md:h-[28rem]" />
+      {/* Desktop: the sheet rises over the middle of the cover at one sheet-width column. */}
+      <section className="glass-sheet relative -mt-12 space-y-6 rounded-sheet p-6 md:mx-auto md:-mt-72 md:max-w-md md:p-8">
         <div className="space-y-2">
           <h1 className="font-heading text-[34px] leading-[1.05]">Sign in to Pot</h1>
           <p className="text-[17px] text-muted-foreground">Sign in with the email address your organizer invited.</p>

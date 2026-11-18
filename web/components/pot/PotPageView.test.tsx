@@ -35,6 +35,24 @@ describe('PotPageView', () => {
     expect(screen.getByText('Objection threshold')).toBeInTheDocument();
   });
 
+  it('gives the desktop breadcrumb the pot title as the current page', () => {
+    render(<PotPageView status={status} nowMs={NOW} myAddress={ME} isOrganizer={false}
+      actions={null} notice={null} invite={null} />);
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'Pots' })).toHaveAttribute('href', '/');
+    expect(within(crumbs).getByText('Cabin weekend')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('puts the invite and the lifecycle in the side rail after the group', () => {
+    render(<PotPageView status={status} nowMs={NOW} myAddress={ME} isOrganizer
+      actions={null} notice={null} invite={<p>INVITE</p>} />);
+    const group = screen.getByRole('heading', { name: 'The group' });
+    const invite = screen.getByText('INVITE');
+    const rail = screen.getByRole('heading', { name: "Where it's at" });
+    expect(group.compareDocumentPosition(invite) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(invite.compareDocumentPosition(rail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('shows the organizer line and the invite slot for the organizer', () => {
     render(<PotPageView status={status} nowMs={NOW} myAddress={ORG} isOrganizer
       actions={null} notice={null} invite={<p>INVITE</p>} />);

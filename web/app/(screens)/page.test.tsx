@@ -96,7 +96,7 @@ describe('Home (HomeContent)', () => {
     expect(screen.getByRole('heading', { name: /needs you/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /your trips/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /start a pot/i })).toHaveAttribute('href', '/new');
-    expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    expect(screen.getAllByText('ana@example.com').length).toBeGreaterThanOrEqual(1);
     // The pot title shows in the pot list and as the activity row's pot name.
     expect(screen.getAllByText('Cabin weekend').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Pay your share')).toBeInTheDocument();

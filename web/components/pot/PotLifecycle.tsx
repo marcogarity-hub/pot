@@ -53,22 +53,21 @@ function detailFor(status: PotStatusRow, nowMs: number): string | null {
   return prefix && remaining > 0 ? `${prefix} ${formatRemaining(remaining)}` : null;
 }
 
-/** Vertical ruler on phones, horizontal from md. Squares are joined by a 1px hairline. */
+/** A vertical ruler at every width (it sits in the desktop side rail). Squares are joined by a 1px hairline. */
 export function PotLifecycle({ steps }: { steps: LifecycleStep[] }) {
   return (
-    <ol aria-label="Pot lifecycle" className="md:grid md:grid-cols-4">
+    <ol aria-label="Pot lifecycle">
       {steps.map((step, i) => (
         <li
           key={`${i}-${step.label}`}
           aria-current={step.status === 'current' ? 'step' : undefined}
           className={cn(
-            'relative flex min-w-0 items-start gap-4 pb-6 last:pb-0 md:block md:pb-0',
+            'relative flex min-w-0 items-start gap-4 pb-6 last:pb-0',
             // The hairline runs from this square to the next one.
             'after:absolute after:left-[11px] after:top-6 after:bottom-0 after:w-px after:bg-border last:after:hidden',
-            'md:after:left-6 md:after:right-0 md:after:top-[11px] md:after:bottom-auto md:after:h-px md:after:w-auto',
           )}
         >
-          <span className="relative z-10 flex size-6 shrink-0 items-center justify-center bg-card md:mb-3 md:justify-start">
+          <span className="relative z-10 flex size-6 shrink-0 items-center justify-center bg-card">
             <Marker status={step.status} />
           </span>
           <div className="min-w-0 space-y-1">

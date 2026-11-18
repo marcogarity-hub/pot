@@ -12,8 +12,8 @@ const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
 
 export default function PrivacyPage() {
   return (
-    <Screen width="narrow">
-      <article className="min-w-0 space-y-8 rounded-group border border-border bg-card p-6 text-base leading-relaxed md:p-10">
+    <Screen width="wide">
+      <article className="min-w-0 space-y-8 rounded-group border border-border bg-card p-6 text-base leading-relaxed md:mx-auto md:max-w-3xl md:p-12">
         <header className="space-y-2 pb-2">
           <h1 className="font-heading text-3xl font-semibold tracking-tight">Privacy</h1>
           <p className="text-sm text-muted-foreground">Last updated {UPDATED}</p>

@@ -52,16 +52,16 @@ export function NeedsYou({ items }: { items: QueueItem[] }) {
       {items.length === 0 ? (
         <p className="rounded-group bg-card p-4 text-[15px] text-muted-foreground">Nothing needs you right now.</p>
       ) : (
-        <ul className="divide-y divide-border rounded-group bg-card">
+        <ul className="divide-y divide-border rounded-group bg-card lg:grid lg:grid-cols-2 lg:gap-4 lg:divide-y-0 lg:bg-transparent">
           {items.map(item => (
             <li key={`${item.potId}-${item.action}`}>
-              <Link href={item.href} className="flex min-h-[64px] items-center gap-3 rounded-group px-4 py-3 transition-colors hover:bg-secondary/60">
+              <Link href={item.href} className="flex min-h-[64px] items-center gap-3 rounded-group px-4 py-3 transition-colors hover:bg-secondary/60 lg:h-full lg:flex-col lg:items-stretch lg:gap-3 lg:bg-card lg:p-5 lg:hover:bg-secondary/60">
                 {item.faces && item.faces.length > 0 && <Faces faces={item.faces} size="md" />}
                 <span className="min-w-0 flex-1">
                   <span className="block text-[17px] font-semibold">{item.label}</span>
                   <span className="block truncate text-[15px] text-muted-foreground">{item.potTitle} · {item.hint}</span>
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground lg:hidden" aria-hidden />
               </Link>
             </li>
           ))}
@@ -80,7 +80,7 @@ export function StartTiles({ primary = true }: { primary?: boolean }) {
     <section aria-label="Start a pot" className="space-y-3">
       {primary ? (
         <>
-          <Link href="/new" className={linkButton({ size: 'lg', className: 'w-full' })}>Start a pot</Link>
+          <Link href="/new" className={linkButton({ size: 'lg', className: 'w-full md:w-auto md:border md:border-input md:bg-card md:text-foreground md:hover:bg-secondary' })}>Start a pot</Link>
           <p className="px-1 text-[15px] text-muted-foreground">Collect equal shares from a group.</p>
         </>
       ) : null}
