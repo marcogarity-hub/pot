@@ -37,7 +37,7 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
         return (
           <li key={p.pot_id}>
             <Link href={`/pots/${p.pot_id}`} className="block overflow-hidden rounded-group bg-card transition-colors hover:bg-secondary/60">
-              <TripCover potId={p.pot_id} className="h-[150px]" />
+              <TripCover potId={p.pot_id} title={p.title} className="h-[150px]" />
               <div className="space-y-3 p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="min-w-0 truncate font-heading text-[21px] font-semibold leading-tight">{p.title ?? `Pot #${p.pot_id}`}</p>

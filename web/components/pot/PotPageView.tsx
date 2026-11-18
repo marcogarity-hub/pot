@@ -40,7 +40,7 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
   return (
     <>
       <div className="relative">
-        <TripCover potId={status.pot_id} className="h-[300px] w-full md:h-[360px] lg:h-[420px]" />
+        <TripCover potId={status.pot_id} title={status.title} className="h-[300px] w-full md:h-[360px] lg:h-[420px]" />
         {/* Desktop only: the art fades into the warm page under the title block. */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-40 bg-gradient-to-b from-transparent to-background md:block" />
         <Link href="/" aria-label="Back to trips"

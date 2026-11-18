@@ -34,7 +34,7 @@ export function JoinPreview({ potId, title, amount, organizerEmail, organizerNam
 
   if (joined) {
     return (
-      <Frame potId={potId}>
+      <Frame potId={potId} title={title}>
         <span aria-hidden className="grid size-14 place-items-center rounded-full bg-success-soft text-success">
           <Check className="size-7" />
         </span>
@@ -55,7 +55,7 @@ export function JoinPreview({ potId, title, amount, organizerEmail, organizerNam
   const paid = seats.filter(m => m.has_paid && !m.has_refunded).length;
 
   return (
-    <Frame potId={potId}>
+    <Frame potId={potId} title={title}>
       <div className="flex items-center gap-2.5">
         <FaceDot face={{ seat: 1, name: organizer, paid: true }} size="sm" />
         <p className="text-[17px]">
@@ -124,11 +124,11 @@ export function JoinPreview({ potId, title, amount, organizerEmail, organizerNam
 }
 
 /** The full-bleed trip cover, a close control on top of it, and the glass sheet that holds the text. */
-function Frame({ potId, children }: { potId: string; children: ReactNode }) {
+function Frame({ potId, title, children }: { potId: string; title: string; children: ReactNode }) {
   return (
     <Screen flush>
       <div className="relative min-h-dvh overflow-hidden">
-        <TripCover potId={potId} className="absolute inset-0" />
+        <TripCover potId={potId} title={title} className="absolute inset-0" />
         <Link
           href="/"
           aria-label="Close"
