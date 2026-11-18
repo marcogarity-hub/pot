@@ -207,6 +207,22 @@
     .glass-art { background: rgba(20, 16, 30, 0.7); -webkit-backdrop-filter: none; backdrop-filter: none; }
   }
 
+  /* Widget tints: a slight, calm colour difference between widgets, with a glassy sheen but no blur (blur is kept
+     for floating controls). Pastels come from the face colours, mixed into white so text stays AA. */
+  .tint-peach { --tint: var(--face-1); }
+  .tint-sage { --tint: var(--face-2); }
+  .tint-butter { --tint: var(--face-3); }
+  .tint-lavender { --tint: var(--face-4); }
+  .tint-sky { --tint: var(--face-5); }
+  .tint-rose { --tint: var(--face-6); }
+  .tint-peach, .tint-sage, .tint-butter, .tint-lavender, .tint-sky, .tint-rose {
+    background:
+      linear-gradient(135deg, color-mix(in oklab, var(--tint) 46%, white) 0%, color-mix(in oklab, var(--tint) 14%, white) 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.85), inset -1px -1px 0 rgba(255, 255, 255, 0.35),
+      0 0 0 0.5px rgba(0, 0, 0, 0.05), 0 4px 14px rgba(0, 0, 0, 0.04);
+  }
+
   /* Home-screen web app: keep content clear of the notch, the home indicator and rounded corners. */
   .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
