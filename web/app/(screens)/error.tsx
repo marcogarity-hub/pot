@@ -13,8 +13,8 @@ import { Screen } from '@/components/pot/Screen';
 export default function ScreenError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <Screen>
-      <section className="min-w-0 space-y-6 border border-border bg-card p-5 md:p-8">
-        <PotMark className="size-8 text-primary" />
+      <section className="min-w-0 space-y-6 rounded-group border border-border bg-card p-5 md:p-8">
+        <PotMark className="size-8 text-foreground" />
         <div className="space-y-3">
           <h1 className="font-heading text-4xl font-semibold leading-tight tracking-tight">Something went wrong</h1>
           <p className="text-base text-muted-foreground">We couldn&apos;t load this page. Try again in a moment.</p>

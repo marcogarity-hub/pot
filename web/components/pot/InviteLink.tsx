@@ -11,10 +11,10 @@ export function InviteLink({ token }: { token: string }) {
   const origin = process.env.NEXT_PUBLIC_APP_URL || (typeof window === 'undefined' ? '' : window.location.origin);
   const url = `${origin.replace(/\/$/, '')}/join/${token}`;
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Invite link</p>
+    <div className="space-y-3 rounded-group bg-card p-5">
+      <p className="text-[17px] font-semibold">Invite link</p>
       <div className="flex gap-2">
-        <Input readOnly value={url} aria-label="Invite link" onFocus={e => e.currentTarget.select()} />
+        <Input readOnly value={url} aria-label="Invite link" onFocus={e => e.currentTarget.select()} className="min-w-0 flex-1" />
         <Button type="button" variant="outline" size="icon" aria-label="Copy invite link"
           onClick={async () => {
             try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* clipboard blocked */ }
@@ -22,7 +22,7 @@ export function InviteLink({ token }: { token: string }) {
           {copied ? <Check /> : <Copy />}
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Only people whose emails you added can join with it.</p>
+      <p className="text-[15px] text-muted-foreground">Only people whose emails you added can join with it.</p>
     </div>
   );
 }

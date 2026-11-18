@@ -24,3 +24,22 @@ describe('PotList state labels', () => {
     expect(screen.getByText('Frozen')).toBeInTheDocument();
   });
 });
+
+describe('PotList trip cards', () => {
+  it('shows the money collected so far against the total, in dollars', () => {
+    const pot = {
+      ...base,
+      state: PotState.Locked, receipt_hash: null,
+      total: '300000000000000000000', share: '100000000000000000000',
+      members: [
+        { has_paid: true, has_refunded: false, active: true, name: 'Ana' },
+        { has_paid: true, has_refunded: false, active: true, name: 'Ben' },
+        { has_paid: false, has_refunded: false, active: true, name: 'Cy' },
+      ],
+    } as unknown as PotSummary;
+    render(<PotList pots={[pot]} />);
+    expect(screen.getByText('$200', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('of $300', { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '2 of 3 paid' })).toBeInTheDocument();
+  });
+});

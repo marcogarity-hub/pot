@@ -28,7 +28,7 @@ export function formatRemaining(ms: number): string {
 export function Countdown({ target, now, label, doneLabel }: { target: string; now: Date; label: string; doneLabel: string }) {
   const remaining = Date.parse(target) - now.getTime();
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-[15px] text-muted-foreground">
       {remaining > 0
         ? <>{label} <span className="font-medium tabular-nums text-foreground">{formatRemaining(remaining)}</span></>
         : doneLabel}

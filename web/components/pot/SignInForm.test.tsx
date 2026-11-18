@@ -27,7 +27,7 @@ async function settle() {
 
 async function requestCode(email = 'Ada@Example.com') {
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
-  fireEvent.click(screen.getByRole('button', { name: /email me a sign-in link/i }));
+  fireEvent.click(screen.getByRole('button', { name: /email me a code/i }));
   await settle();
 }
 
@@ -317,7 +317,7 @@ describe('SignInForm change email', () => {
     await requestCode();
     fireEvent.click(screen.getByRole('button', { name: /use a different email/i }));
     expect(screen.getByLabelText('Email')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /email me a sign-in link/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /email me a code/i })).toBeTruthy();
     expect(screen.queryByLabelText(/sign-in code/i)).toBeNull();
   });
 });
@@ -346,7 +346,7 @@ describe('SignInForm Google and Apple', () => {
   it('shows no provider buttons unless NEXT_PUBLIC_AUTH_PROVIDERS lists one', () => {
     render(<SignInForm next="/" />);
     expect(screen.queryByRole('button', { name: /continue with/i })).toBeNull();
-    expect(screen.getByRole('button', { name: /email me a sign-in link/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /email me a code/i })).toBeTruthy();
   });
 
   it('ignores unknown provider names', () => {
@@ -392,7 +392,7 @@ describe('SignInForm Google and Apple', () => {
     await settle();
     expect((screen.getByRole('button', { name: /continue with google/i }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: /continue with apple/i }) as HTMLButtonElement).disabled).toBe(true);
-    const emailButton = screen.getByRole('button', { name: /email me a sign-in link/i }) as HTMLButtonElement;
+    const emailButton = screen.getByRole('button', { name: /email me a code/i }) as HTMLButtonElement;
     expect(emailButton.disabled).toBe(true);
     expect(screen.queryByText('Sending…')).toBeNull();
   });

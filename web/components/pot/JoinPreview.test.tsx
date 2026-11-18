@@ -12,14 +12,52 @@ describe('JoinPreview', () => {
   it('shows the pot, the share, the organizer, and which account the viewer joins as', () => {
     render(<JoinPreview {...props} />);
     expect(screen.getByRole('heading', { name: /cabin weekend/i })).toBeInTheDocument();
-    expect(screen.getByText('300 USDC')).toBeInTheDocument();
+    expect(screen.getByText('$300')).toBeInTheDocument();
     expect(screen.getByText('host@example.com')).toBeInTheDocument();
     expect(screen.getByText(/you'll join as/i)).toHaveTextContent('ana@example.com');
   });
 
-  it('omits the organizer line when it is unknown', () => {
+  it('falls back to a neutral organizer line when the organizer is unknown', () => {
     render(<JoinPreview {...props} organizerEmail={null} />);
-    expect(screen.queryByText(/organized by/i)).toBeNull();
+    expect(screen.getByText('Your organizer invited you')).toBeInTheDocument();
+    expect(screen.queryByText('host@example.com')).toBeNull();
+  });
+
+  it('shows the cover with a close control that goes back home', () => {
+    render(<JoinPreview {...props} />);
+    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/');
+  });
+
+  it('states both guarantees in plain words', () => {
+    render(<JoinPreview {...props} organizerName="Hannah" deadline="Fri, 11:59 PM" />);
+    expect(screen.getByText('Held, not sent to Hannah')).toBeInTheDocument();
+    expect(screen.getByText('Your share waits until everyone has paid.')).toBeInTheDocument();
+    expect(screen.getByText('Not full by Fri, 11:59 PM?')).toBeInTheDocument();
+    expect(screen.getByText('You get it back automatically.')).toBeInTheDocument();
+  });
+
+  it('lists who is in by "Member N" with paid and not-yet words, never by email', () => {
+    const members = [
+      { has_paid: true, has_refunded: false, active: true },
+      { has_paid: false, has_refunded: false, active: true },
+      { has_paid: true, has_refunded: true, active: true },
+      { has_paid: true, has_refunded: false, active: false },
+    ];
+    render(<JoinPreview {...props} members={members} />);
+    expect(screen.getByRole('heading', { name: /who's in/i })).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 paid')).toBeInTheDocument();
+    expect(screen.getByText('Member 1')).toBeInTheDocument();
+    expect(screen.getByText('Member 2')).toBeInTheDocument();
+    expect(screen.getByText('Member 3')).toBeInTheDocument();
+    expect(screen.queryByText('Member 4')).toBeNull();
+    expect(screen.getAllByText('Paid')).toHaveLength(1);
+    expect(screen.getAllByText('Not yet')).toHaveLength(2);
+    expect(screen.getByText('split 3 ways')).toBeInTheDocument();
+  });
+
+  it('omits the who-is-in section when no members are given', () => {
+    render(<JoinPreview {...props} />);
+    expect(screen.queryByRole('heading', { name: /who's in/i })).toBeNull();
   });
 
   it('shows a joined state with a link to the pot after the primary button', () => {

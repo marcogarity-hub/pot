@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { PotState } from '@/lib/pot/chain';
 import { usePot } from '@/lib/realtime/usePot';
 import { Button } from '@/components/ui/button';
@@ -24,14 +25,16 @@ export function PotStatus({ potId }: { potId: string }) {
   const actions = status && ready ? availableActions(status, ready.wallet_address, now) : [];
   useAutoFinalize(potId, actions.includes('finalize'));
 
-  if (loading || meLoading || me === null) return <p className="text-sm text-muted-foreground">Loading pot…</p>;
+  if (loading || meLoading || me === null) return <Frame><p className="text-[15px] text-muted-foreground">Loading pot…</p></Frame>;
   if (!status) {
     return (
-      <div className="space-y-3 border border-border bg-card p-5 text-sm">
-        <p className="font-medium">We couldn&apos;t find this pot.</p>
-        <p className="text-muted-foreground">It may still be confirming on-chain, or you aren&apos;t a member.</p>
+      <Frame>
+        <div className="space-y-3 rounded-group bg-card p-5 text-[15px]">
+          <p className="font-semibold">We couldn&apos;t find this pot.</p>
+          <p className="text-muted-foreground">It may still be confirming on-chain, or you aren&apos;t a member.</p>
+        </div>
         <IdentityNotice me={me} potId={potId} onRetry={retry} />
-      </div>
+      </Frame>
     );
   }
 
@@ -56,22 +59,39 @@ export function PotStatus({ potId }: { potId: string }) {
   );
 }
 
+/** The page's frame when there is no pot to show yet: safe-area top, one column, and a way back. */
+function Frame({ children }: { children: ReactNode }) {
+  return (
+    <div className="pt-safe">
+      <div className="mx-auto w-full max-w-2xl space-y-3 px-4 py-6 md:px-6">
+        <Link href="/" className="text-[15px] font-medium underline underline-offset-4">Back to trips</Link>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Says why the viewer has no actions. `ready` renders nothing. */
 function IdentityNotice({ me, potId, onRetry }: { me: MeState | null; potId: string; onRetry(): void }) {
   if (me === null || me.kind === 'ready') return null;
   if (me.kind === 'no-wallet') {
-    return <div className="space-y-1 text-sm text-muted-foreground"><p>You&apos;re signed in but not part of this pot yet.</p><p>Open the invite link the organizer sent you to join it.</p></div>;
+    return (
+      <div className="space-y-1 rounded-group bg-card p-5 text-[15px] text-muted-foreground">
+        <p>You&apos;re signed in but not part of this pot yet.</p>
+        <p>Open the invite link the organizer sent you to join it.</p>
+      </div>
+    );
   }
   if (me.kind === 'error') {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-group bg-card p-5 text-[15px]">
         <p className="text-muted-foreground">We couldn&apos;t check your account. Check your connection and try again.</p>
         <Button variant="outline" size="sm" onClick={onRetry}>Try again</Button>
       </div>
     );
   }
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-group bg-card p-5 text-[15px]">
       <p className="text-muted-foreground">Sign in to take actions on this pot.</p>
       <Link href={`/sign-in?next=/pots/${potId}`} className={linkButton({ size: 'sm' })}>Sign in</Link>
     </div>

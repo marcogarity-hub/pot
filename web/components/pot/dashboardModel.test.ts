@@ -71,8 +71,14 @@ describe('needsYou', () => {
     const [item] = needsYou([pot()], ME, NOW);
     expect(item).toMatchObject({
       potId: '1', potTitle: 'Cabin', action: 'pay', label: 'Pay your share',
-      hint: '2 USDC, closes in 3 h', href: '/pots/1',
+      hint: '$2, closes in 3 h', href: '/pots/1',
     });
+  });
+
+  it('shows the members who still have to pay as faces on the pay row', () => {
+    const [item] = needsYou([pot()], ME, NOW);
+    expect(item.faces?.length).toBeGreaterThan(0);
+    expect(item.faces?.every(f => f.paid === false)).toBe(true);
   });
 
   it('matches the address case-insensitively', () => {
@@ -92,18 +98,18 @@ describe('needsYou', () => {
   it('offers refund in Funding after the deadline when the viewer paid', () => {
     const p = pot({ deadline: iso(NOW - HOUR), members: [member(ME, { has_paid: true })] });
     const [item] = needsYou([p], ME, NOW);
-    expect(item).toMatchObject({ action: 'refund', label: 'Claim your refund', hint: 'Get your 2 USDC back' });
+    expect(item).toMatchObject({ action: 'refund', label: 'Claim your refund', hint: 'Get your $2 back' });
   });
 
   it('offers the organizer request-payout on a Locked pot', () => {
     const p = pot({ state: PotState.Locked, organizer_address: ME, locked_at: iso(NOW - HOUR) });
     const [item] = needsYou([p], ME, NOW);
-    expect(item).toMatchObject({ action: 'request-payout', label: 'Request the payout', hint: '6 USDC locked, 6 days left to request' });
+    expect(item).toMatchObject({ action: 'request-payout', label: 'Request the payout', hint: '$6 locked, 6 days left to request' });
   });
 
   it('shows a plain locked hint once the request window has closed', () => {
     const p = pot({ state: PotState.Locked, organizer_address: ME, locked_at: iso(NOW - 8 * 86_400_000) });
-    expect(needsYou([p], ME, NOW)[0].hint).toBe('6 USDC locked');
+    expect(needsYou([p], ME, NOW)[0].hint).toBe('$6 locked');
   });
 
   it('does not offer request-payout to a non-organizer on a Locked pot', () => {
@@ -267,12 +273,12 @@ describe('activityItems', () => {
   it('skips unknown event names without crashing', () => {
     const items = activityItems([ev(1, 'Mystery'), ev(2, 'Paid', { member: OTHER, amount: SHARE }), ev(3, '')], titles, ME);
     expect(items).toHaveLength(1);
-    expect(items[0].text).toBe('A member paid 2 USDC');
+    expect(items[0].text).toBe('A member paid $2');
   });
 
   it('says You when the viewer is the actor, A member otherwise', () => {
     const items = activityItems([ev(1, 'Paid', { member: ME, amount: SHARE }), ev(2, 'Paid', { member: OTHER, amount: SHARE })], titles, ME);
-    expect(items.map(i => i.text)).toEqual(['A member paid 2 USDC', 'You paid 2 USDC']);
+    expect(items.map(i => i.text)).toEqual(['A member paid $2', 'You paid $2']);
   });
 
   it('uses a known member email when one is supplied', () => {

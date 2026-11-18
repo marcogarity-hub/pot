@@ -202,7 +202,7 @@ export function SignInForm({ next }: { next: string }) {
     return (
       <div className="space-y-6">
         <div className="space-y-2">
-          <MailCheck className="size-6 text-primary" aria-hidden />
+          <MailCheck className="size-6 text-foreground" aria-hidden />
           <h2 className="font-heading text-xl font-semibold tracking-tight">Check your email</h2>
           <p className="text-base text-muted-foreground">We emailed you a code. Enter it below.</p>
           <p className="text-base text-muted-foreground">Sent to <span className="font-medium text-foreground">{sentTo}</span>. Or click the link in the email, in this same browser.</p>
@@ -237,7 +237,7 @@ export function SignInForm({ next }: { next: string }) {
             value={email} onChange={e => setEmail(e.target.value)} />
         </div>
         {error && <p role="alert" className="bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p>}
-        <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && !redirecting ? 'Sending…' : 'Email me a sign-in link'}</Button>
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && !redirecting ? 'Sending…' : 'Email me a code'}</Button>
         <p className="text-sm text-muted-foreground">No password. We email you a sign-in code and a link.</p>
       </form>
     </div>

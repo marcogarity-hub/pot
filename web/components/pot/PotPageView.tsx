@@ -1,19 +1,25 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from 'cn';
-import { formatUnits } from 'viem';
 import { PotState } from '@/lib/pot/chain';
+import { formatDollars } from '@/lib/format/money';
 import type { PotStatusRow } from '@/lib/realtime/usePot';
 import { verifiedReceipt } from './actions';
+import { Countdown } from './Countdown';
+import type { Face } from './Faces';
 import { MemberList } from './MemberList';
 import { PotLifecycle, lifecycleSteps } from './PotLifecycle';
 import { formatWindow } from './PotActions';
 import { ProgressBar } from './ProgressBar';
 import { StateLabel } from './StateLabel';
+import { TripCover } from './TripCover';
 import { stateInfo } from './potState';
 
 /**
  * The pot page as a pure view over loaded data, so a fixture can render it. `actions`, `notice` and `invite`
- * are slots: the real page fills them with client components that hold the handlers.
+ * are slots: the real page fills them with client components that hold the handlers. The primary action
+ * floats in a glass toolbar that `actions` draws itself.
  */
 export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, notice, invite }: {
   status: PotStatusRow; nowMs: number; myAddress: string | null; isOrganizer: boolean;
@@ -22,76 +28,117 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
   const info = stateInfo(status);
   const me = myAddress?.toLowerCase() ?? null;
   const isMember = me !== null && status.members.some(m => m.address.toLowerCase() === me);
-  const line = isOrganizer ? 'You organize this pot' : isMember ? 'You are a member' : null;
+  const line = isOrganizer ? 'You organize' : isMember ? 'You are a member' : null;
   const active = status.members.filter(m => m.active);
   const inPot = status.members.filter(m => m.has_paid && !m.has_refunded).length;
   const receipt = verifiedReceipt(status.receipt_text, status.receipt_hash);
-  const usdc = (wei: string) => `${formatUnits(BigInt(wei), 18)} USDC`;
+  // Seats follow the server's member order, the same numbering MemberList uses, so colours stay put.
+  const faces: Face[] = status.members.flatMap((m, i) => (m.active
+    ? [{ seat: i + 1, name: m.name, email: m.email, paid: m.has_paid && !m.has_refunded }]
+    : []));
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-      <header className="min-w-0 space-y-3 border border-border bg-card p-5 md:col-span-12 md:p-8">
-        <h1 className="break-words font-heading text-3xl font-semibold tracking-tight md:text-5xl">{status.title ?? `Pot #${status.pot_id}`}</h1>
-        <StateLabel info={info} />
-        {line && <p className="text-sm text-muted-foreground">{line}</p>}
-      </header>
+    <>
+      <div className="relative">
+        <TripCover potId={status.pot_id} className="h-[300px] w-full md:h-[340px]" />
+        <Link href="/" aria-label="Back to trips"
+          style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          className="glass-art absolute left-4 top-0 flex size-11 items-center justify-center rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:left-6">
+          <ChevronLeft aria-hidden className="size-6" strokeWidth={2} />
+        </Link>
+      </div>
 
-      <div className="min-w-0 space-y-6 md:col-span-8">
-        <section aria-labelledby="next-step" className="min-w-0 space-y-4 border border-border bg-card p-5 md:p-6">
-          <h2 id="next-step" className="text-lg font-semibold">Your next step</h2>
+      <div className="mx-auto w-full max-w-2xl space-y-6 px-4 pb-44 pt-5 md:px-6">
+        <header className="min-w-0 space-y-2">
+          <StateLabel info={info} />
+          <h1 className="break-words font-heading text-[34px] leading-[1.05] tracking-tight">{status.title ?? `Pot #${status.pot_id}`}</h1>
+          <p className="text-[17px] text-muted-foreground">
+            {line && <><span>{line}</span> · </>}
+            <span>{formatDollars(status.share)} each</span>
+          </p>
+        </header>
+
+        <ProgressBar
+          paidCount={inPot}
+          memberCount={active.length}
+          collected={formatDollars(BigInt(status.share) * BigInt(inPot))}
+          total={formatDollars(status.total)}
+          faces={faces}
+          footer={status.state === PotState.Funding
+            ? <Countdown target={status.deadline} now={new Date(nowMs)} label="Deadline in" doneLabel="Deadline passed" />
+            : null}
+        />
+
+        {(receipt || status.state === PotState.PayoutRequested) && (
+          <section aria-labelledby="request" className="space-y-3">
+            <h2 id="request" className="px-1 text-[22px] font-semibold tracking-tight">The request</h2>
+            <div className="divide-y divide-border overflow-hidden rounded-group bg-card">
+              <div className="min-w-0 space-y-1 px-5 py-4">
+                <p className="text-[15px] text-muted-foreground">Receipt</p>
+                <p className={cn('whitespace-pre-wrap break-words text-[17px]', !receipt && 'text-muted-foreground')}>
+                  {receipt ?? 'Receipt pending'}
+                </p>
+              </div>
+              {status.state === PotState.PayoutRequested && (
+                <div className="space-y-2 px-5 py-4">
+                  {status.release_eligible_at && (
+                    <Countdown target={status.release_eligible_at} now={new Date(nowMs)} label="Objections close in" doneLabel="Objections closed" />
+                  )}
+                  <p className="money text-[17px] font-semibold">{status.objections_count} of {status.threshold} objections</p>
+                  <p className="text-[15px] text-muted-foreground">needed to block it</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <div className="space-y-4">
           {actions}
           {notice}
-        </section>
+        </div>
 
-        <section aria-labelledby="lifecycle" className="min-w-0 space-y-4 border border-border bg-card p-5 md:p-6">
-          <h2 id="lifecycle" className="text-lg font-semibold">Lifecycle</h2>
-          <PotLifecycle steps={lifecycleSteps(status, nowMs)} />
-        </section>
-
-        <section aria-labelledby="members" className="min-w-0 space-y-4 border border-border bg-card p-5 md:p-6">
-          <h2 id="members" className="text-lg font-semibold">Members</h2>
-          <ProgressBar paidCount={inPot} memberCount={active.length} members={status.members} />
+        <section aria-labelledby="members" className="space-y-3">
+          <h2 id="members" className="px-1 text-[22px] font-semibold tracking-tight">The group</h2>
           <MemberList status={status} myAddress={myAddress} />
         </section>
-      </div>
 
-      <div className="min-w-0 space-y-6 md:col-span-4">
-        <section aria-labelledby="details" className="min-w-0 border border-border bg-card p-5">
-          <h2 id="details" className="text-lg font-semibold">Details</h2>
-          <dl className="mt-3 divide-y divide-border border-y border-border text-sm">
-            <DetailRow label="Total"><span className="money">{usdc(status.total)}</span></DetailRow>
-            <DetailRow label="Each member pays"><span className="money">{usdc(status.share)}</span></DetailRow>
-            <DetailRow label="Deadline"><span className="money">{formatWhen(status.deadline)}</span></DetailRow>
-            <DetailRow label="Request window"><span className="money">{formatWindow(status.request_window_seconds)}</span></DetailRow>
-            <DetailRow label="Objection window"><span className="money">{formatWindow(status.objection_window_seconds)}</span></DetailRow>
-            <DetailRow label="Objection threshold">
-              <span className="money">{status.threshold}</span>
-              {status.state === PotState.PayoutRequested && (
-                <span className="block text-muted-foreground">{status.objections_count} of {status.threshold} objections needed to block it</span>
-              )}
-            </DetailRow>
-            {(receipt || status.state === PotState.PayoutRequested) && (
-              <div className="min-w-0 space-y-1 py-3">
-                <dt className="text-muted-foreground">Receipt</dt>
-                <dd className={cn('whitespace-pre-wrap break-words font-medium', !receipt && 'text-muted-foreground')}>
-                  {receipt ?? 'Receipt pending'}
-                </dd>
-              </div>
-            )}
-          </dl>
+        {invite && <section aria-label="Invite">{invite}</section>}
+
+        <section aria-labelledby="lifecycle" className="space-y-3">
+          <h2 id="lifecycle" className="px-1 text-[22px] font-semibold tracking-tight">Lifecycle</h2>
+          <div className="rounded-group bg-card p-5">
+            <PotLifecycle steps={lifecycleSteps(status, nowMs)} />
+          </div>
         </section>
 
-        {invite && <section aria-label="Invite" className="min-w-0 border border-border bg-card p-5">{invite}</section>}
+        <section aria-labelledby="details" className="space-y-3">
+          <h2 id="details" className="px-1 text-[22px] font-semibold tracking-tight">Details</h2>
+          <dl className="divide-y divide-border overflow-hidden rounded-group bg-card text-[17px]">
+            <DetailRow label="Held in">USDC on Arc</DetailRow>
+            <DetailRow label="Total">{formatDollars(status.total)}</DetailRow>
+            <DetailRow label="Each member pays">{formatDollars(status.share)}</DetailRow>
+            <DetailRow label="Deadline">{formatWhen(status.deadline)}</DetailRow>
+            <DetailRow label="Request window">{formatWindow(status.request_window_seconds)}</DetailRow>
+            <DetailRow label="Objection window">{formatWindow(status.objection_window_seconds)}</DetailRow>
+            <DetailRow label="Objection threshold">{status.threshold}</DetailRow>
+            {status.receipt_hash && (
+              <DetailRow label="Receipt hash"><span className="font-mono text-[15px] break-all">{status.receipt_hash}</span></DetailRow>
+            )}
+          </dl>
+          <p className="px-1 text-[13px] text-muted-foreground">
+            Test money only: USDC on the Arc testnet. <Link href="/privacy" className="underline">Privacy</Link>
+          </p>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 max-w-full break-words text-right font-medium">{children}</dd>
+      <dd className="min-w-0 max-w-full break-words text-right">{children}</dd>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { cn } from 'cn';
 import type { PotStatusRow } from '@/lib/realtime/usePot';
 import { PotState } from '@/lib/pot/chain';
@@ -88,8 +89,8 @@ const SR: Record<LifecycleStep['status'], string> = {
 };
 
 function Marker({ status }: { status: LifecycleStep['status'] }) {
-  if (status === 'current') return <span aria-hidden className="block size-6 border-2 border-primary bg-primary shadow-[inset_0_0_0_3px_var(--card)]" />;
-  if (status === 'done') return <span aria-hidden className="block size-4 bg-primary" />;
-  if (status === 'end') return <span aria-hidden className="block size-4 bg-destructive" />;
-  return <span aria-hidden className="block size-4 border border-input bg-card" />;
+  if (status === 'current') return <span aria-hidden className="grid size-6 place-items-center rounded-full border-2 border-pine bg-card"><span className="block size-2.5 rounded-full bg-pine" /></span>;
+  if (status === 'done') return <span aria-hidden className="grid size-6 place-items-center rounded-full bg-pine text-white"><Check className="size-3.5" strokeWidth={3} /></span>;
+  if (status === 'end') return <span aria-hidden className="block size-6 rounded-full bg-destructive" />;
+  return <span aria-hidden className="block size-6 rounded-full border border-input bg-card" />;
 }

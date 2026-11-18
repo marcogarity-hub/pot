@@ -27,9 +27,9 @@ async function renderJoin(token = 'tok-1') {
     params: Promise.resolve({ inviteToken: token }),
     searchParams: Promise.resolve({}),
   } as unknown as Parameters<typeof JoinPage>[0]) as unknown as ReactElement<{
-    children: ReactElement<{ children: Promise<ReactElement> }>;
+    children: Promise<ReactElement<{ token: string; linkFailed: boolean }>>;
   }>;
-  const gate = await pageEl.props.children.props.children;
+  const gate = await pageEl.props.children;
   const resolved = await (gate.type as (p: unknown) => Promise<ReactElement>)(gate.props);
   render(resolved);
 }

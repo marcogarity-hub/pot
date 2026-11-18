@@ -17,7 +17,7 @@ export function SignInFormSkeleton() {
         <Label htmlFor="email-loading">Email</Label>
         <Input id="email-loading" type="email" disabled placeholder="Loading…" />
       </div>
-      <Button type="button" size="lg" className="w-full" disabled>Email me a sign-in link</Button>
+      <Button type="button" size="lg" className="w-full" disabled>Email me a code</Button>
       <p className="text-sm text-muted-foreground">No password. We email you a sign-in code and a link.</p>
     </div>
   );

@@ -23,7 +23,7 @@ describe('PotActions', () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactionHash: '0xabc' }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
-    const pay = screen.getByRole('button', { name: /pay 100 usdc/i });
+    const pay = screen.getByRole('button', { name: /pay \$100/i });
     await act(async () => { fireEvent.click(pay); });
     expect(fetchMock).toHaveBeenCalledWith('/api/pots/7/pay', expect.objectContaining({ method: 'POST' }));
   });
@@ -33,13 +33,13 @@ describe('PotActions', () => {
     const fetchMock = vi.fn().mockReturnValue(d.promise);
     vi.stubGlobal('fetch', fetchMock);
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
-    const pay = screen.getByRole('button', { name: /pay 100 usdc/i });
+    const pay = screen.getByRole('button', { name: /pay \$100/i });
     await act(async () => { fireEvent.click(pay); });
     expect(pay).toBeDisabled();
     fireEvent.click(pay);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await act(async () => { d.resolve(new Response(JSON.stringify({ error: 'AlreadyPaid', message: "You've already paid into this pot." }), { status: 409 })); });
-    expect(screen.getByRole('button', { name: /pay 100 usdc/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /pay \$100/i })).toBeEnabled();
   });
 
   it("shows the server's message on a 409", async () => {
@@ -47,7 +47,7 @@ describe('PotActions', () => {
       new Response(JSON.stringify({ error: 'AlreadyPaid', message: "You've already paid into this pot." }), { status: 409 }),
     ));
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
     expect(screen.getByRole('alert')).toHaveTextContent("You've already paid into this pot.");
   });
 
@@ -55,9 +55,9 @@ describe('PotActions', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactionHash: '0xabc' }), { status: 200 })));
     const onSettled = vi.fn();
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={onSettled} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
     expect(screen.getByText(/you paid/i)).toBeInTheDocument();
-    expect(screen.getByText('100 USDC')).toBeInTheDocument();
+    expect(screen.getByText('$100')).toBeInTheDocument();
     expect(onSettled).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.queryByText(/you paid/i)).not.toBeInTheDocument();
@@ -83,8 +83,8 @@ describe('PotActions confirmation', () => {
   it('shows the amount, the pot name, the time, and the transaction as a short confirmation code', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactionHash: hash }), { status: 200 })));
     render(<PotActions potId="7" actions={['pay']} status={{ ...status, title: 'Cabin weekend' }} onSettled={() => {}} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
-    expect(screen.getByText('100 USDC')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
+    expect(screen.getByText('$100')).toBeInTheDocument();
     expect(screen.getByText('Cabin weekend')).toBeInTheDocument();
     expect(screen.getByText('Date')).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /0x1234.*cdef/ });
@@ -95,7 +95,7 @@ describe('PotActions confirmation', () => {
   it('omits the confirmation code when the server returned no hash', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })));
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText(/you paid/i)).toBeInTheDocument();
   });
@@ -106,7 +106,7 @@ describe('PotActions session and refresh handling', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })));
     const onAuthLost = vi.fn();
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} onAuthLost={onAuthLost} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
     expect(screen.getByRole('alert')).toHaveTextContent('Please sign in again.');
     expect(onAuthLost).toHaveBeenCalledTimes(1);
   });
@@ -117,7 +117,7 @@ describe('PotActions session and refresh handling', () => {
     ));
     const onSettled = vi.fn();
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={onSettled} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
     expect(onSettled).toHaveBeenCalledTimes(1);
   });
 
@@ -144,7 +144,7 @@ describe('PotActions confirmation scroll', () => {
   async function payAndSettle() {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactionHash: '0xabc' }), { status: 200 })));
     render(<PotActions potId="7" actions={['pay']} status={status} onSettled={() => {}} />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
   }
 
   it('scrolls without animation when the user prefers reduced motion', async () => {

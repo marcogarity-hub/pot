@@ -10,16 +10,15 @@ import { InviteNotFound, NoLongerMember, SignedOutInvite, WrongEmail } from './J
 
 export default function JoinPage({ params, searchParams }: PageProps<'/join/[inviteToken]'>) {
   return (
-    <Screen width="narrow">
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Checking your invite…</p>}>
-        {Promise.all([params, searchParams]).then(([{ inviteToken }, sp]) => (
-          <JoinGate token={inviteToken} linkFailed={sp.error === 'link'} />
-        ))}
-      </Suspense>
-    </Screen>
+    <Suspense fallback={<Screen width="narrow"><p className="text-sm text-muted-foreground">Checking your invite…</p></Screen>}>
+      {Promise.all([params, searchParams]).then(([{ inviteToken }, sp]) => (
+        <JoinGate token={inviteToken} linkFailed={sp.error === 'link'} />
+      ))}
+    </Suspense>
   );
 }
 
+// The pot preview is full-bleed (it draws its own frame); every other join state sits in the narrow page frame.
 async function JoinGate({ token, linkFailed }: { token: string; linkFailed: boolean }) {
   const supabase = await createServerSupabase();
   const user = await getVerifiedUser(supabase);
@@ -27,8 +26,8 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
 
   if (!user) {
     const title = await inviteTitle(token);
-    if (title === undefined) return <InviteNotFound />;
-    return <SignedOutInvite title={title} linkFailed={linkFailed} next={next} />;
+    if (title === undefined) return <Screen width="narrow"><InviteNotFound /></Screen>;
+    return <Screen width="narrow"><SignedOutInvite title={title} linkFailed={linkFailed} next={next} /></Screen>;
   }
 
   const outcome = resolveInvite(await lookupInvite(token, user.email));
@@ -48,7 +47,7 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
         email={user.email} name={(me as { display_name: string | null } | null)?.display_name ?? null} />
     );
   }
-  if (outcome.kind === 'not-found') return <InviteNotFound />;
-  if (outcome.kind === 'left') return <NoLongerMember />;
-  return <WrongEmail email={user.email} />;
+  if (outcome.kind === 'not-found') return <Screen width="narrow"><InviteNotFound /></Screen>;
+  if (outcome.kind === 'left') return <Screen width="narrow"><NoLongerMember /></Screen>;
+  return <Screen width="narrow"><WrongEmail email={user.email} /></Screen>;
 }

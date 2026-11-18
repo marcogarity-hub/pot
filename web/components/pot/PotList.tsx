@@ -1,49 +1,60 @@
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-import { MemberCells } from './MemberCells';
-import { formatUsdc } from './DashboardParts';
-import { StateLabel } from './StateLabel';
-import { stateInfo } from './potState';
+import { cn } from 'cn';
+import { formatDollars } from '@/lib/format/money';
+import { Faces, type Face } from './Faces';
+import { TripCover } from './TripCover';
+import { stateInfo, type StateTone } from './potState';
 
 export type PotSummary = {
   pot_id: string; title: string | null; state: number; receipt_hash: string | null; total: string; share: string;
-  is_organizer: boolean | null; members: Array<{ has_paid: boolean; has_refunded: boolean; active: boolean }>;
+  is_organizer: boolean | null;
+  members: Array<{ has_paid: boolean; has_refunded: boolean; active: boolean; name?: string | null; email?: string | null }>;
 };
 
-/** The viewer's pots as ruled rows: name, one cell per member, amount, state. */
+/** Plain state text, coloured by tone. The words always carry the meaning; colour only reinforces it. */
+const STATE_TEXT: Record<StateTone, string> = {
+  accent: 'text-foreground', neutral: 'text-muted-foreground', warning: 'text-warning', success: 'text-success', danger: 'text-destructive',
+};
+
+/** The viewer's trips as cards: cover, name and state, a progress bar, the friends' faces and the money so far. */
 export function PotList({ pots }: { pots: PotSummary[] }) {
   if (pots.length === 0) {
     return (
-      <p className="border border-dashed border-input bg-card p-6 text-sm text-muted-foreground">
+      <p className="rounded-group border border-dashed border-input bg-card p-6 text-[15px] text-muted-foreground">
         No pots yet. Start one, or open an invite link a friend sent you.
       </p>
     );
   }
   return (
-    <ul className="divide-y divide-border border border-border bg-card">
+    <ul className="grid gap-4 md:grid-cols-2">
       {pots.map(p => {
-        const active = p.members.filter(m => m.active).length;
-        const paid = p.members.filter(m => m.has_paid && !m.has_refunded).length;
+        const faces: Face[] = p.members
+          .filter(m => m.active)
+          .map((m, i) => ({ seat: i + 1, name: m.name, email: m.email, paid: m.has_paid && !m.has_refunded }));
+        const paid = faces.filter(f => f.paid).length;
+        const pct = faces.length > 0 ? Math.round((paid / faces.length) * 100) : 0;
+        const info = stateInfo(p);
         return (
           <li key={p.pot_id}>
-            <Link
-              href={`/pots/${p.pot_id}`}
-              className="grid items-center gap-x-4 gap-y-3 px-4 py-4 transition-colors hover:bg-secondary/60 md:grid-cols-12 md:px-5"
-            >
-              <div className="min-w-0 md:col-span-4">
-                <p className="truncate font-semibold">{p.title ?? `Pot #${p.pot_id}`}</p>
-                <p className="text-xs text-muted-foreground">{p.is_organizer ? 'You organize' : 'You are a member'}</p>
-              </div>
-              <div className="min-w-0 space-y-1.5 md:col-span-3">
-                <MemberCells members={p.members} />
-                <p className="money text-xs text-muted-foreground">{paid} of {active} paid</p>
-              </div>
-              <div className="flex items-center justify-between gap-4 md:col-span-5 md:justify-end">
-                <span className="money whitespace-nowrap text-sm font-semibold">{formatUsdc(BigInt(p.total))} USDC</span>
-                <span className="flex items-center gap-2">
-                  <StateLabel info={stateInfo(p)} />
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </span>
+            <Link href={`/pots/${p.pot_id}`} className="block overflow-hidden rounded-group bg-card transition-colors hover:bg-secondary/60">
+              <TripCover potId={p.pot_id} className="h-[150px]" />
+              <div className="space-y-3 p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="min-w-0 truncate font-heading text-[21px] font-semibold leading-tight">{p.title ?? `Pot #${p.pot_id}`}</p>
+                  <span className={cn('shrink-0 text-[15px] font-semibold', STATE_TEXT[info.tone])}>{info.label}</span>
+                </div>
+                <p className="text-[13px] text-muted-foreground">
+                  {p.is_organizer ? 'You organize' : 'You are a member'} · {paid} of {faces.length} paid
+                </p>
+                <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-pine" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Faces faces={faces} size="sm" />
+                  <p className="money whitespace-nowrap text-[15px] text-muted-foreground">
+                    <span className="font-semibold text-foreground">{formatDollars(BigInt(p.share) * BigInt(paid))}</span> of {formatDollars(p.total)}
+                  </p>
+                </div>
               </div>
             </Link>
           </li>

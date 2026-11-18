@@ -19,13 +19,13 @@ const status = {
 afterEach(() => cleanup());
 
 describe('MemberList', () => {
-  it('shows the email, a You tag for the viewer, and a Paid / Not paid / Refunded label', () => {
+  it('shows the email, a You tag for the viewer, and a Paid / Not yet / Refunded label', () => {
     render(<MemberList status={status} myAddress={UNPAID} />);
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
     expect(within(rows[0]).getByText('ana@example.com')).toBeInTheDocument();
     expect(within(rows[0]).getByText('Paid')).toBeInTheDocument();
-    expect(within(rows[1]).getByText('Not paid')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Not yet')).toBeInTheDocument();
     expect(within(rows[1]).getByText('You')).toBeInTheDocument();
     expect(within(rows[2]).getByText('Refunded')).toBeInTheDocument();
   });

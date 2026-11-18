@@ -10,7 +10,7 @@ async function PresetForm({ searchParams }: { searchParams: Promise<Record<strin
 
 export default function NewPotPage({ searchParams }: PageProps<'/new'>) {
   return (
-    <Screen title="New pot" width="wide">
+    <Screen flush>
       <Suspense fallback={null}>
         <PresetForm searchParams={searchParams} />
       </Suspense>

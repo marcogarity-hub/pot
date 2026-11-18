@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { safeNext } from '@/components/pot/auth';
 import { Screen } from '@/components/pot/Screen';
 import { PotMark } from '@/components/pot/PotMark';
+import { TripCover } from '@/components/pot/TripCover';
 import { LinkNotice } from '@/components/pot/LinkNotice';
 import { SignInForm } from '@/components/pot/SignInForm';
 import { SignInFormSkeleton } from '@/components/pot/SignInFormSkeleton';
@@ -12,42 +13,34 @@ const GUARANTEES = [
   ['Refund if it does not fill.', 'Miss the deadline and everyone who paid takes their share back.'],
 ];
 
+/** Sign in as a glass sheet rising over the trip cover. The sheet holds text, so it gets the opaque glass. */
 export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
   return (
-    <Screen width="wide">
-      <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-12">
-        <section className="min-w-0 bg-card p-6 md:order-2 md:col-span-5 md:p-10">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">Sign in to Pot</h1>
-          <p className="mb-6 mt-2 text-base text-muted-foreground">Sign in with the email address your organizer invited.</p>
-          {/* searchParams are runtime data under Cache Components. The fallback must not be interactive. */}
-          <Suspense fallback={<SignInFormSkeleton />}>
-            {searchParams.then(sp => (
-              <>
-                {sp.error === 'link' && <div className="mb-6"><LinkNotice /></div>}
-                <SignInForm next={safeNext(typeof sp.next === 'string' ? sp.next : null)} />
-              </>
-            ))}
-          </Suspense>
-        </section>
-        <div className="min-w-0 space-y-8 bg-card p-6 md:order-1 md:col-span-7 md:p-10">
-          <div className="space-y-4">
-            <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight md:text-5xl">
-              Nobody is in until their money is locked in.
-            </h2>
-            <p className="max-w-[52ch] text-base text-muted-foreground">
-              Sign in with Google or an emailed code. Pot creates your wallet for you.
-            </p>
-          </div>
-          <ul className="divide-y divide-border border-y border-border">
-            {GUARANTEES.map(([head, body]) => (
-              <li key={head} className="flex gap-3 py-3">
-                <PotMark className="mt-0.5 size-5 shrink-0" />
-                <p className="text-sm"><span className="font-semibold">{head}</span> <span className="text-muted-foreground">{body}</span></p>
-              </li>
-            ))}
-          </ul>
+    <Screen width="narrow">
+      <TripCover potId="sign-in" className="h-44 rounded-group md:h-56" />
+      <section className="glass-sheet relative -mt-12 space-y-6 rounded-sheet p-6 md:p-8">
+        <div className="space-y-2">
+          <h1 className="font-heading text-[34px] leading-[1.05]">Sign in to Pot</h1>
+          <p className="text-[17px] text-muted-foreground">Sign in with the email address your organizer invited.</p>
         </div>
-      </div>
+        {/* searchParams are runtime data under Cache Components. The fallback must not be interactive. */}
+        <Suspense fallback={<SignInFormSkeleton />}>
+          {searchParams.then(sp => (
+            <>
+              {sp.error === 'link' && <LinkNotice />}
+              <SignInForm next={safeNext(typeof sp.next === 'string' ? sp.next : null)} />
+            </>
+          ))}
+        </Suspense>
+        <ul className="divide-y divide-border rounded-group bg-card px-4">
+          {GUARANTEES.map(([head, body]) => (
+            <li key={head} className="flex gap-3 py-3">
+              <PotMark className="mt-0.5 size-5 shrink-0" />
+              <p className="text-[15px]"><span className="font-semibold">{head}</span> <span className="text-muted-foreground">{body}</span></p>
+            </li>
+          ))}
+        </ul>
+      </section>
     </Screen>
   );
 }

@@ -39,8 +39,10 @@ export function OAuthButtons({ providers, busy, onSelect }: { providers: OAuthPr
       {providers.includes('apple') && (
         <p className="text-sm text-muted-foreground">With Apple, choose “Share My Email” so it matches the address your organizer invited.</p>
       )}
-      <div role="separator" aria-label="or sign in with email" className="relative h-px bg-border">
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-sm text-muted-foreground">or</span>
+      <div role="separator" aria-label="or sign in with email" className="flex items-center gap-3 text-[13px] text-muted-foreground">
+        <span aria-hidden className="h-px flex-1 bg-border" />
+        <span aria-hidden>or</span>
+        <span aria-hidden className="h-px flex-1 bg-border" />
       </div>
     </div>
   );

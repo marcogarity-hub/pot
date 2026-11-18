@@ -10,18 +10,16 @@ describe('StateLabel', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
   });
 
-  it('uses the danger ground and text colour for a danger tone', () => {
+  it('uses the destructive text colour for a danger tone', () => {
     render(<StateLabel info={{ label: 'Frozen', tone: 'danger' }} />);
     const label = screen.getByText('Frozen');
     expect(label).toHaveClass('text-destructive');
-    expect(label).toHaveClass('bg-destructive-soft');
+    expect(label).not.toHaveClass('bg-destructive-soft');
   });
 
-  it('keeps the square marker decorative so the label carries the meaning', () => {
+  it('is plain text with no marker, so the label carries the meaning', () => {
     const { container } = render(<StateLabel info={{ label: 'Released', tone: 'success' }} />);
-    const marker = container.querySelector('span[aria-hidden]');
-    expect(marker).toHaveClass('bg-success');
-    expect(marker?.textContent).toBe('');
-    expect(screen.getByText('Released')).toBeInTheDocument();
+    expect(screen.getByText('Released')).toHaveClass('text-success');
+    expect(container.querySelector('span[aria-hidden]')).toBeNull();
   });
 });

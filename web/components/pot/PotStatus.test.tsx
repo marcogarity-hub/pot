@@ -42,7 +42,7 @@ describe('PotStatus by identity state', () => {
     mockPot(status);
     mockMe({ kind: 'ready', email: 'a@example.com', wallet_address: ME_ADDRESS });
     render(<PotStatus potId="1" />);
-    expect(screen.getByRole('button', { name: /pay 100 usdc/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /pay \$100/i })).toBeTruthy();
     expect(screen.queryByText(/not part of this pot yet/i)).toBeNull();
   });
 
@@ -107,7 +107,7 @@ describe('PotStatus session expiry (UI-01)', () => {
     mockPot(status);
     mockMe({ kind: 'ready', email: 'a@example.com', wallet_address: ME_ADDRESS }, retry);
     const { rerender } = render(<PotStatus potId="1" />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay 100 usdc/i })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /pay \$100/i })); });
     expect(screen.getByRole('alert')).toHaveTextContent('Please sign in again.');
     expect(retry).toHaveBeenCalledTimes(1);
 

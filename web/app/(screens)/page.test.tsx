@@ -92,9 +92,9 @@ describe('Home (HomeContent)', () => {
   it('loads the pots and shows the verified email when the session is verified', async () => {
     vi.mocked(getVerifiedUser).mockResolvedValue({ id: 'user-1', email: 'ana@example.com' });
     await renderHome();
-    expect(screen.getByText('Held in escrow')).toBeInTheDocument();
+    expect(screen.getByText(/held in \d+ pots?/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /needs you/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /your pots/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /your trips/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /start a pot/i })).toHaveAttribute('href', '/new');
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
     // The pot title shows in the pot list and as the activity row's pot name.
@@ -104,5 +104,16 @@ describe('Home (HomeContent)', () => {
     expect(from).toHaveBeenCalledWith('pot_status');
     expect(from).toHaveBeenCalledWith('users');
     expect(from).toHaveBeenCalledWith('pot_events');
+  });
+});
+
+describe('Home signed-out example', () => {
+  it('shows the example pot strip and one sign-in action that goes to the sign-in page', async () => {
+    vi.mocked(getVerifiedUser).mockResolvedValue(null);
+    await renderHome();
+    expect(screen.getByRole('img', { name: '3 of 4 paid' })).toBeInTheDocument();
+    for (const link of screen.getAllByRole('link', { name: /^sign in$/i })) {
+      expect(link).toHaveAttribute('href', '/sign-in');
+    }
   });
 });

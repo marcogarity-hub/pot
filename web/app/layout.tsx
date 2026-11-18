@@ -22,6 +22,7 @@ export const metadata: Metadata = {
   applicationName: "Pot",
   appleWebApp: { capable: true, title: "Pot", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

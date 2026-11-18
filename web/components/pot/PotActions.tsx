@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CircleCheck } from 'lucide-react';
-import { formatUnits } from 'viem';
 import { arcTestnet } from '@/lib/pot/chain';
+import { formatDollars } from '@/lib/format/money';
 import type { PotStatusRow } from '@/lib/realtime/usePot';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,13 +18,16 @@ const ROUTES: Record<Action, string> = {
   swap: 'swap', finalize: 'finalize', expire: 'expire',
 };
 
-const BIG = 'h-12 w-full text-base';
-
-/** The first of these on offer is the primary action (default Button). Everything else is outline. */
+/** The first of these on offer is the primary action (the one coral button). Everything else is secondary. */
 const PRIMARY_ORDER: Action[] = ['pay', 'requestRelease', 'finalize', 'refund', 'expire'];
+const TOOLBAR_ORDER: Action[] = ['pay', 'requestRelease', 'finalize', 'refund', 'expire', 'object'];
 
 type Done = { action: Action; txHash?: string; at: Date };
 
+/**
+ * The pot's actions. The one primary action per state sits in a floating glass toolbar at the bottom of the
+ * screen. Forms, notices and the swap picker stay inline where the page puts them.
+ */
 export function PotActions({ potId, actions, status, onSettled, onAuthLost, idleText }: {
   potId: string; actions: Action[]; status: PotStatusRow; onSettled(): void;
   /** Called on a 401: the session is gone, so the page should re-check who is signed in. */
@@ -42,7 +45,7 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost, idle
   const [releaseStuck, setReleaseStuck] = useState<string | null>(null);
   const [leaver, setLeaver] = useState('');
   const [replacement, setReplacement] = useState('');
-  const share = formatUnits(BigInt(status.share), 18);
+  const share = formatDollars(status.share);
 
   async function run(action: Action, body?: unknown) {
     // The ref blocks a double tap before React re-renders the disabled button.
@@ -74,91 +77,112 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost, idle
   }
 
   if (done) {
-    return <Confirmation done={done} title={status.title ?? `Pot #${status.pot_id}`} amount={share} onDone={() => setDone(null)} />;
+    return (
+      <>
+        <Confirmation done={done} title={status.title ?? `Pot #${status.pot_id}`} amount={share} />
+        <Toolbar>
+          <Button size="lg" className={TOOLBAR_BUTTON} onClick={() => setDone(null)}>Done</Button>
+        </Toolbar>
+      </>
+    );
   }
 
   const busy = pending !== null;
   const label = (a: Action, idle: string, working: string) => (pending === a ? working : idle);
   const receiptTrimmed = receipt.trim();
   const primary = PRIMARY_ORDER.find(a => actions.includes(a));
-  const variant = (a: Action) => (a === primary ? 'default' : 'outline');
+  const variant = (a: Action) => (a === primary ? 'default' : a === 'object' ? 'outline' : 'glass');
+  // Once the payout request is on-chain but its receipt failed to save, the request button must not reappear.
+  const toolbar = TOOLBAR_ORDER.filter(a => actions.includes(a) && !(a === 'requestRelease' && releaseStuck));
+
+  const buttonFor = (a: Action): ReactNode => {
+    const text: Record<Action, [string, string]> = {
+      pay: [`Pay ${share}`, 'Paying…'],
+      refund: [`Get my ${share} back`, 'Refunding…'],
+      requestRelease: ['Request payout', 'Requesting…'],
+      object: ['Object', 'Objecting…'],
+      finalize: ['Finalize payout', 'Finalizing…'],
+      expire: ['Expire pot and open refunds', 'Expiring…'],
+      swap: ['Swap seat', 'Swapping…'],
+    };
+    const [idle, working] = text[a];
+    const disabled = busy || (a === 'requestRelease' && (receiptTrimmed.length === 0 || receiptTrimmed.length > 500));
+    const className = a === 'object' ? `${TOOLBAR_BUTTON} text-destructive` : TOOLBAR_BUTTON;
+    const onClick = () => {
+      if (a === 'requestRelease') void run('requestRelease', { receiptText: receiptTrimmed });
+      else void run(a);
+    };
+    return (
+      <Button key={a} variant={variant(a)} className={className} disabled={disabled} onClick={onClick}>
+        {label(a, idle, working)}
+      </Button>
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      {actions.length === 0 && idleText && <p className="text-sm">{idleText}</p>}
+    <>
+      <div className="space-y-4">
+        {actions.length === 0 && idleText && <p className="text-[15px] text-muted-foreground">{idleText}</p>}
 
-      {actions.includes('pay') && (
-        <Button size="lg" variant={variant('pay')} className={BIG} disabled={busy} onClick={() => run('pay')}>
-          {label('pay', `Pay ${share} USDC`, 'Paying…')}
-        </Button>
-      )}
-
-      {actions.includes('refund') && (
-        <Button size="lg" variant={variant('refund')} className={BIG} disabled={busy} onClick={() => run('refund')}>
-          {label('refund', `Get my ${share} USDC back`, 'Refunding…')}
-        </Button>
-      )}
-
-      {actions.includes('requestRelease') && !releaseStuck && (
-        <div className="space-y-3">
-          <Label htmlFor="receipt">Receipt or booking reference</Label>
-          <Textarea id="receipt" maxLength={500} value={receipt} placeholder="Airbnb confirmation HMX123"
-            onChange={e => setReceipt(e.target.value)} />
-          <p className="text-xs text-muted-foreground">
-            Members see this and have {formatWindow(status.objection_window_seconds)} to object before the money is released to you.
-          </p>
-          <Button size="lg" variant={variant('requestRelease')} className={BIG} disabled={busy || receiptTrimmed.length === 0 || receiptTrimmed.length > 500}
-            onClick={() => run('requestRelease', { receiptText: receiptTrimmed })}>
-            {label('requestRelease', 'Request payout', 'Requesting…')}
-          </Button>
-        </div>
-      )}
-
-      {actions.includes('object') && (
-        <Button size="lg" variant="outline" className={`${BIG} text-destructive`} disabled={busy} onClick={() => run('object')}>
-          {label('object', 'Object to this payout', 'Objecting…')}
-        </Button>
-      )}
-
-      {actions.includes('finalize') && (
-        <Button size="lg" variant={variant('finalize')} className={BIG} disabled={busy} onClick={() => run('finalize')}>
-          {label('finalize', 'Finalize payout', 'Finalizing…')}
-        </Button>
-      )}
-
-      {actions.includes('expire') && (
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">The request window has ended. Expiring the pot opens refunds for everyone who paid. Until someone expires it, the organizer can still request the payout.</p>
-          <Button variant={variant('expire')} className={BIG} disabled={busy} onClick={() => run('expire')}>
-            {label('expire', 'Expire pot and open refunds', 'Expiring…')}
-          </Button>
-        </div>
-      )}
-
-      {actions.includes('swap') && (
-        <details className="border border-border p-4 text-sm">
-          <summary className="cursor-pointer font-medium">Replace a member</summary>
-          <div className="mt-3 space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="leaver">Member leaving</Label>
-              <Input id="leaver" type="email" value={leaver} onChange={e => setLeaver(e.target.value)} placeholder="leaving@example.com" />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="replacement">Replacement</Label>
-              <Input id="replacement" type="email" value={replacement} onChange={e => setReplacement(e.target.value)} placeholder="new@example.com" />
-            </div>
-            <p className="text-xs text-muted-foreground">If the leaving member already paid, they get their share back.</p>
-            <Button variant="outline" className={BIG} disabled={busy || !leaver.trim() || !replacement.trim()}
-              onClick={() => run('swap', { leaverEmail: leaver.trim().toLowerCase(), replacementEmail: replacement.trim().toLowerCase() })}>
-              {label('swap', 'Swap seat', 'Swapping…')}
-            </Button>
+        {actions.includes('requestRelease') && !releaseStuck && (
+          <div className="space-y-3 rounded-group bg-card p-5">
+            <Label htmlFor="receipt">Receipt or booking reference</Label>
+            <Textarea id="receipt" maxLength={500} value={receipt} placeholder="Airbnb confirmation HMX123"
+              onChange={e => setReceipt(e.target.value)} />
+            <p className="text-[15px] text-muted-foreground">
+              Members see this and have {formatWindow(status.objection_window_seconds)} to object before the money is released to you.
+            </p>
           </div>
-        </details>
-      )}
+        )}
 
-      {releaseStuck && <p role="status" className="text-sm font-medium">{releaseStuck}</p>}
+        {actions.includes('expire') && (
+          <p className="text-[15px] text-muted-foreground">The request window has ended. Expiring the pot opens refunds for everyone who paid. Until someone expires it, the organizer can still request the payout.</p>
+        )}
 
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {actions.includes('swap') && (
+          <details className="rounded-group bg-card p-5 text-[15px]">
+            <summary className="cursor-pointer font-semibold">Replace a member</summary>
+            <div className="mt-3 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="leaver">Member leaving</Label>
+                <Input id="leaver" type="email" value={leaver} onChange={e => setLeaver(e.target.value)} placeholder="leaving@example.com" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="replacement">Replacement</Label>
+                <Input id="replacement" type="email" value={replacement} onChange={e => setReplacement(e.target.value)} placeholder="new@example.com" />
+              </div>
+              <p className="text-[13px] text-muted-foreground">If the leaving member already paid, they get their share back.</p>
+              <Button variant="outline" className={BIG} disabled={busy || !leaver.trim() || !replacement.trim()}
+                onClick={() => run('swap', { leaverEmail: leaver.trim().toLowerCase(), replacementEmail: replacement.trim().toLowerCase() })}>
+                {label('swap', 'Swap seat', 'Swapping…')}
+              </Button>
+            </div>
+          </details>
+        )}
+
+        {releaseStuck && <p role="status" className="text-[15px] font-medium">{releaseStuck}</p>}
+
+        {error && <p role="alert" className="text-[15px] text-destructive">{error}</p>}
+      </div>
+
+      {toolbar.length > 0 && <Toolbar>{toolbar.map(buttonFor)}</Toolbar>}
+    </>
+  );
+}
+
+const BIG = 'h-12 w-full text-base';
+const TOOLBAR_BUTTON = 'h-[52px] min-w-0 flex-1 rounded-full px-4 text-[17px]';
+
+/**
+ * The floating glass bar at the bottom of the screen. It is safe-area aware and centred on desktop.
+ * Only the bar takes pointer events, so the content above it stays scrollable.
+ */
+function Toolbar({ children }: { children: ReactNode }) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-safe md:px-6">
+      <div role="group" aria-label="Pot actions" className="glass pointer-events-auto mx-auto mb-4 flex max-w-2xl items-center gap-2 rounded-full p-1.5">
+        {children}
+      </div>
     </div>
   );
 }
@@ -174,51 +198,51 @@ const HEADING: Record<Action, string> = {
 };
 
 /**
- * Receipt for a settled action. Amount and pot name come from the pot; the time is when this page
- * received the result; the code is the transaction hash, and it is omitted if the server sent none.
+ * Receipt for a settled action, as a calm confirmation: a pine check, the headline, and the amount where one
+ * applies. The date and the transaction link (a hash, so only here in the details list) sit at the end.
  */
-function Confirmation({ done, title, amount, onDone }: { done: Done; title: string; amount: string; onDone(): void }) {
-  const hasAmount = done.action === 'pay' || done.action === 'refund';
+function Confirmation({ done, title, amount }: { done: Done; title: string; amount: string }) {
+  const pay = done.action === 'pay';
   const explorer = `${arcTestnet.blockExplorers.default.url}/tx/${done.txHash}`;
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     cardRef.current?.scrollIntoView?.({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
   }, []);
   return (
-    <div ref={cardRef} className="flex flex-col items-center gap-5 py-4 text-center">
-      <span aria-hidden className="grid size-16 place-items-center bg-success-soft text-success">
-        <CircleCheck className="size-9" />
+    <section ref={cardRef} aria-label="Confirmation" className="flex flex-col items-center gap-5 pt-4 text-center">
+      <span aria-hidden className="grid size-20 place-items-center rounded-full bg-pine text-white shadow-[0_8px_24px_rgba(31,77,58,0.25)]">
+        <CircleCheck className="size-10" strokeWidth={2} />
       </span>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground" role="status">{HEADING[done.action]}</p>
-        {hasAmount && <p className="money font-heading text-5xl font-semibold tracking-tight">{`${amount} USDC`}</p>}
-        <p className="text-sm">
-          {hasAmount && (done.action === 'pay' ? 'to ' : 'from ')}
-          <span className="font-medium">{title}</span>
-        </p>
+        <p role="status" className="text-[15px] font-medium text-muted-foreground">{HEADING[done.action]}</p>
+        <h2 className="font-heading text-[34px] leading-[1.05] tracking-tight">{pay ? 'You’re in' : title}</h2>
+        {pay && (
+          <p className="text-[17px] text-muted-foreground">
+            <span className="money font-semibold text-foreground">{amount}</span> is held until everyone has paid, for <span className="font-medium text-foreground">{title}</span>.
+          </p>
+        )}
+        {done.action === 'refund' && <p className="money text-[17px] font-semibold">{amount}</p>}
+        {pay && <p className="text-[15px] text-muted-foreground">Your share is locked in the pot until it releases or refunds.</p>}
       </div>
 
-      <dl className="w-full divide-y border border-border text-left text-sm">
+      <dl aria-label="Details" className="w-full divide-y divide-border overflow-hidden rounded-group bg-card text-left text-[17px]">
         <div className="flex items-center justify-between gap-4 px-4 py-3">
           <dt className="text-muted-foreground">Date</dt>
-          <dd className="money text-right">{formatWhen(done.at)}</dd>
+          <dd className="text-right">{formatWhen(done.at)}</dd>
         </div>
         {done.txHash && (
           <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <dt className="text-muted-foreground">Confirmation</dt>
+            <dt className="text-muted-foreground">Transaction</dt>
             <dd>
-              <a className="money font-mono font-medium underline underline-offset-4" href={explorer} target="_blank" rel="noreferrer">
+              <a className="font-mono text-[15px] font-medium underline underline-offset-4" href={explorer} target="_blank" rel="noreferrer">
                 {shortHash(done.txHash)}
               </a>
             </dd>
           </div>
         )}
       </dl>
-
-      {done.action === 'pay' && <p className="text-sm text-muted-foreground">Your share is locked in the pot until it releases or refunds.</p>}
-      <Button size="lg" className={BIG} onClick={onDone}>Done</Button>
-    </div>
+    </section>
   );
 }
 

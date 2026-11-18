@@ -18,7 +18,7 @@ const toLocalInput = (d: Date) => {
 
 function fillForm(deadline = toLocalInput(new Date(Date.now() + 30 * 24 * 3600 * 1000))) {
   fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Cabin' } });
-  fireEvent.change(screen.getByLabelText('Total (USDC)'), { target: { value: '200' } });
+  fireEvent.change(screen.getByLabelText('Total ($)'), { target: { value: '200' } });
   fireEvent.change(screen.getByLabelText('Member 1 email'), { target: { value: 'a@example.com' } });
   fireEvent.click(screen.getByRole('button', { name: /add member/i }));
   fireEvent.change(screen.getByLabelText('Member 2 email'), { target: { value: 'b@example.com' } });
@@ -254,5 +254,30 @@ describe('CreatePotForm window presets from the URL', () => {
     expect(screen.getByLabelText('Payout request window')).toHaveTextContent('2 minutes (demo)');
     cleanup();
     expect(await submitAndReadWindows('whatever')).toEqual({ objection: 120, request: 120 });
+  });
+});
+
+describe('CreatePotForm sheet', () => {
+  it('shows the per-member share in dollars and sends the total unchanged', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ potId: '1', inviteToken: 't' }, 201));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<CreatePotForm />);
+    fillForm();
+    expect(screen.getByTestId('share')).toHaveTextContent('Each member pays $100');
+    expect(screen.getByTestId('share')).not.toHaveTextContent('USDC');
+    await submit();
+    expect(JSON.parse(callsTo(fetchMock, CREATE)[0][1].body).total).toBe('200');
+  });
+
+  it('links the close button back to the dashboard', () => {
+    render(<CreatePotForm />);
+    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('heading', { level: 1, name: 'Start a pot' })).toBeInTheDocument();
+  });
+
+  it('shows a face for each member row', () => {
+    render(<CreatePotForm />);
+    fireEvent.change(screen.getByLabelText('Member 1 email'), { target: { value: 'ana@example.com' } });
+    expect(screen.getByText('A', { selector: 'span[aria-hidden]' })).toBeInTheDocument();
   });
 });

@@ -38,7 +38,7 @@ describe('PotPageView', () => {
   it('shows the organizer line and the invite slot for the organizer', () => {
     render(<PotPageView status={status} nowMs={NOW} myAddress={ORG} isOrganizer
       actions={null} notice={null} invite={<p>INVITE</p>} />);
-    expect(screen.getByText('You organize this pot')).toBeInTheDocument();
+    expect(screen.getByText('You organize')).toBeInTheDocument();
     expect(screen.getByText('INVITE')).toBeInTheDocument();
   });
 });
