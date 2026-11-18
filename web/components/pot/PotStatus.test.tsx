@@ -43,14 +43,14 @@ describe('PotStatus by identity state', () => {
     mockMe({ kind: 'ready', email: 'a@example.com', wallet_address: ME_ADDRESS });
     render(<PotStatus potId="1" />);
     expect(screen.getByRole('button', { name: /pay \$100/i })).toBeTruthy();
-    expect(screen.queryByText(/not part of this pot yet/i)).toBeNull();
+    expect(screen.queryByText(/not part of this plan yet/i)).toBeNull();
   });
 
   it('no-wallet with the pot visible: explains the state and offers no actions or sign-in', () => {
     mockPot(status);
     mockMe({ kind: 'no-wallet' });
     render(<PotStatus potId="1" />);
-    expect(screen.getByText("You're signed in but not part of this pot yet.")).toBeTruthy();
+    expect(screen.getByText("You're signed in but not part of this plan yet.")).toBeTruthy();
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
   });
@@ -59,7 +59,7 @@ describe('PotStatus by identity state', () => {
     mockPot(null);
     mockMe({ kind: 'no-wallet' });
     render(<PotStatus potId="1" />);
-    expect(screen.getByText("You're signed in but not part of this pot yet.")).toBeTruthy();
+    expect(screen.getByText("You're signed in but not part of this plan yet.")).toBeTruthy();
     expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
   });

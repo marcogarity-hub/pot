@@ -42,7 +42,7 @@ async function JoinGate({ token, linkFailed }: { token: string; linkFailed: bool
       supabase.from('users').select('display_name').eq('auth_user_id', user.id).maybeSingle(),
     ]);
     return (
-      <JoinPreview potId={outcome.potId} title={summary.title ?? 'a pot'} amount={summary.amount}
+      <JoinPreview potId={outcome.potId} title={summary.title ?? 'a plan'} amount={summary.amount}
         organizerEmail={summary.organizerEmail} organizerName={summary.organizerName}
         email={user.email} name={(me as { display_name: string | null } | null)?.display_name ?? null} />
     );

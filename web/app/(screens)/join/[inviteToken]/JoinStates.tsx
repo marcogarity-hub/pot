@@ -15,7 +15,7 @@ export function SignedOutInvite({ title, linkFailed, next }: { title: string | n
     <InviteModule>
       <div className="space-y-2">
         <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight">You&apos;re invited{title ? ` to ${title}` : ''}</h1>
-        <p className="text-sm text-muted-foreground">Sign in with the email your organizer invited to see the pot and pay your share.</p>
+        <p className="text-sm text-muted-foreground">Sign in with the email your organizer invited to see the plan and pay your share.</p>
       </div>
       {linkFailed && <LinkNotice />}
       <SignInForm next={next} />
@@ -42,7 +42,7 @@ export function NoLongerMember() {
   return (
     <InviteModule>
       <div className="space-y-2">
-        <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight">You&apos;re no longer in this pot.</h1>
+        <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight">You&apos;re no longer in this plan.</h1>
         <p className="text-sm text-muted-foreground">Your seat was given to someone else. Ask the organizer if you think this is a mistake.</p>
       </div>
       <Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link>
@@ -55,7 +55,7 @@ export function InviteNotFound() {
     <InviteModule>
       <div className="space-y-2">
         <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight">Invite not found</h1>
-        <p className="text-sm text-muted-foreground">This link may be mistyped or the pot may still be confirming. Ask the organizer to send it again.</p>
+        <p className="text-sm text-muted-foreground">This link may be mistyped or the plan may still be confirming. Ask the organizer to send it again.</p>
       </div>
       <Link href="/" className={linkButton({ variant: 'outline' })}>Go home</Link>
     </InviteModule>

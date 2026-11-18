@@ -45,7 +45,7 @@ export function JoinPreview({ potId, title, amount, organizerEmail, organizerNam
           </p>
         </div>
         <Link href={`/pots/${potId}`} className={linkButton({ size: 'lg', className: 'mt-6 w-full text-base' })}>
-          Go to pot
+          Go to plan
         </Link>
       </Frame>
     );
@@ -118,7 +118,7 @@ export function JoinPreview({ potId, title, amount, organizerEmail, organizerNam
         <DisplayNameForm initialName={name ?? null} id="join-display-name" />
       </div>
 
-      <Button size="lg" className="mt-6 w-full text-base" onClick={() => setJoined(true)}>Join pot</Button>
+      <Button size="lg" className="mt-6 w-full text-base" onClick={() => setJoined(true)}>Join plan</Button>
     </Frame>
   );
 }

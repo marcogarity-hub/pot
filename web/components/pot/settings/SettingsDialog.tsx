@@ -31,8 +31,8 @@ export function SettingsDialog({ open, onOpenChange, section = 'profile', me }: 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 bg-black/20 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <Dialog.Popup className="glass-sheet fixed inset-x-0 bottom-0 flex h-[88dvh] flex-col overflow-hidden rounded-t-sheet outline-none transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:h-[min(960px,90dvh)] md:w-[min(1140px,calc(100vw-2rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-sheet motion-reduce:transition-none">
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/20 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Popup className="glass-sheet fixed inset-x-0 bottom-0 z-50 flex h-[88dvh] flex-col overflow-hidden rounded-t-sheet outline-none transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:h-[min(960px,90dvh)] md:w-[min(1140px,calc(100vw-2rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-sheet motion-reduce:transition-none">
           <Dialog.Title className="sr-only">Settings</Dialog.Title>
           <SettingsBody initial={section} me={me} />
         </Dialog.Popup>

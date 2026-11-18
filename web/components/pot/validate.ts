@@ -24,11 +24,11 @@ export function validateCreate(input: CreatePotBody, now: Date): CreateResult {
   const emails = input.memberEmails.map(normalizeEmail);
   const n = emails.length;
 
-  if (!input.title.trim()) errors.title = 'Give the pot a name';
+  if (!input.title.trim()) errors.title = 'Give the plan a name';
   else if (input.title.trim().length > 120) errors.title = 'Keep the name under 120 characters';
 
   if (n === 0) errors.memberEmails = 'Add at least one member';
-  else if (n > MAX_MEMBERS) errors.memberEmails = `A pot can have at most ${MAX_MEMBERS} members`;
+  else if (n > MAX_MEMBERS) errors.memberEmails = `A plan can have at most ${MAX_MEMBERS} members`;
   else if (emails.some(e => !emailSchema.safeParse(e).success)) errors.memberEmails = 'Check the member emails';
   else if (new Set(emails).size !== n) errors.memberEmails = 'Each member email can only appear once';
 

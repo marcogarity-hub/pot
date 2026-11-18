@@ -9,7 +9,7 @@ import { SignedInFrame } from '@/components/pot/SignedInFrame';
 export default function PotPage({ params }: PageProps<'/pots/[potId]'>) {
   return (
     <Screen flush>
-      <Suspense fallback={<p className="px-4 py-6 text-[15px] text-muted-foreground">Loading pot…</p>}>
+      <Suspense fallback={<p className="px-4 py-6 text-[15px] text-muted-foreground">Loading plan…</p>}>
         {params.then(({ potId }) => (
           <SignedInFrame hideTabBar>
             <PotStatus potId={potId} />

@@ -90,7 +90,7 @@ function usdc(raw: string): string {
 const faceOf = (m: DashboardMember, seat: number, paid: boolean): Face => ({ seat, name: m.name, email: m.email, paid });
 
 function nextAction(p: DashboardPot, me: string, now: number): QueueItem | null {
-  const base = { potId: p.pot_id, potTitle: p.title ?? `Pot #${p.pot_id}`, href: `/pots/${p.pot_id}` };
+  const base = { potId: p.pot_id, potTitle: p.title ?? `Plan #${p.pot_id}`, href: `/pots/${p.pot_id}` };
   const isOrganizer = p.organizer_address.toLowerCase() === me;
   const mineIndex = p.members.findIndex(m => m.active && m.address.toLowerCase() === me);
   const mine = mineIndex >= 0 ? p.members[mineIndex] : undefined;
@@ -239,7 +239,7 @@ export function closingSoon(pots: DashboardPot[], now: number, windowMs = 7 * DA
     .filter(p => p.state === PotState.Funding)
     .map(p => ({
       potId: p.pot_id,
-      title: p.title ?? `Pot #${p.pot_id}`,
+      title: p.title ?? `Plan #${p.pot_id}`,
       paid: p.members.filter(m => m.active && m.has_paid).length,
       members: p.members.filter(m => m.active).length,
       deadlineAt: ms(p.deadline),

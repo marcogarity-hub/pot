@@ -25,10 +25,10 @@ function fillForm(deadline = toLocalInput(new Date(Date.now() + 30 * 24 * 3600 *
   fireEvent.change(screen.getByLabelText('Pay-in deadline'), { target: { value: deadline } });
 }
 
-const submitButton = () => screen.getByRole('button', { name: /create pot|finishing up|creating pot/i });
+const submitButton = () => screen.getByRole('button', { name: /create plan|finishing up|creating plan/i });
 
 async function submit() {
-  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create pot' })); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create plan' })); });
 }
 
 function callsTo(fetchMock: ReturnType<typeof vi.fn>, url: string) {
@@ -75,7 +75,7 @@ describe('CreatePotForm recovery', () => {
     fillForm();
     await submit();
 
-    expect(screen.getByRole('button', { name: /finishing up your pot/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /finishing up your plan/i })).toBeDisabled();
     const first = JSON.parse(callsTo(fetchMock, RECONCILE)[0][1].body);
     expect(first).toEqual({ title: 'Cabin', memberEmails: ['a@example.com', 'b@example.com'], circleTransactionId: 'ctx-1' });
     expect(push).not.toHaveBeenCalled();
@@ -107,8 +107,8 @@ describe('CreatePotForm recovery', () => {
     render(<CreatePotForm />);
     fillForm();
     await submit();
-    expect(screen.getByRole('alert')).toHaveTextContent("The pot wasn't created. You can try again.");
-    expect(screen.getByRole('button', { name: 'Create pot' })).toBeEnabled();
+    expect(screen.getByRole('alert')).toHaveTextContent("The plan wasn't created. You can try again.");
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeEnabled();
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -120,7 +120,7 @@ describe('CreatePotForm recovery', () => {
     fillForm();
     await submit();
     expect(screen.getByRole('alert')).toHaveTextContent(/don't submit it again/i);
-    expect(screen.getByRole('button', { name: /create pot|finishing up|creating pot/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /create plan|finishing up|creating plan/i })).toBeDisabled();
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -134,8 +134,8 @@ describe('CreatePotForm recovery', () => {
     await submit();
     await act(async () => { await vi.advanceTimersByTimeAsync(RECONCILE_TIMEOUT_MS + RECONCILE_INTERVAL_MS); });
     expect(screen.getByRole('alert')).toHaveTextContent(/don't submit it again/i);
-    expect(screen.getByRole('alert')).toHaveTextContent(/refresh your pot list/i);
-    expect(screen.getByRole('button', { name: /create pot|finishing up|creating pot/i })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/refresh your plan list/i);
+    expect(screen.getByRole('button', { name: /create plan|finishing up|creating plan/i })).toBeDisabled();
     expect(push).not.toHaveBeenCalled();
     expect(callsTo(fetchMock, CREATE)).toHaveLength(1);
   });
@@ -165,7 +165,7 @@ describe('CreatePotForm recovery', () => {
     fillForm();
     await submit();
     expect(screen.getByRole('alert')).toHaveTextContent('Wallet provisioning pending');
-    expect(screen.getByRole('button', { name: 'Create pot' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeEnabled();
   });
 });
 
@@ -180,7 +180,7 @@ describe('CreatePotForm 502 with a transaction hash (UI-03)', () => {
     await submit();
     const sent = JSON.parse(callsTo(fetchMock, RECONCILE)[0][1].body);
     expect(sent).toEqual({ title: 'Cabin', memberEmails: ['a@example.com', 'b@example.com'], transactionHash: '0xdef' });
-    expect(screen.getByRole('button', { name: /finishing up your pot/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /finishing up your plan/i })).toBeDisabled();
     expect(callsTo(fetchMock, CREATE)).toHaveLength(1);
   });
 
@@ -202,7 +202,7 @@ describe('CreatePotForm 502 with a transaction hash (UI-03)', () => {
     await submit();
     expect(callsTo(fetchMock, RECONCILE)).toHaveLength(0);
     expect(screen.getByRole('alert')).toHaveTextContent('Pot creation could not be confirmed.');
-    expect(screen.getByRole('button', { name: 'Create pot' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeEnabled();
   });
 });
 
@@ -214,7 +214,7 @@ describe('CreatePotForm validation announcements', () => {
     const name = screen.getByLabelText('Name');
     expect(name).toHaveFocus();
     expect(name).toHaveAttribute('aria-invalid', 'true');
-    expect(name).toHaveAccessibleDescription('Give the pot a name');
+    expect(name).toHaveAccessibleDescription('Give the plan a name');
     const alerts = screen.getAllByRole('alert');
     expect(alerts).toHaveLength(1);
     expect(alerts[0]).toHaveTextContent(/fix the fields with errors/i);
@@ -272,7 +272,7 @@ describe('CreatePotForm sheet', () => {
   it('links the close button back to the dashboard', () => {
     render(<CreatePotForm />);
     expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('heading', { level: 1, name: 'Start a pot' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Start a plan' })).toBeInTheDocument();
   });
 
   it('shows a face for each member row', () => {

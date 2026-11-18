@@ -26,7 +26,7 @@ describe('PotPageView', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Cabin weekend' })).toBeInTheDocument();
     expect(screen.getByText('You are a member')).toBeInTheDocument();
     expect(screen.getByText('ACTIONS')).toBeInTheDocument();
-    const lifecycle = screen.getByRole('list', { name: 'Pot lifecycle' });
+    const lifecycle = screen.getByRole('list', { name: 'Plan lifecycle' });
     expect(within(lifecycle).getByText(/Deadline in/)).toBeInTheDocument();
     expect(screen.getByText('1 of 2 paid')).toHaveClass('money');
     expect(screen.getByText('You')).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe('PotPageView', () => {
     render(<PotPageView status={status} nowMs={NOW} myAddress={ME} isOrganizer={false}
       actions={null} notice={null} invite={null} />);
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(crumbs).getByRole('link', { name: 'Pots' })).toHaveAttribute('href', '/');
+    expect(within(crumbs).getByRole('link', { name: 'Plans' })).toHaveAttribute('href', '/');
     expect(within(crumbs).getByText('Cabin weekend')).toHaveAttribute('aria-current', 'page');
   });
 

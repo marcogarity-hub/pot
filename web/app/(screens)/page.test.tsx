@@ -79,7 +79,7 @@ describe('Home (HomeContent)', () => {
   it('shows the signed-out view and makes no pot query when the session is not verified', async () => {
     vi.mocked(getVerifiedUser).mockResolvedValue(null);
     await renderHome();
-    expect(screen.getByRole('link', { name: /start a pot/i })).toHaveAttribute('href', '/sign-in?next=/new');
+    expect(screen.getByRole('link', { name: /start a plan/i })).toHaveAttribute('href', '/sign-in?next=/new');
     for (const link of screen.getAllByRole('link', { name: /^sign in$/i })) {
       expect(link).toHaveAttribute('href', '/sign-in');
     }

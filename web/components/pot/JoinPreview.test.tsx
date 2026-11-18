@@ -62,11 +62,11 @@ describe('JoinPreview', () => {
 
   it('shows a joined state with a link to the pot after the primary button', () => {
     render(<JoinPreview {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: /join pot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /join plan/i }));
     expect(screen.getByRole('heading', { name: /you've joined/i })).toBeInTheDocument();
     expect(screen.queryByText(/you're in/i)).toBeNull();
-    expect(screen.getByRole('link', { name: /go to pot/i })).toHaveAttribute('href', '/pots/7');
-    expect(screen.queryByRole('button', { name: /join pot/i })).toBeNull();
+    expect(screen.getByRole('link', { name: /go to plan/i })).toHaveAttribute('href', '/pots/7');
+    expect(screen.queryByRole('button', { name: /join plan/i })).toBeNull();
   });
 
   it('shows the organizer by name when they set one, and falls back to their email', () => {
@@ -81,6 +81,6 @@ describe('JoinPreview', () => {
     render(<JoinPreview {...props} name="Ana R." />);
     expect(screen.getByLabelText('Your name')).toHaveValue('Ana R.');
     expect(screen.getByText(/other members see this instead of your email/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /join pot/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /join plan/i })).toBeEnabled();
   });
 });

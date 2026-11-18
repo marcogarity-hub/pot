@@ -158,7 +158,7 @@ export function CreatePotForm({ preset, initial, titlePlaceholder }: { preset?: 
     if (outcome.kind === 'cancelled') { release(); return; }
     if (outcome.kind === 'not-created') {
       release();
-      setSubmitError("The pot wasn't created. You can try again.");
+      setSubmitError("The plan wasn't created. You can try again.");
       return;
     }
     // stop or timeout: keep the form locked so the pot can't be created twice.
@@ -177,13 +177,13 @@ export function CreatePotForm({ preset, initial, titlePlaceholder }: { preset?: 
           <Link href="/" aria-label="Close" className={linkButton({ variant: 'glass', size: 'icon' })}>
             <X strokeWidth={2} />
           </Link>
-          <h1 className="mt-4 font-heading text-[34px] leading-[1.05] md:mt-0 md:text-[40px]">Start a pot</h1>
+          <h1 className="mt-4 font-heading text-[34px] leading-[1.05] md:mt-0 md:text-[40px]">Start a plan</h1>
         </div>
 
         <div className="md:mt-8 md:grid md:grid-cols-2 md:items-start md:gap-x-10">
         <div className="min-w-0">
         <section aria-labelledby="pot-heading" className="mt-6 space-y-2 md:mt-0">
-          <h2 id="pot-heading" className="px-1 text-[22px] font-semibold tracking-tight">The pot</h2>
+          <h2 id="pot-heading" className="px-1 text-[22px] font-semibold tracking-tight">The plan</h2>
           <div className="divide-y divide-border overflow-hidden rounded-group bg-card">
             <Field id="title" label="Name" error={errors.title}>
               <Input id="title" value={title} placeholder={titlePlaceholder ?? 'Cabin weekend'} maxLength={120}
@@ -237,7 +237,7 @@ export function CreatePotForm({ preset, initial, titlePlaceholder }: { preset?: 
             </div>
             <div className="min-w-0 px-4 py-3">
               <WindowField id="request-window" label="Payout request window"
-                hint="After the pot locks, the organizer should request the payout within this time. After that, anyone can expire the pot so members can get refunds."
+                hint="After the plan locks, the organizer should request the payout within this time. After that, anyone can expire the plan so members can get refunds."
                 presets={REQUEST_PRESETS} seconds={requestWindowSeconds} onChange={setRequest}
                 error={errors.requestWindowSeconds} />
             </div>
@@ -264,7 +264,7 @@ export function CreatePotForm({ preset, initial, titlePlaceholder }: { preset?: 
       <div className="glass fixed inset-x-0 bottom-0 z-20 pb-safe md:static md:z-auto md:[background:none] md:[backdrop-filter:none] md:[box-shadow:none]">
         <div className="mx-auto max-w-xl px-4 pb-3 pt-3 md:max-w-7xl md:px-10 md:pb-12 md:pt-0 md:text-right">
           <Button type="submit" size="lg" className="w-full md:w-auto md:min-w-56" disabled={submitting || stuckMessage !== null}>
-            {finishing ? 'Finishing up your pot…' : submitting ? 'Creating pot…' : 'Create pot'}
+            {finishing ? 'Finishing up your plan…' : submitting ? 'Creating plan…' : 'Create plan'}
           </Button>
         </div>
       </div>
@@ -323,7 +323,7 @@ export function SubmitStatus({ finishing, hasErrors, stuckMessage, submitError }
     <>
       {finishing && (
         <p role="status" className="text-[15px] text-muted-foreground">
-          Your pot is being confirmed on-chain. This can take up to two minutes. Please don&apos;t submit again.
+          Your plan is being confirmed on-chain. This can take up to two minutes. Please don&apos;t submit again.
         </p>
       )}
       {hasErrors && <p role="alert" className="text-[15px] text-destructive">Fix the fields with errors, then try again.</p>}

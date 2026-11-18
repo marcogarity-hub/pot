@@ -99,7 +99,7 @@ describe('JoinPage (JoinGate)', () => {
     it('does not call claimUser for the left outcome', async () => {
       vi.mocked(lookupInvite).mockResolvedValue({ potId: '8', invited: true, isOrganizer: false, memberState: 'inactive' });
       await renderJoin();
-      expect(screen.getByRole('heading', { name: /no longer in this pot/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /no longer in this plan/i })).toBeInTheDocument();
       expect(claimUser).not.toHaveBeenCalled();
     });
 

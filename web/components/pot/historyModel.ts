@@ -97,7 +97,7 @@ export function buildHistory(
       id: String(e.id),
       kind: movement.kind,
       potId: e.pot_id,
-      potTitle: pot?.title ?? `Pot #${e.pot_id}`,
+      potTitle: pot?.title ?? `Plan #${e.pot_id}`,
       at: null,
     };
     if (movement.amount !== undefined) item.amount = movement.amount;

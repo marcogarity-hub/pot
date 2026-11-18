@@ -26,31 +26,31 @@ export default function PrivacyPage() {
           <section className="space-y-3 border-t border-border pt-6">
             <h2 className="font-heading text-xl font-semibold tracking-tight">What we collect</h2>
             <ul className="list-disc space-y-2 pl-5">
-              <li><strong>Your email address.</strong> You give it when you sign in, or a pot organizer types it to invite you.</li>
+              <li><strong>Your email address.</strong> You give it when you sign in, or a plan organizer types it to invite you.</li>
               <li>
                 <strong>If you sign in with Google:</strong> the email address on your Google account. Google also sends your name and
                 profile picture, which our sign-in provider stores with your account. We only use your email address; we do not copy your Google
                 name into Pot. We never read your Google mail, contacts, files or anything else.
               </li>
               <li>
-                <strong>A display name, if you choose to set one.</strong> The other members of your pots see it instead of your email address.
-                Only a pot&apos;s organizer sees the email addresses they invited. You can change or remove your name any time.
+                <strong>A display name, if you choose to set one.</strong> The other members of your plans see it instead of your email address.
+                Only a plan&apos;s organizer sees the email addresses they invited. You can change or remove your name any time.
               </li>
               <li><strong>A wallet we create for you.</strong> Each member gets a wallet address tied to their email, so you never handle keys or gas.</li>
-              <li><strong>Pot records:</strong> pot titles, amounts, deadlines, the member list, payments and actions (pay, object, refund, release), and any receipt text an organizer enters.</li>
+              <li><strong>Plan records:</strong> plan titles, amounts, deadlines, the member list, payments and actions (pay, object, refund, release), and any receipt text an organizer enters.</li>
               <li><strong>A sign-in cookie</strong> that keeps you signed in. We use no advertising or tracking cookies and no analytics.</li>
             </ul>
           </section>
 
           <section className="space-y-3 border-t border-border pt-6">
             <h2 className="font-heading text-xl font-semibold tracking-tight">How we use it</h2>
-            <p>Only to run pots: to sign you in, show you your pots, move the test money, and send your sign-in code. We don&apos;t sell your information and we don&apos;t use it for advertising.</p>
+            <p>Only to run plans: to sign you in, show you your plans, move the test money, and send your sign-in code. We don&apos;t sell your information and we don&apos;t use it for advertising.</p>
           </section>
 
           <section className="space-y-3 border-t border-border pt-6">
             <h2 className="font-heading text-xl font-semibold tracking-tight">What is public</h2>
             <p>
-              Payments, wallet addresses and pot IDs are written to a public blockchain. Anyone can see them, and they can&apos;t be edited or
+              Payments, wallet addresses and plan IDs are written to a public blockchain. Anyone can see them, and they can&apos;t be edited or
               deleted by us or anyone else. Your email address is not written to the blockchain.
             </p>
           </section>
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
           <section className="space-y-3 border-t border-border pt-6">
             <h2 className="font-heading text-xl font-semibold tracking-tight">Deleting your data</h2>
             <p>
-              This is a demo, so we keep account and pot records only as long as the demo runs. To ask us to delete yours,{' '}
+              This is a demo, so we keep account and plan records only as long as the demo runs. To ask us to delete yours,{' '}
               {CONTACT_EMAIL
                 ? <>email <a className="underline underline-offset-4" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</>
                 : <>open an issue on the project&apos;s GitHub page.</>}{' '}

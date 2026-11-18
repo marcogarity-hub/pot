@@ -15,11 +15,11 @@ export const RECONCILE_INTERVAL_MS = 5_000;
 export const RECONCILE_TIMEOUT_MS = 120_000;
 
 export const STOP_MESSAGES: Record<number, string> = {
-  422: "The pot's details don't match what was submitted, so we couldn't finish it. Don't submit it again. Refresh your pot list later to check.",
-  403: "We couldn't finish this pot with your account. Don't submit it again. Refresh your pot list later to check.",
-  401: 'Your sign-in expired. Sign in again, then refresh your pot list. Don\'t submit the pot again until you\'ve checked.',
+  422: "The plan's details don't match what was submitted, so we couldn't finish it. Don't submit it again. Refresh your plan list later to check.",
+  403: "We couldn't finish this plan with your account. Don't submit it again. Refresh your plan list later to check.",
+  401: 'Your sign-in expired. Sign in again, then refresh your plan list. Don\'t submit the plan again until you\'ve checked.',
 };
-export const TIMEOUT_MESSAGE = "We're still finishing your pot. Don't submit it again. Refresh your pot list in a few minutes to see it.";
+export const TIMEOUT_MESSAGE = "We're still finishing your plan. Don't submit it again. Refresh your plan list in a few minutes to see it.";
 
 /**
  * Polls reconcile until the pot is recorded, the server says it was never created, a terminal

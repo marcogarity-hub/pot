@@ -25,12 +25,12 @@ export function PotStatus({ potId }: { potId: string }) {
   const actions = status && ready ? availableActions(status, ready.wallet_address, now) : [];
   useAutoFinalize(potId, actions.includes('finalize'));
 
-  if (loading || meLoading || me === null) return <Frame><p className="text-[15px] text-muted-foreground">Loading pot…</p></Frame>;
+  if (loading || meLoading || me === null) return <Frame><p className="text-[15px] text-muted-foreground">Loading plan…</p></Frame>;
   if (!status) {
     return (
       <Frame>
         <div className="space-y-3 rounded-group bg-card p-5 text-[15px]">
-          <p className="font-semibold">We couldn&apos;t find this pot.</p>
+          <p className="font-semibold">We couldn&apos;t find this plan.</p>
           <p className="text-muted-foreground">It may still be confirming on-chain, or you aren&apos;t a member.</p>
         </div>
         <IdentityNotice me={me} potId={potId} onRetry={retry} />
@@ -64,7 +64,7 @@ function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="pt-safe">
       <div className="mx-auto w-full max-w-2xl space-y-3 px-4 py-6 md:max-w-5xl md:px-10">
-        <Link href="/" className="text-[15px] font-medium underline underline-offset-4">Back to trips</Link>
+        <Link href="/" className="text-[15px] font-medium underline underline-offset-4">Back to plans</Link>
         {children}
       </div>
     </div>
@@ -77,7 +77,7 @@ function IdentityNotice({ me, potId, onRetry }: { me: MeState | null; potId: str
   if (me.kind === 'no-wallet') {
     return (
       <div className="space-y-1 rounded-group bg-card p-5 text-[15px] text-muted-foreground">
-        <p>You&apos;re signed in but not part of this pot yet.</p>
+        <p>You&apos;re signed in but not part of this plan yet.</p>
         <p>Open the invite link the organizer sent you to join it.</p>
       </div>
     );
@@ -92,7 +92,7 @@ function IdentityNotice({ me, potId, onRetry }: { me: MeState | null; potId: str
   }
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-group bg-card p-5 text-[15px]">
-      <p className="text-muted-foreground">Sign in to take actions on this pot.</p>
+      <p className="text-muted-foreground">Sign in to take actions on this plan.</p>
       <Link href={`/sign-in?next=/pots/${potId}`} className={linkButton({ size: 'sm' })}>Sign in</Link>
     </div>
   );

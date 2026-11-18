@@ -56,7 +56,7 @@ function detailFor(status: PotStatusRow, nowMs: number): string | null {
 /** A vertical ruler at every width (it sits in the desktop side rail). Squares are joined by a 1px hairline. */
 export function PotLifecycle({ steps }: { steps: LifecycleStep[] }) {
   return (
-    <ol aria-label="Pot lifecycle">
+    <ol aria-label="Plan lifecycle">
       {steps.map((step, i) => (
         <li
           key={`${i}-${step.label}`}

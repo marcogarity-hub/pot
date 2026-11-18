@@ -44,7 +44,7 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
         <TripCover potId={status.pot_id} title={status.title} className="h-[300px] w-full md:h-[360px] lg:h-[420px]" />
         {/* Desktop only: the art fades into the warm page under the title block. */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-40 bg-gradient-to-b from-transparent to-background md:block" />
-        <Link href="/" aria-label="Back to trips"
+        <Link href="/" aria-label="Back to plans"
           style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
           className="glass-art absolute left-4 top-0 flex size-11 items-center justify-center rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden">
           <ChevronLeft aria-hidden className="size-6" strokeWidth={2} />
@@ -52,16 +52,16 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
         <nav aria-label="Breadcrumb"
           style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
           className="glass-art absolute left-6 top-0 hidden h-11 max-w-[60%] items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-white md:flex md:left-[304px]">
-          <Link href="/" className="shrink-0 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Pots</Link>
+          <Link href="/" className="shrink-0 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Plans</Link>
           <ChevronRight aria-hidden className="size-4 shrink-0" strokeWidth={2} />
-          <span aria-current="page" className="min-w-0 truncate">{status.title ?? `Pot #${status.pot_id}`}</span>
+          <span aria-current="page" className="min-w-0 truncate">{status.title ?? `Plan #${status.pot_id}`}</span>
         </nav>
       </div>
 
       <div className="mx-auto w-full max-w-2xl space-y-6 px-4 pb-44 pt-5 md:max-w-7xl md:px-10 md:pb-32 md:pt-0">
         <header className="min-w-0 space-y-2 md:relative md:z-10 md:-mt-24">
           <StateLabel info={info} />
-          <h1 className="break-words font-heading text-[34px] leading-[1.05] tracking-tight md:text-[56px] md:leading-[1]">{status.title ?? `Pot #${status.pot_id}`}</h1>
+          <h1 className="break-words font-heading text-[34px] leading-[1.05] tracking-tight md:text-[56px] md:leading-[1]">{status.title ?? `Plan #${status.pot_id}`}</h1>
           <p className="text-[17px] text-muted-foreground">
             {line && <><span>{line}</span> · </>}
             <span>{formatDollars(status.share)} each</span>

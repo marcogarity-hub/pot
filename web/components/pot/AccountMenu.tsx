@@ -46,7 +46,7 @@ export function AccountMenu({ name, email, onOpenSettings, defaultOpen = false }
         <span className="min-w-0 truncate font-medium">{label}</span>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner side="top" align="start" sideOffset={8}>
+        <Popover.Positioner side="top" align="start" sideOffset={8} className="z-[60]">
           <Popover.Popup
             finalFocus={() => !openingSettings.current}
             className="glass-sheet w-[232px] rounded-group p-2 outline-none transition-opacity duration-100 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"

@@ -67,7 +67,7 @@ function SignedOut() {
   return (
     <div className="space-y-8 md:space-y-12">
       {/* Phone: cover, then the example card and copy stacked. Desktop: the cover is a wide panel with the copy and the example card on it. */}
-      <section aria-label="Example pot" className="relative">
+      <section aria-label="Example plan" className="relative">
         <TripCover potId="home-example" className="h-64 rounded-group md:h-[30rem]" />
         <div className="relative -mt-14 mx-3 space-y-3 rounded-group bg-card p-5 md:absolute md:bottom-8 md:right-8 md:mx-0 md:mt-0 md:w-80">
           <p className="text-[17px] font-semibold">Cabin weekend</p>
@@ -80,11 +80,11 @@ function SignedOut() {
         <div className="mt-8 space-y-5 px-1 md:absolute md:left-8 md:top-8 md:mt-0 md:w-[32rem] md:space-y-6 md:rounded-group md:bg-card md:p-8">
           <h1 className="font-heading text-[34px] leading-[1.05] md:text-[52px] md:leading-[1.02]">Nobody is in until their money is locked in.</h1>
           <p className="text-[17px] text-muted-foreground">
-            Pot collects an equal share from everyone and holds it until the whole group has paid. The pot locks only when every member has paid.
+            Pot collects an equal share from everyone and holds it until the whole group has paid. The plan locks only when every member has paid.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/sign-in" className={linkButton({ size: 'lg', className: 'w-full sm:w-auto' })}>Sign in</Link>
-            <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg', variant: 'outline', className: 'w-full sm:w-auto' })}>Start a pot</Link>
+            <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg', variant: 'outline', className: 'w-full sm:w-auto' })}>Start a plan</Link>
           </div>
         </div>
       </section>

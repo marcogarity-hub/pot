@@ -65,7 +65,7 @@ describe('CreatePotForm starting values', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<CreatePotForm initial={{ title: 'Cabin', total: '200', members: ['a@example.com', 'b@example.com'], threshold: 1, objectionWindow: 3600, requestWindow: 86400 }} />);
     fireEvent.change(screen.getByLabelText('Pay-in deadline'), { target: { value: toLocalInput(new Date(Date.now() + 5 * DAY)) } });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create pot' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create plan' })); });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);

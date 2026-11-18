@@ -26,7 +26,7 @@ describe('buildHistory', () => {
     });
     expect(items[2]).toMatchObject({ kind: 'refunded', amount: U(40) });
     expect(items[2]).not.toHaveProperty('receiptText');
-    expect(items[0].potTitle).toBe('Pot #8');
+    expect(items[0].potTitle).toBe('Plan #8');
   });
 
   it('counts a seat swap refund only for the leaver and only when money came back', () => {

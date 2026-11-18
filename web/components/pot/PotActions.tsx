@@ -79,7 +79,7 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost, idle
   if (done) {
     return (
       <>
-        <Confirmation done={done} title={status.title ?? `Pot #${status.pot_id}`} amount={share} />
+        <Confirmation done={done} title={status.title ?? `Plan #${status.pot_id}`} amount={share} />
         <Toolbar>
           <Button size="lg" className={TOOLBAR_BUTTON} onClick={() => setDone(null)}>Done</Button>
         </Toolbar>
@@ -102,7 +102,7 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost, idle
       requestRelease: ['Request payout', 'Requesting…'],
       object: ['Object', 'Objecting…'],
       finalize: ['Finalize payout', 'Finalizing…'],
-      expire: ['Expire pot and open refunds', 'Expiring…'],
+      expire: ['Expire plan and open refunds', 'Expiring…'],
       swap: ['Swap seat', 'Swapping…'],
     };
     const [idle, working] = text[a];
@@ -136,7 +136,7 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost, idle
         )}
 
         {actions.includes('expire') && (
-          <p className="text-[15px] text-muted-foreground">The request window has ended. Expiring the pot opens refunds for everyone who paid. Until someone expires it, the organizer can still request the payout.</p>
+          <p className="text-[15px] text-muted-foreground">The request window has ended. Expiring the plan opens refunds for everyone who paid. Until someone expires it, the organizer can still request the payout.</p>
         )}
 
         {actions.includes('swap') && (
@@ -180,7 +180,7 @@ const TOOLBAR_BUTTON = 'h-[52px] min-w-0 flex-1 rounded-full px-4 text-[17px] md
 function Toolbar({ children }: { children: ReactNode }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-safe md:left-[264px] md:px-6">
-      <div role="group" aria-label="Pot actions" className="glass pointer-events-auto mx-auto mb-4 flex max-w-2xl items-center gap-2 rounded-full p-1.5 md:w-max md:max-w-full">
+      <div role="group" aria-label="Plan actions" className="glass pointer-events-auto mx-auto mb-4 flex max-w-2xl items-center gap-2 rounded-full p-1.5 md:w-max md:max-w-full">
         {children}
       </div>
     </div>
