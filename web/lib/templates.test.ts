@@ -12,8 +12,8 @@ describe('templates', () => {
     }
   });
 
-  it('has the six starting points with their windows', () => {
-    expect(Object.keys(TEMPLATES).sort()).toEqual(['dinner', 'gift', 'group-order', 'rent', 'tickets', 'trip']);
+  it('has the seven starting points with their windows', () => {
+    expect(Object.keys(TEMPLATES).sort()).toEqual(['dinner', 'gift', 'group-order', 'merch', 'rent', 'tickets', 'trip']);
     expect(templateById('trip')).toMatchObject({ label: 'Weekend trip', objectionWindow: 172800, requestWindow: 604800 });
     expect(templateById('dinner')).toMatchObject({ label: 'Group dinner', objectionWindow: 3600, requestWindow: 86400 });
     expect(templateById('tickets')).toMatchObject({ objectionWindow: 86400, requestWindow: 604800 });

@@ -16,6 +16,7 @@ export const TEMPLATES = {
   'group-order': { label: 'Group order', titlePlaceholder: 'Lunch order', objectionWindow: HOUR, requestWindow: DAY },
   rent: { label: 'Rent', titlePlaceholder: 'June rent', objectionWindow: 2 * DAY, requestWindow: 7 * DAY },
   gift: { label: 'Group gift', titlePlaceholder: 'Birthday gift', objectionWindow: 2 * DAY, requestWindow: 7 * DAY },
+  merch: { label: 'Group merch order', titlePlaceholder: 'Club hoodies', objectionWindow: DAY, requestWindow: 7 * DAY },
   tickets: { label: 'Event tickets', titlePlaceholder: 'Concert tickets', objectionWindow: DAY, requestWindow: 7 * DAY },
 } satisfies Record<string, PotTemplate>;
 

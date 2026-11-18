@@ -20,7 +20,7 @@ describe('SettingsDialog', () => {
 
   it('opens on the section it is given', () => {
     render(<SettingsDialog open onOpenChange={vi.fn()} section="help" me={me} />);
-    expect(screen.getByRole('heading', { level: 2, name: 'How Pot works' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Splitting costs with Pot' })).toBeInTheDocument();
   });
 
   it('switches sections on click', () => {

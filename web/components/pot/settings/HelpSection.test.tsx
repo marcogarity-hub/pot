@@ -8,7 +8,7 @@ afterEach(cleanup);
 describe('HelpSection', () => {
   it('explains the blockchain in plain words and lists the questions collapsed', () => {
     render(<HelpSection />);
-    expect(screen.getByRole('heading', { name: 'How Pot works' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Splitting costs with Pot' })).toBeInTheDocument();
     expect(screen.getByText(/shared public record/i)).toBeInTheDocument();
     for (const { question } of HELP_FAQ) {
       expect(screen.getByRole('button', { name: question })).toHaveAttribute('aria-expanded', 'false');
