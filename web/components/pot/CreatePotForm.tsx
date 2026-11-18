@@ -13,7 +13,7 @@ import { FaceDot } from './Faces';
 import { linkButton } from './linkButton';
 import { postJson, type ApiResult } from './api';
 import { reconcilePot, TIMEOUT_MESSAGE, type ReconcileInput, type ReconcileOutcome } from './reconcile';
-import { DEADLINE_MAX, deriveShare, MAX_MEMBERS, normalizeEmail, validateCreate, type CreateErrors } from './validate';
+import { DEADLINE_MAX, deriveShare, MAX_MEMBERS, normalizeEmail, OBJECTION_MAX, OBJECTION_MIN, REQUEST_MAX, REQUEST_MIN, validateCreate, type CreateErrors } from './validate';
 import { WindowField, type Preset } from './WindowField';
 
 /** Wall-clock time in the YYYY-MM-DDTHH:mm format a datetime-local input uses. */
@@ -38,25 +38,44 @@ function focusFirstInvalid(errors: CreateErrors) {
 
 const OBJECTION_PRESETS: Preset[] = [
   { label: '2 minutes (demo)', seconds: 120 },
+  { label: '1 hour', seconds: 3600 },
+  { label: '1 day', seconds: 86400 },
   { label: '48 hours (production)', seconds: 172800 },
 ];
 const REQUEST_PRESETS: Preset[] = [
   { label: '2 minutes (demo)', seconds: 120 },
+  { label: '1 hour', seconds: 3600 },
+  { label: '1 day', seconds: 86400 },
   { label: '7 days (production)', seconds: 604800 },
 ];
 
 /** Window values a new pot starts with: the 2-minute demo windows. The `booking` preset (linked from the dashboard) starts on the production windows instead. */
 const DEFAULT_WINDOWS = { objection: 120, request: 120 };
-const BOOKING_WINDOWS = { objection: OBJECTION_PRESETS[1].seconds, request: REQUEST_PRESETS[1].seconds };
+const BOOKING_WINDOWS = { objection: 172800, request: 604800 };
 
 /** Borderless input for a row inside a white grouped cell. Keeps the focus outline from the base Input. */
 const ROW_INPUT = 'h-11 rounded-none border-0 bg-transparent px-0 text-[17px] shadow-none';
 
-export function CreatePotForm({ preset }: { preset?: string }) {
+/** Values the form starts from (a template or a past pot). Every field is optional; the deadline is never prefilled. */
+export type CreatePotInitial = {
+  title?: string;
+  total?: string;
+  members?: string[];
+  threshold?: number;
+  objectionWindow?: number;
+  requestWindow?: number;
+};
+
+/** The initial window when it is a whole number inside the contract limits, otherwise the fallback. */
+function windowOr(value: number | undefined, min: number, max: number, fallback: number) {
+  return value !== undefined && Number.isInteger(value) && value >= min && value <= max ? value : fallback;
+}
+
+export function CreatePotForm({ preset, initial, titlePlaceholder }: { preset?: string; initial?: CreatePotInitial; titlePlaceholder?: string }) {
   const router = useRouter();
-  const [title, setTitle] = useState('');
-  const [total, setTotal] = useState('');
-  const [emails, setEmails] = useState<string[]>(['']);
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [total, setTotal] = useState(initial?.total ?? '');
+  const [emails, setEmails] = useState<string[]>(() => (initial?.members?.length ? initial.members.slice(0, MAX_MEMBERS) : ['']));
   const [deadlineLocal, setDeadlineLocal] = useState('');
   // No max on the server render, so server and client HTML match (the clock differs between them).
   const deadlineMax = useSyncExternalStore(
@@ -64,10 +83,16 @@ export function CreatePotForm({ preset }: { preset?: string }) {
     () => toLocalInput(new Date(Date.now() + DEADLINE_MAX * 1000)),
     () => undefined,
   );
-  const [threshold, setThreshold] = useState('1');
+  const [threshold, setThreshold] = useState(
+    initial?.threshold !== undefined && Number.isInteger(initial.threshold) && initial.threshold >= 1 ? String(initial.threshold) : '1',
+  );
   const initialWindows = preset === 'booking' ? BOOKING_WINDOWS : DEFAULT_WINDOWS;
-  const [objectionWindowSeconds, setObjection] = useState(initialWindows.objection);
-  const [requestWindowSeconds, setRequest] = useState(initialWindows.request);
+  const [objectionWindowSeconds, setObjection] = useState(
+    windowOr(initial?.objectionWindow, OBJECTION_MIN, OBJECTION_MAX, initialWindows.objection),
+  );
+  const [requestWindowSeconds, setRequest] = useState(
+    windowOr(initial?.requestWindow, REQUEST_MIN, REQUEST_MAX, initialWindows.request),
+  );
   const [errors, setErrors] = useState<CreateErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -161,7 +186,7 @@ export function CreatePotForm({ preset }: { preset?: string }) {
           <h2 id="pot-heading" className="px-1 text-[22px] font-semibold tracking-tight">The pot</h2>
           <div className="divide-y divide-border overflow-hidden rounded-group bg-card">
             <Field id="title" label="Name" error={errors.title}>
-              <Input id="title" value={title} placeholder="Cabin weekend" maxLength={120}
+              <Input id="title" value={title} placeholder={titlePlaceholder ?? 'Cabin weekend'} maxLength={120}
                 className={ROW_INPUT}
                 onChange={e => setTitle(e.target.value)} aria-invalid={!!errors.title}
                 aria-describedby={errors.title ? 'title-error' : undefined} />
