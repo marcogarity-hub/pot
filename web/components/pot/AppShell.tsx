@@ -3,9 +3,9 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { House, Plus, User, type LucideIcon } from 'lucide-react';
+import { CircleHelp, History, House, Plus, User, type LucideIcon } from 'lucide-react';
 import { cn } from 'cn';
-import { AppSidebar, type ShellPot } from './AppSidebar';
+import { AppSidebar } from './AppSidebar';
 import { SettingsDialog, type SettingsSection } from './settings/SettingsDialog';
 
 const OpenSettingsContext = createContext<(section?: SettingsSection) => void>(() => {});
@@ -17,14 +17,14 @@ export function useOpenSettings(): (section?: SettingsSection) => void {
 
 /**
  * The signed-in frame. md and up: a floating glass sidebar on the left and the page in the space beside it.
- * Below md: the page, with a glass tab bar at the bottom (Trips, New, and You, which opens Settings).
+ * Below md: the page, with a glass tab bar at the bottom (Home, History, New, Help, and You, which opens Profile).
  * Settings state lives here, so the sidebar's account menu and the tab bar open the same dialog.
  * `hideTabBar` drops the phone tab bar on pages that float their own action bar at the bottom (a pot, the create form).
  */
-export function AppShell({ me, pots, activePotId, hideTabBar = false, children }: {
+export function AppShell({ me, hideTabBar = false, children }: {
   me: { name: string | null; email: string };
-  pots: ShellPot[];
-  activePotId?: string;
+  /** Unused: the sidebar no longer lists plans. Optional so older callers still compile. */
+  pots?: unknown[];
   hideTabBar?: boolean;
   children: ReactNode;
 }) {
@@ -34,7 +34,7 @@ export function AppShell({ me, pots, activePotId, hideTabBar = false, children }
   return (
     <OpenSettingsContext.Provider value={(section = 'profile') => openSettings(section)}>
     <div className={cn('min-h-dvh md:pb-0', !hideTabBar && 'pb-28')}>
-      <AppSidebar me={me} pots={pots} activePotId={activePotId} onOpenSettings={openSettings} />
+      <AppSidebar me={me} onOpenSettings={openSettings} />
       <div className="min-h-dvh md:pl-[264px]">{children}</div>
       {!hideTabBar && <MobileTabBar onYou={() => openSettings('profile')} />}
       <SettingsDialog
@@ -49,13 +49,15 @@ export function AppShell({ me, pots, activePotId, hideTabBar = false, children }
 }
 
 const TABS: Array<{ label: string; href: string; icon: LucideIcon }> = [
-  { label: 'Trips', href: '/', icon: House },
+  { label: 'Home', href: '/', icon: House },
+  { label: 'History', href: '/history', icon: History },
   { label: 'New', href: '/new', icon: Plus },
+  { label: 'Help', href: '/help', icon: CircleHelp },
 ];
 
 const TAB = 'flex h-full min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
-/** Phone tab bar: a floating glass pill above the home indicator. The current tab is a solid black fill and aria-current. */
+/** Phone tab bar: a floating glass pill above the home indicator. The current page is a solid black fill and aria-current. */
 function MobileTabBar({ onYou }: { onYou: () => void }) {
   const pathname = usePathname();
   return (

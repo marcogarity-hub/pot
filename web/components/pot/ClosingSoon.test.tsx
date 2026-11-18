@@ -9,9 +9,11 @@ const NOW = Date.parse('2026-11-18T12:00:00Z');
 const DAY = 86_400_000;
 
 describe('ClosingSoon', () => {
-  it('renders nothing when no pot is closing soon', () => {
-    const { container } = render(<ClosingSoon pots={[]} now={NOW} />);
-    expect(container).toBeEmptyDOMElement();
+  it('shows a calm empty card when no plan is closing soon, so the column stays balanced', () => {
+    render(<ClosingSoon pots={[]} now={NOW} />);
+    expect(screen.getByRole('heading', { name: 'Closing soon' })).toBeInTheDocument();
+    expect(screen.getByText('Nothing closes in the next week.')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
   });
 
   it('lists each pot with its paid count, time left, and a link to the pot', () => {

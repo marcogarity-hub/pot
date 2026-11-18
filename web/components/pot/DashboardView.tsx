@@ -2,18 +2,20 @@ import Link from 'next/link';
 import { History } from './History';
 import { NameBanner } from './NameBanner';
 import { DashboardStrip } from './DashboardStrip';
-import { NeedsYouCards } from './DashboardParts';
+import { NeedsYouCards, historyPlacement } from './DashboardParts';
 import { PotList } from './PotList';
 import { QuickStart } from './QuickStart';
 import { ClosingSoon } from './ClosingSoon';
 import { TripCover } from './TripCover';
-import { closingSoon, firstName, heldAmount, heldPotCount, type DashboardPot, type QueueItem } from './dashboardModel';
+import { closingSoon, firstName, groupNeeds, heldAmount, heldPotCount, type DashboardPot, type QueueItem } from './dashboardModel';
 
 /**
  * The signed-in home, content only: AppShell draws the sidebar and the phone tab bar around it.
  * Pure view over already-loaded data, so a fixture can render it too. `now` is the render's clock, passed in.
- * Phone: greeting, name banner, strip, needs you, your trips, quick start, history, closing soon.
- * lg and up: needs you, your trips and quick start in the main column, with history and closing soon on the right.
+ * Phone: greeting, name banner (until a name is set), strip, needs you, your plans, start something new, closing soon, history.
+ * lg and up: a 50/50 split in one four-column grid. Needs you (two cards per row, an odd one spanning the left half) and
+ * closing soon share the top row; history sits under closing soon, aligned with the bottom needs-you card. Plans and
+ * start something new follow across the full width.
  */
 export function DashboardView({ name, pots, queue, now }: {
   name: string | null; pots: DashboardPot[]; queue: QueueItem[]; now: number;
@@ -24,6 +26,7 @@ export function DashboardView({ name, pots, queue, now }: {
     : `${needing} ${needing === 1 ? 'needs' : 'need'} you`;
   const first = firstName(name);
   const closing = closingSoon(pots, now);
+  const needCount = groupNeeds(queue).length;
 
   return (
     <main className="relative min-h-dvh">
@@ -40,24 +43,21 @@ export function DashboardView({ name, pots, queue, now }: {
 
         <div className="mt-6 space-y-4">
           {first === null && <NameBanner />}
-          <DashboardStrip held={heldAmount(pots)} heldPots={heldPotCount(pots)} primary={pots.length === 0} />
+          <DashboardStrip held={heldAmount(pots)} heldPlans={heldPotCount(pots)} />
         </div>
 
-        {/* Phones: needs you, your pots, quick start, then the side widgets. lg: needs you beside History and Closing soon,
-            then the pots and quick start across the full width, so the trip cards get room for their titles. */}
-        <div className="mt-10 flex flex-col gap-10 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8 lg:gap-y-10">
-          <div className="order-1 min-w-0 lg:col-span-7 lg:col-start-1 lg:row-start-1">
-            <NeedsYouCards items={queue} />
+        <div className="mt-10 flex flex-col gap-10">
+          {/* One shared grid on lg, so every box on a row has the same top and bottom edges. Phones stack these in order. */}
+          <div className="contents lg:grid lg:grid-cols-4 lg:items-stretch lg:gap-x-6 lg:gap-y-3">
+            <NeedsYouCards items={queue} className="order-1" />
+            <ClosingSoon pots={closing} now={now} className="order-4" />
+            <History surface="tint-sage" className={historyPlacement(needCount)} />
           </div>
-          <div className="order-4 min-w-0 space-y-10 lg:col-span-5 lg:col-start-8 lg:row-start-1">
-            <History />
-            <ClosingSoon pots={closing} now={now} />
-          </div>
-          <section id="your-pots" aria-labelledby="your-pots-heading" className="order-2 min-w-0 space-y-3 lg:col-span-12 lg:row-start-2">
-            <h2 id="your-pots-heading" className="text-[22px] font-semibold">Your trips</h2>
+          <section id="your-pots" aria-labelledby="your-pots-heading" className="order-2 min-w-0 space-y-3">
+            <h2 id="your-pots-heading" className="text-[22px] font-semibold">Your plans</h2>
             <PotList pots={pots} />
           </section>
-          <div className="order-3 min-w-0 lg:col-span-12 lg:row-start-3">
+          <div className="order-3 min-w-0">
             <QuickStart />
           </div>
         </div>

@@ -58,6 +58,13 @@ describe('HistoryWidget', () => {
     expect(screen.queryByRole('dialog', { name: 'History' })).not.toBeInTheDocument();
   });
 
+  it('takes a surface class in place of the white card, for the dashboard tint', () => {
+    render(<HistoryWidget state={ready(items)} surface="tint-sage" />);
+    const card = screen.getByRole('heading', { name: 'History' }).closest('section')!;
+    expect(card).toHaveClass('tint-sage');
+    expect(card).not.toHaveClass('bg-card');
+  });
+
   it('opens already open when defaultOpen is set', () => {
     render(<HistoryWidget state={ready(items)} defaultOpen />);
     expect(screen.getByRole('dialog', { name: 'History' })).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AccountMenu } from './AccountMenu';
 
 const m = vi.hoisted(() => ({ signOut: vi.fn(), refresh: vi.fn() }));
@@ -20,24 +20,23 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('button', { name: 'ana@example.com' })).toBeInTheDocument();
   });
 
-  it('opens with the email as its header and the four actions', () => {
-    render(<AccountMenu name="Ana" email="ana@example.com" onOpenSettings={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Ana' }));
-    const menu = screen.getByText('ana@example.com').closest('div, section, ul')!.parentElement!;
-    expect(menu).toHaveTextContent('Settings');
-    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
-    expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+  it('opens with the email as its header and exactly three actions: Profile, Privacy, Log out', () => {
+    render(<AccountMenu name="Ana" email="ana@example.com" onOpenSettings={vi.fn()} defaultOpen />);
+    expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    const menu = screen.getByRole('button', { name: 'Log out' }).closest('ul') as HTMLElement;
+    expect(within(menu).getAllByRole('button').map(b => b.textContent)).toEqual(['Profile', 'Privacy', 'Log out']);
+    expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Help' })).toBeNull();
   });
 
-  it('Settings opens the dialog on Profile, and Help on Help', () => {
+  it('Profile and Privacy open the dialog on their own section', () => {
     const onOpenSettings = vi.fn();
     render(<AccountMenu name="Ana" email="ana@example.com" onOpenSettings={onOpenSettings} defaultOpen />);
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Profile' }));
     expect(onOpenSettings).toHaveBeenLastCalledWith('profile');
     fireEvent.click(screen.getByRole('button', { name: 'Ana' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Help' }));
-    expect(onOpenSettings).toHaveBeenLastCalledWith('help');
+    fireEvent.click(screen.getByRole('button', { name: 'Privacy' }));
+    expect(onOpenSettings).toHaveBeenLastCalledWith('privacy');
   });
 
   it('Log out signs out and refreshes the page, as the sign-out button does', async () => {
@@ -50,8 +49,8 @@ describe('AccountMenu', () => {
 
   it('Escape closes the menu', () => {
     render(<AccountMenu name="Ana" email="ana@example.com" onOpenSettings={vi.fn()} defaultOpen />);
-    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Settings' }), { key: 'Escape' });
-    expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Profile' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Profile' }), { key: 'Escape' });
+    expect(screen.queryByRole('button', { name: 'Profile' })).toBeNull();
   });
 });

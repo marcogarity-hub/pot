@@ -10,7 +10,6 @@ import { Faces, type Face } from '@/components/pot/Faces';
 import { AppShell } from '@/components/pot/AppShell';
 import { DashboardView } from '@/components/pot/DashboardView';
 import { DASHBOARD_POT_COLUMNS, needsYou, type DashboardPot } from '@/components/pot/dashboardModel';
-import { toShellPots } from '@/components/pot/shellModel';
 
 /** The server render's clock, read outside the component so the render itself stays pure. */
 const requestTime = () => Date.now();
@@ -43,7 +42,7 @@ async function HomeContent() {
   const queue = needsYou(pots, myAddress, now);
 
   return (
-    <AppShell me={{ name: myName, email: user.email }} pots={toShellPots(pots, queue)}>
+    <AppShell me={{ name: myName, email: user.email }}>
       <DashboardView name={myName} pots={pots} queue={queue} now={now} />
     </AppShell>
   );

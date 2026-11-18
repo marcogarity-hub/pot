@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type { QueueItem } from './dashboardModel';
 import { formatDollars } from '@/lib/format/money';
-import { NeedsYouCards } from './DashboardParts';
+import { NeedsYouCards, historyPlacement } from './DashboardParts';
 
 afterEach(() => cleanup());
 
@@ -62,7 +62,7 @@ describe('NeedsYouCards', () => {
     const cards = screen.getAllByRole('link');
     expect(cards).toHaveLength(1);
     expect(cards[0]).toHaveAttribute('href', '#your-pots');
-    expect(within(cards[0]).getByText('Pay your share in 2 trips')).toBeInTheDocument();
+    expect(within(cards[0]).getByText('Pay your share in 2 plans')).toBeInTheDocument();
     expect(within(cards[0]).getByText('Soonest: Dinner, $20, closes in 1 day')).toBeInTheDocument();
     expect(within(cards[0]).getByText('2')).toBeInTheDocument();
   });
@@ -76,6 +76,46 @@ describe('NeedsYouCards', () => {
     const cards = screen.getAllByRole('link');
     expect(cards).toHaveLength(2);
     expect(within(cards[0]).getByText('Finalize the payout')).toBeInTheDocument();
-    expect(within(cards[1]).getByText('Pay your share in 2 trips')).toBeInTheDocument();
+    expect(within(cards[1]).getByText('Pay your share in 2 plans')).toBeInTheDocument();
+  });
+
+  it('gives each action type its own soft tint, and the plan cards stay white', () => {
+    render(<NeedsYouCards items={[
+      queueItem({ potId: '1', action: 'pay', href: '/pots/1' }),
+      queueItem({ potId: '2', action: 'finalize', label: 'Finalize the payout', href: '/pots/2' }),
+      queueItem({ potId: '3', action: 'refund', label: 'Claim your refund', href: '/pots/3' }),
+    ]} />);
+    const [pay, finalize, refund] = screen.getAllByRole('link');
+    expect(pay).toHaveClass('tint-peach');
+    expect(finalize).toHaveClass('tint-rose');
+    expect(refund).toHaveClass('tint-sage');
+    expect(pay).not.toHaveClass('bg-card');
+  });
+
+  it('places the cards two per row and an odd last card across the left half', () => {
+    render(<NeedsYouCards items={[
+      queueItem({ potId: '1', action: 'pay', href: '/pots/1' }),
+      queueItem({ potId: '2', action: 'finalize', label: 'Finalize the payout', href: '/pots/2' }),
+      queueItem({ potId: '3', action: 'refund', label: 'Claim your refund', href: '/pots/3' }),
+    ]} />);
+    const [first, second, third] = screen.getAllByRole('link');
+    expect(first).toHaveClass('lg:col-start-1', 'lg:row-start-2');
+    expect(second).toHaveClass('lg:col-start-2', 'lg:row-start-2');
+    expect(third).toHaveClass('lg:col-span-2', 'lg:col-start-1', 'lg:row-start-3');
+  });
+
+  it('gives one card, or none, the whole left half across two rows', () => {
+    const { unmount } = render(<NeedsYouCards items={[queueItem()]} />);
+    expect(screen.getByRole('link', { name: /pay your share/i })).toHaveClass('lg:row-span-2', 'lg:col-span-2');
+    unmount();
+    render(<NeedsYouCards items={[]} />);
+    expect(screen.getByText('Nothing needs you right now.')).toHaveClass('tint-peach', 'lg:row-span-2');
+  });
+
+  it('lines History up under the bottom needs-you card', () => {
+    expect(historyPlacement(0)).toContain('lg:row-start-3');
+    expect(historyPlacement(3)).toContain('lg:row-start-3');
+    expect(historyPlacement(4)).toContain('lg:row-start-3');
+    expect(historyPlacement(5)).toContain('lg:row-start-4');
   });
 });

@@ -14,6 +14,12 @@ describe('HelpSection', () => {
       expect(screen.getByRole('button', { name: question })).toHaveAttribute('aria-expanded', 'false');
     }
   });
+  it('drops the title and keeps the subheadings in order when the page supplies its own h1', () => {
+    render(<HelpSection hideHeading />);
+    expect(screen.queryByRole('heading', { name: 'Splitting costs with Pot' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Where your money goes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Common questions' })).toBeInTheDocument();
+  });
   it('opens one answer at a time', () => {
     render(<HelpSection />);
     const first = screen.getByRole('button', { name: HELP_FAQ[0].question });

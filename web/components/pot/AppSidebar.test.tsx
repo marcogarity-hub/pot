@@ -2,48 +2,64 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { AppSidebar } from './AppSidebar';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
+const m = vi.hoisted(() => ({ pathname: '/' }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => m.pathname,
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}));
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  m.pathname = '/';
+});
 
-const pots = [
-  { id: '7', title: 'Cabin weekend', needsYou: true, stateLabel: 'Funding' },
-  { id: '9', title: 'Lake trip' },
-  { id: '11', title: null },
-];
+const me = { name: 'Ana', email: 'ana@example.com' };
 
 describe('AppSidebar', () => {
-  it('has the wordmark linking home and the one New pot action', () => {
-    render(<AppSidebar me={{ name: 'Ana', email: 'ana@example.com' }} pots={pots} onOpenSettings={vi.fn()} />);
+  it('has the wordmark linking home and the one New plan action', () => {
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
     expect(screen.getByRole('link', { name: 'Pot' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'New pot' })).toHaveAttribute('href', '/new');
+    expect(screen.getByRole('link', { name: 'New plan' })).toHaveAttribute('href', '/new');
+    expect(screen.queryByRole('link', { name: 'New pot' })).toBeNull();
   });
 
-  it('lists only pots, with links, a needs-you word and the current pot marked', () => {
-    render(<AppSidebar me={{ name: 'Ana', email: 'ana@example.com' }} pots={pots} activePotId="9" onOpenSettings={vi.fn()} />);
-    const list = screen.getByRole('navigation', { name: 'Your pots' });
-    expect(within(list).getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/pots/7', '/pots/9', '/pots/11']);
-    expect(within(list).getByRole('link', { name: /Cabin weekend/ })).toHaveTextContent('Needs you · Funding');
-    expect(within(list).getByRole('link', { name: /Lake trip/ })).toHaveAttribute('aria-current', 'page');
-    expect(within(list).getByRole('link', { name: /Cabin weekend/ })).not.toHaveAttribute('aria-current');
-    expect(within(list).getByRole('link', { name: /Untitled pot/ })).toBeInTheDocument();
-  });
-
-  it('has no Trips, Activity or You items', () => {
-    render(<AppSidebar me={{ name: null, email: 'ana@example.com' }} pots={[]} onOpenSettings={vi.fn()} />);
-    expect(screen.queryByRole('link', { name: 'Trips' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Activity' })).toBeNull();
+  it('lists Home, History, Wallet and Help as page links under New plan', () => {
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
+    const nav = screen.getByRole('navigation', { name: 'Sections' });
+    const links = within(nav).getAllByRole('link');
+    expect(links.map(l => l.textContent)).toEqual(['Home', 'History', 'Wallet', 'Help']);
+    expect(links.map(l => l.getAttribute('href'))).toEqual(['/', '/history', '/wallet', '/help']);
+    expect(within(nav).queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryByRole('navigation', { name: 'Your pots' })).toBeNull();
   });
 
+  it('marks Home as the current page only on /', () => {
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('does not mark Home on another page', () => {
+    m.pathname = '/new';
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
+    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('marks the page the visitor is on, and only that one', () => {
+    m.pathname = '/wallet';
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
+    expect(screen.getByRole('link', { name: 'Wallet' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'History' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Help' })).not.toHaveAttribute('aria-current');
+  });
+
   it('opens the account menu from the account trigger', () => {
-    render(<AppSidebar me={{ name: 'Ana', email: 'ana@example.com' }} pots={[]} onOpenSettings={vi.fn()} />);
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Ana' }));
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
   });
 
   it('is hidden below md, where the tab bar takes over', () => {
-    render(<AppSidebar me={{ name: null, email: 'ana@example.com' }} pots={[]} onOpenSettings={vi.fn()} />);
+    render(<AppSidebar me={me} onOpenSettings={vi.fn()} />);
     expect(screen.getByRole('complementary', { name: 'Sidebar' })).toHaveClass('hidden', 'md:flex');
   });
 });

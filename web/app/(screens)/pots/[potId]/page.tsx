@@ -11,7 +11,7 @@ export default function PotPage({ params }: PageProps<'/pots/[potId]'>) {
     <Screen flush>
       <Suspense fallback={<p className="px-4 py-6 text-[15px] text-muted-foreground">Loading pot…</p>}>
         {params.then(({ potId }) => (
-          <SignedInFrame activePotId={potId} hideTabBar>
+          <SignedInFrame hideTabBar>
             <PotStatus potId={potId} />
           </SignedInFrame>
         ))}

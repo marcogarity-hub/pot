@@ -62,11 +62,16 @@ export function HistoryList({ items, limit, withReceipts = true }: { items: Hist
   );
 }
 
-/** Dashboard card: the latest few movements, and a drawer with the full list. Pure view over `state`. */
-export function HistoryWidget({ state, defaultOpen = false }: { state: HistoryState; defaultOpen?: boolean }) {
+/**
+ * Dashboard card: the latest few movements, and a drawer with the full list. Pure view over `state`.
+ * `surface` is the card's background class (a tint on the dashboard); `className` adds placement.
+ */
+export function HistoryWidget({ state, defaultOpen = false, surface = 'bg-card', className }: {
+  state: HistoryState; defaultOpen?: boolean; surface?: string; className?: string;
+}) {
   const hasItems = !state.loading && !state.error && state.items.length > 0;
   return (
-    <section aria-labelledby="history-title" className="rounded-group bg-card p-5">
+    <section aria-labelledby="history-title" className={cn('rounded-group p-5', surface, className)}>
       <div className="flex items-center justify-between gap-3">
         <h2 id="history-title" className="text-[22px] font-semibold">History</h2>
         {hasItems && (
@@ -81,7 +86,7 @@ export function HistoryWidget({ state, defaultOpen = false }: { state: HistorySt
                     <X className="size-5" aria-hidden />
                   </Dialog.Close>
                 </div>
-                <Dialog.Description className="text-[15px] text-muted-foreground">Every payment, refund and payout on your pots.</Dialog.Description>
+                <Dialog.Description className="text-[15px] text-muted-foreground">Every payment, refund and payout on your plans.</Dialog.Description>
                 <HistoryList items={state.items} />
               </Dialog.Popup>
             </Dialog.Portal>
@@ -97,9 +102,9 @@ export function HistoryWidget({ state, defaultOpen = false }: { state: HistorySt
 }
 
 /** Dashboard widget. Reads the viewer's history itself, so it works on any page. */
-export function History({ defaultOpen }: { defaultOpen?: boolean }) {
+export function History({ defaultOpen, surface, className }: { defaultOpen?: boolean; surface?: string; className?: string }) {
   const state = useHistory();
-  return <HistoryWidget state={state} defaultOpen={defaultOpen} />;
+  return <HistoryWidget state={state} defaultOpen={defaultOpen} surface={surface} className={className} />;
 }
 
 /** The one-line total for the Payments section, or null when it cannot be computed exactly. */

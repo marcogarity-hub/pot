@@ -3,11 +3,11 @@
 import { HistoryList, HistoryStatus, HistorySummary } from '@/components/pot/History';
 import { useHistory, type HistoryState } from '@/components/pot/useHistory';
 
-/** Settings > Payments: the full list with a one-line total. Pure view over `state`. */
-export function PaymentsView({ state }: { state: HistoryState }) {
+/** The full payments list with a one-line total. Pure view over `state`. `hideHeading` drops its own title when the page already has one. */
+export function PaymentsView({ state, hideHeading = false }: { state: HistoryState; hideHeading?: boolean }) {
   return (
-    <section aria-labelledby="payments-title" className="space-y-4">
-      <h2 id="payments-title" className="text-[22px] font-semibold">Payments</h2>
+    <section aria-labelledby={hideHeading ? undefined : 'payments-title'} className="space-y-4">
+      {!hideHeading && <h2 id="payments-title" className="text-[22px] font-semibold">Payments</h2>}
       {!state.loading && !state.error && <HistorySummary items={state.items} />}
       <div className="rounded-group bg-card px-4">
         <HistoryStatus state={state} />
@@ -17,8 +17,8 @@ export function PaymentsView({ state }: { state: HistoryState }) {
   );
 }
 
-/** Your payments and receipts, read through the browser client. Takes no props. */
-export function PaymentsSection() {
+/** Your payments and receipts, read through the browser client. */
+export function PaymentsSection({ hideHeading = false }: { hideHeading?: boolean }) {
   const state = useHistory();
-  return <PaymentsView state={state} />;
+  return <PaymentsView state={state} hideHeading={hideHeading} />;
 }

@@ -6,7 +6,7 @@ import { useMe } from '@/components/pot/useMe';
 import { Button } from '@/components/ui/button';
 
 /** Your wallet address with a copy button, and what the money is. Crypto words belong here and in Details. */
-export function WalletSection() {
+export function WalletSection({ hideHeading = false }: { hideHeading?: boolean }) {
   const { me, loading, retry } = useMe();
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -24,7 +24,7 @@ export function WalletSection() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-[22px] font-semibold">Wallet</h2>
+      {!hideHeading && <h2 className="text-[22px] font-semibold">Wallet</h2>}
       {loading && <p role="status" className="text-[15px] text-muted-foreground">Loading your wallet…</p>}
       {!loading && me?.kind === 'ready' && (
         <div className="space-y-4 rounded-group bg-card p-5">
@@ -42,7 +42,7 @@ export function WalletSection() {
         </div>
       )}
       {!loading && me?.kind === 'no-wallet' && (
-        <p className="text-[15px] text-muted-foreground">Your wallet is set up the first time you join or start a pot.</p>
+        <p className="text-[15px] text-muted-foreground">Your wallet is set up the first time you join or start a plan.</p>
       )}
       {!loading && me && (me.kind === 'error' || me.kind === 'signed-out') && (
         <div className="space-y-3">

@@ -66,3 +66,148 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /dev-preview/shell-settings?view=help 200 in 79ms (next.js: 16ms, proxy.ts: 20ms, application-code: 43ms)
  GET /manifest.webmanifest 200 in 29ms (next.js: 11ms, proxy.ts: 8ms, application-code: 10ms)
  GET /manifest.webmanifest 200 in 22ms (next.js: 9ms, proxy.ts: 9ms, application-code: 4ms)
+✓ Compiled in 605ms
+✓ Compiled in 43ms
+⚠ Fast Refresh had to perform a full reload when ./components/pot/AppShell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+✓ Compiled in 61ms
+ GET /dev-preview/dashboard 200 in 293ms (next.js: 199ms, proxy.ts: 19ms, application-code: 76ms)
+ GET /manifest.webmanifest 200 in 31ms (next.js: 13ms, proxy.ts: 6ms, application-code: 12ms)
+ GET /manifest.webmanifest 200 in 5ms (next.js: 1.4ms, proxy.ts: 1.7ms, application-code: 1.5ms)
+⚠ Fast Refresh had to perform a full reload when ./components/pot/settings/SettingsDialog.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+✓ Compiled in 83ms
+ GET /dev-preview/dashboard 200 in 65ms (next.js: 29ms, proxy.ts: 3ms, application-code: 34ms)
+ GET /manifest.webmanifest 200 in 15ms (next.js: 10ms, proxy.ts: 4ms, application-code: 1.8ms)
+ GET /manifest.webmanifest 200 in 4ms (next.js: 1.3ms, proxy.ts: 1.3ms, application-code: 1.8ms)
+⨯ ./app/dev-preview/dashboard/page.tsx:6:1
+Error: Module not found: Can't resolve '@/components/pot/shellModel'
+  [90m4 |[0m [36mimport[0m { [33mDashboardView[0m } [36mfrom[0m [32m'@/components/pot/DashboardView'[0m;
+  [90m5 |[0m [36mimport[0m { needsYou, [36mtype[0m [33mDashboardPot[0m } [36mfrom[0m [32m'@/components/pot/dashboardModel'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { toShellPots } [36mfrom[0m [32m'@/components/pot/shellModel'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m
+  [90m8 |[0m [36mconst[0m [33mME[0m = [32m'0xaaaa000000000000000000000000000000000001'[0m;
+  [90m9 |[0m [36mconst[0m [33mU[0m = (n: number) => ([33mBigInt[0m(n) * [33mBigInt[0m([35m10[0m) ** [33mBigInt[0m([35m18[0m)).toString();
+
+Import map: aliased to relative './components/pot/shellModel' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./app/dev-preview/dashboard/page.tsx:6:1
+Error: Module not found: Can't resolve '@/components/pot/shellModel'
+  [90m4 |[0m [36mimport[0m { [33mDashboardView[0m } [36mfrom[0m [32m'@/components/pot/DashboardView'[0m;
+  [90m5 |[0m [36mimport[0m { needsYou, [36mtype[0m [33mDashboardPot[0m } [36mfrom[0m [32m'@/components/pot/dashboardModel'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { toShellPots } [36mfrom[0m [32m'@/components/pot/shellModel'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m
+  [90m8 |[0m [36mconst[0m [33mME[0m = [32m'0xaaaa000000000000000000000000000000000001'[0m;
+  [90m9 |[0m [36mconst[0m [33mU[0m = (n: number) => ([33mBigInt[0m(n) * [33mBigInt[0m([35m10[0m) ** [33mBigInt[0m([35m18[0m)).toString();
+
+Import map: aliased to relative './components/pot/shellModel' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./app/dev-preview/dashboard/page.tsx:6:1
+Error: Module not found: Can't resolve '@/components/pot/shellModel'
+  [90m4 |[0m [36mimport[0m { [33mDashboardView[0m } [36mfrom[0m [32m'@/components/pot/DashboardView'[0m;
+  [90m5 |[0m [36mimport[0m { needsYou, [36mtype[0m [33mDashboardPot[0m } [36mfrom[0m [32m'@/components/pot/dashboardModel'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { toShellPots } [36mfrom[0m [32m'@/components/pot/shellModel'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m
+  [90m8 |[0m [36mconst[0m [33mME[0m = [32m'0xaaaa000000000000000000000000000000000001'[0m;
+  [90m9 |[0m [36mconst[0m [33mU[0m = (n: number) => ([33mBigInt[0m(n) * [33mBigInt[0m([35m10[0m) ** [33mBigInt[0m([35m18[0m)).toString();
+
+Import map: aliased to relative './components/pot/shellModel' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./app/dev-preview/dashboard/page.tsx:6:1
+Error: Module not found: Can't resolve '@/components/pot/shellModel'
+  [90m4 |[0m [36mimport[0m { [33mDashboardView[0m } [36mfrom[0m [32m'@/components/pot/DashboardView'[0m;
+  [90m5 |[0m [36mimport[0m { needsYou, [36mtype[0m [33mDashboardPot[0m } [36mfrom[0m [32m'@/components/pot/dashboardModel'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { toShellPots } [36mfrom[0m [32m'@/components/pot/shellModel'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m
+  [90m8 |[0m [36mconst[0m [33mME[0m = [32m'0xaaaa000000000000000000000000000000000001'[0m;
+  [90m9 |[0m [36mconst[0m [33mU[0m = (n: number) => ([33mBigInt[0m(n) * [33mBigInt[0m([35m10[0m) ** [33mBigInt[0m([35m18[0m)).toString();
+
+Import map: aliased to relative './components/pot/shellModel' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ GET /dev-preview/shell-settings?view=help 500 in 635ms (next.js: 564ms, proxy.ts: 7ms, application-code: 64ms)
+⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_original-stack-frames from "127.0.0.1".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['127.0.0.1'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /dev-preview/shell-settings?view=help 500 in 22ms (next.js: 11ms, proxy.ts: 3ms, application-code: 7ms)
+✓ Compiled in 29ms
+ GET /dev-preview/shell-settings?view=inline 500 in 13ms (next.js: 7ms, proxy.ts: 1.2ms, application-code: 5ms)
+ GET /dev-preview/shell-settings?view=inline 500 in 26ms (next.js: 11ms, proxy.ts: 8ms, application-code: 7ms)
+✓ Compiled in 33ms
+ GET /dev-preview/shell-settings?view=profile 200 in 89ms (next.js: 32ms, proxy.ts: 6ms, application-code: 51ms)
+ GET /dev-preview/shell-settings?view=help 200 in 89ms (next.js: 54ms, proxy.ts: 6ms, application-code: 29ms)
+ GET /dev-preview/dashboard 200 in 93ms (next.js: 58ms, proxy.ts: 7ms, application-code: 28ms)
+ GET /manifest.webmanifest 200 in 20ms (next.js: 6ms, proxy.ts: 8ms, application-code: 5ms)
+ GET /manifest.webmanifest 200 in 30ms (next.js: 11ms, proxy.ts: 17ms, application-code: 2ms)
+ GET /manifest.webmanifest 200 in 8ms (next.js: 2ms, proxy.ts: 2ms, application-code: 3ms)
+ GET /dev-preview/shell-settings?view=profile 200 in 89ms (next.js: 15ms, proxy.ts: 29ms, application-code: 45ms)
+ GET /manifest.webmanifest 200 in 26ms (next.js: 15ms, proxy.ts: 4ms, application-code: 7ms)
+ GET /dev-preview/shell-settings?view=profile 200 in 44ms (next.js: 7ms, proxy.ts: 9ms, application-code: 28ms)
+✓ Compiled in 48ms
+ GET /dev-preview/shell-settings?view=help 200 in 46ms (next.js: 7ms, proxy.ts: 1.7ms, application-code: 38ms)
+ GET /dev-preview/shell-settings?view=profile 200 in 47ms (next.js: 19ms, proxy.ts: 1.6ms, application-code: 26ms)
+ GET /dev-preview/dashboard 200 in 45ms (next.js: 25ms, proxy.ts: 3ms, application-code: 18ms)
+ GET /manifest.webmanifest 200 in 30ms (next.js: 23ms, proxy.ts: 4ms, application-code: 4ms)
+ GET /manifest.webmanifest 200 in 9ms (next.js: 5ms, proxy.ts: 3ms, application-code: 1.6ms)
+ GET /manifest.webmanifest 200 in 8ms (next.js: 3ms, proxy.ts: 3ms, application-code: 2ms)
+✓ Compiled in 15ms
+ GET /dev-preview/shell-settings?view=profile 200 in 57ms (next.js: 7ms, proxy.ts: 5ms, application-code: 44ms)
+ GET /dev-preview/shell-settings?view=help 200 in 57ms (next.js: 43ms, proxy.ts: 5ms, application-code: 9ms)
+ GET /dev-preview/dashboard 200 in 59ms (next.js: 22ms, proxy.ts: 5ms, application-code: 33ms)
+ GET /manifest.webmanifest 200 in 34ms (next.js: 20ms, proxy.ts: 8ms, application-code: 7ms)
+ GET /manifest.webmanifest 200 in 6ms (next.js: 1.3ms, proxy.ts: 2ms, application-code: 3ms)
+ GET /manifest.webmanifest 200 in 6ms (next.js: 1.1ms, proxy.ts: 3ms, application-code: 1.8ms)
+✓ Compiled in 72ms
+ GET /dev-preview/shell-settings?view=profile 200 in 113ms (next.js: 44ms, proxy.ts: 3ms, application-code: 65ms)
+ GET /dev-preview/shell-settings?view=help 200 in 113ms (next.js: 59ms, proxy.ts: 3ms, application-code: 51ms)
+ GET /dev-preview/dashboard 200 in 112ms (next.js: 80ms, proxy.ts: 3ms, application-code: 29ms)
+ GET /manifest.webmanifest 200 in 26ms (next.js: 12ms, proxy.ts: 8ms, application-code: 6ms)
+ GET /manifest.webmanifest 200 in 12ms (next.js: 6ms, proxy.ts: 3ms, application-code: 3ms)
+ GET /manifest.webmanifest 200 in 6ms (next.js: 1.7ms, proxy.ts: 1.3ms, application-code: 3ms)
+✓ Compiled in 23ms
+ GET /dev-preview/shell-settings?view=help 200 in 50ms (next.js: 4ms, proxy.ts: 2ms, application-code: 44ms)
+ GET /dev-preview/shell-settings?view=profile 200 in 50ms (next.js: 35ms, proxy.ts: 2ms, application-code: 12ms)
+ GET /dev-preview/dashboard 200 in 52ms (next.js: 19ms, proxy.ts: 2ms, application-code: 31ms)
+ GET /manifest.webmanifest 200 in 22ms (next.js: 8ms, proxy.ts: 2ms, application-code: 12ms)
+ GET /manifest.webmanifest 200 in 7ms (next.js: 2ms, proxy.ts: 3ms, application-code: 2ms)
+ GET /manifest.webmanifest 200 in 7ms (next.js: 2ms, proxy.ts: 1.7ms, application-code: 3ms)
+✓ Compiled in 41ms
+ GET /dev-preview/shell-settings?view=profile 200 in 44ms (next.js: 6ms, proxy.ts: 2ms, application-code: 36ms)
+ GET /dev-preview/shell-settings?view=help 200 in 44ms (next.js: 15ms, proxy.ts: 2ms, application-code: 27ms)
+ GET /dev-preview/dashboard 200 in 45ms (next.js: 24ms, proxy.ts: 3ms, application-code: 18ms)
+ GET /manifest.webmanifest 200 in 19ms (next.js: 10ms, proxy.ts: 6ms, application-code: 4ms)
+ GET /manifest.webmanifest 200 in 7ms (next.js: 3ms, proxy.ts: 1.6ms, application-code: 3ms)
+ GET /manifest.webmanifest 200 in 5ms (next.js: 1.6ms, proxy.ts: 1.8ms, application-code: 1.4ms)
+ GET /dev-preview/dashboard 200 in 91ms (next.js: 21ms, proxy.ts: 10ms, application-code: 60ms)
+ GET /manifest.webmanifest 200 in 50ms (next.js: 26ms, proxy.ts: 13ms, application-code: 10ms)
+ GET /dev-preview/dashboard 200 in 50ms (next.js: 7ms, proxy.ts: 7ms, application-code: 36ms)
+ GET /dev-preview/dashboard 200 in 35ms (next.js: 2.0ms, proxy.ts: 1.8ms, application-code: 31ms)
+ GET /dev-preview/dashboard 200 in 39ms (next.js: 1.7ms, proxy.ts: 1.4ms, application-code: 36ms)
+ GET /dev-preview/dashboard 200 in 51ms (next.js: 9ms, proxy.ts: 4ms, application-code: 38ms)
+✓ Compiled in 43ms
+[?25h

@@ -25,7 +25,12 @@ describe('ProfileSection', () => {
     expect(screen.getByLabelText('Your name')).toHaveValue('Ana');
     expect(screen.getByLabelText('Email')).toHaveValue('ana@example.com');
     expect(screen.getByLabelText('Email')).toHaveAttribute('readonly');
-    expect(screen.getByText('Friends in your pots see this name.')).toBeInTheDocument();
+    expect(screen.getByText('Friends in your plans see this name.')).toBeInTheDocument();
+  });
+
+  it('links to the wallet page', () => {
+    render(<ProfileSection name="Ana" email="ana@example.com" />);
+    expect(screen.getByRole('link', { name: 'Wallet' })).toHaveAttribute('href', '/wallet');
   });
 });
 
@@ -46,8 +51,15 @@ describe('WalletSection', () => {
   it('says calmly when no wallet exists yet', () => {
     m.me = { kind: 'no-wallet', email: 'ana@example.com' };
     render(<WalletSection />);
-    expect(screen.getByText('Your wallet is set up the first time you join or start a pot.')).toBeInTheDocument();
+    expect(screen.getByText('Your wallet is set up the first time you join or start a plan.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy address' })).toBeNull();
+  });
+
+  it('leaves out its own heading when the page supplies one', () => {
+    m.me = { kind: 'no-wallet', email: 'ana@example.com' };
+    render(<WalletSection hideHeading />);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByText('This is test money, not real dollars.')).toBeInTheDocument();
   });
 
   it('offers a retry when the wallet cannot be loaded', () => {

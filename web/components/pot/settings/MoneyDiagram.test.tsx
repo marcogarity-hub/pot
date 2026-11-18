@@ -12,6 +12,13 @@ describe('MoneyDiagram', () => {
     expect(screen.getByText('The organizer')).toBeInTheDocument();
     expect(screen.getByText(/every share goes back to the person who paid it/i)).toBeInTheDocument();
   });
+  it('tints the three places in the same size grid and the way back in rose', () => {
+    render(<MoneyDiagram />);
+    expect(screen.getByText('Your wallet').parentElement).toHaveClass('tint-sky');
+    expect(screen.getByText('The plan’s pot').parentElement).toHaveClass('tint-sage');
+    expect(screen.getByText('The organizer').parentElement).toHaveClass('tint-butter');
+    expect(screen.getByText(/every share goes back/i).closest('p')).toHaveClass('tint-rose');
+  });
   it('gives screen readers the same story as an ordered list', () => {
     render(<MoneyDiagram />);
     expect(screen.getAllByRole('listitem')).toHaveLength(4);

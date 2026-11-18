@@ -21,12 +21,12 @@ const STATE_TEXT: Record<StateTone, string> = {
 /** Finished pots (released, or expired or frozen) can be run again by their organizer. */
 const isFinished = (p: PotSummary) => p.state === PotState.Released || p.state === PotState.Frozen;
 
-/** The viewer's trips as cards: cover, name and state, a progress bar, the friends' faces and the money so far. */
+/** The viewer's plans as cards: cover, name and state, a progress bar, the friends' faces and the money so far. */
 export function PotList({ pots }: { pots: PotSummary[] }) {
   if (pots.length === 0) {
     return (
       <p className="rounded-group border border-dashed border-input bg-card p-6 text-[15px] text-muted-foreground">
-        No pots yet. Start one, or open an invite link a friend sent you.
+        No plans yet. Start one, or open an invite link a friend sent you.
       </p>
     );
   }
@@ -45,7 +45,7 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
               <TripCover potId={p.pot_id} title={p.title} className="h-[150px]" />
               <div className="space-y-3 p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="min-w-0 truncate font-heading text-[21px] font-semibold leading-tight">{p.title ?? `Pot #${p.pot_id}`}</p>
+                  <p className="min-w-0 truncate font-heading text-[21px] font-semibold leading-tight">{p.title ?? `Plan #${p.pot_id}`}</p>
                   <span className={cn('shrink-0 text-[15px] font-semibold', STATE_TEXT[info.tone])}>{info.label}</span>
                 </div>
                 <p className="text-[13px] text-muted-foreground">

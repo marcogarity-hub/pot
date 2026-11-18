@@ -44,6 +44,13 @@ describe('PaymentsSection', () => {
     expect(screen.getByText('You paid your share')).toBeInTheDocument();
   });
 
+  it('leaves out its own heading when the page supplies one', () => {
+    state.current = { items: [], loading: false, error: false, retry: () => {} };
+    render(<PaymentsSection hideHeading />);
+    expect(screen.queryByRole('heading', { name: 'Payments' })).toBeNull();
+    expect(screen.getByText('Payments and receipts will show up here.')).toBeInTheDocument();
+  });
+
   it('shows the calm empty state', () => {
     state.current = { items: [], loading: false, error: false, retry: () => {} };
     render(<PaymentsSection />);

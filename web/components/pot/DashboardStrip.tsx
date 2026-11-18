@@ -1,27 +1,25 @@
 import Link from 'next/link';
+import { cn } from 'cn';
 import { formatDollars } from '@/lib/format/money';
-import { linkButton } from './linkButton';
+
+const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
+/** One equal-width segment of the strip. Plain white, never coral: the sidebar's New plan is the one coral action. */
+const SEGMENT = 'flex min-h-[64px] items-center rounded-group bg-card px-5 py-3 text-[17px] font-semibold transition-colors hover:bg-secondary/60';
 
 /**
- * The slim strip under the greeting: two ways to start, and the money held. Only "Start a pot" can be coral, and
- * only on a phone when the person has no pots at all. Desktop keeps the sidebar's New pot as the one coral action.
+ * The slim strip under the greeting: two ways to start, and the money held. The three segments split the full width
+ * of the banner above; on phones they stack. With nothing held, the two starts share the width.
  */
-export function DashboardStrip({ held, heldPots, primary }: { held: bigint; heldPots: number; primary: boolean }) {
+export function DashboardStrip({ held, heldPlans }: { held: bigint; heldPlans: number }) {
+  const hasHeld = held > BigInt(0);
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Link
-        href="/new"
-        className={linkButton({
-          variant: primary ? 'default' : 'outline',
-          className: primary ? 'md:border md:border-input md:bg-card md:text-foreground md:hover:bg-secondary' : undefined,
-        })}
-      >
-        Start a pot
-      </Link>
-      <Link href="/new?preset=booking" className={linkButton({ variant: 'outline' })}>Plan a real booking</Link>
-      {held > BigInt(0) && (
-        <p className="money text-[15px] text-muted-foreground">
-          <span className="font-semibold text-foreground">{formatDollars(held)}</span> held across {heldPots} {heldPots === 1 ? 'pot' : 'pots'}
+    <div className={cn('grid gap-3 sm:grid-cols-2', hasHeld && 'sm:grid-cols-3')}>
+      <Link href="/new" className={cn(SEGMENT, FOCUS)}>Start a plan</Link>
+      <Link href="/new?preset=booking" className={cn(SEGMENT, FOCUS)}>Plan a real booking</Link>
+      {hasHeld && (
+        <p className="money flex min-h-[64px] items-center rounded-group bg-card px-5 py-3 text-[15px] text-muted-foreground">
+          <span><span className="font-semibold text-foreground">{formatDollars(held)}</span> held across {heldPlans} {heldPlans === 1 ? 'plan' : 'plans'}</span>
         </p>
       )}
     </div>

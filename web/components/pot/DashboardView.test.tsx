@@ -54,16 +54,16 @@ describe('DashboardView', () => {
     expect(screen.queryByRole('region', { name: 'Add your name' })).toBeNull();
   });
 
-  it('renders the held summary, the needs-you card, the trips, quick start and history', () => {
+  it('renders the held summary, the needs-you card, the plans, quick start and history', () => {
     render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
     expect(screen.getAllByText('$100').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/held across 1 pot/)).toBeInTheDocument();
+    expect(screen.getByText(/held across 1 plan/)).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Needs you' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /pay your share/i })).toHaveAttribute('href', '/pots/7');
 
     const trips = document.getElementById('your-pots')!;
-    expect(within(trips).getByRole('heading', { name: 'Your trips' })).toBeInTheDocument();
+    expect(within(trips).getByRole('heading', { name: 'Your plans' })).toBeInTheDocument();
     const potLink = within(trips).getByRole('link', { name: /cabin weekend/i });
     expect(potLink).toHaveAttribute('href', '/pots/7');
     expect(within(potLink).getByText('1 of 2 paid', { exact: false })).toBeInTheDocument();
@@ -84,9 +84,25 @@ describe('DashboardView', () => {
     expect(screen.queryByText(/created this pot|paid \$/)).toBeNull();
   });
 
+  it('moves the strip up under the greeting once a name is set, with no name banner', () => {
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.queryByRole('region', { name: 'Add your name' })).toBeNull();
+    const greeting = screen.getByRole('heading', { level: 1, name: 'Hey Ana' }).parentElement!;
+    const strip = screen.getByRole('link', { name: 'Start a plan' }).parentElement!;
+    expect(greeting.nextElementSibling!.firstElementChild).toBe(strip);
+  });
+
+  it('gives the widgets soft tints and keeps the plan cards white', () => {
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.getByRole('link', { name: /pay your share/i })).toHaveClass('tint-peach');
+    expect(screen.getByRole('heading', { name: 'Closing soon' }).closest('section')!.querySelector('ul')).toHaveClass('tint-sky');
+    expect(screen.getByRole('heading', { name: 'History' }).closest('section')).toHaveClass('tint-sage');
+    expect(document.getElementById('your-pots')!.querySelector('li')).toHaveClass('bg-card');
+  });
+
   it('keeps the start actions pointing at the create flow', () => {
     render(<DashboardView name="Ana R." pots={[]} queue={[]} now={NOW} />);
-    expect(screen.getByRole('link', { name: 'Start a pot' })).toHaveAttribute('href', '/new');
+    expect(screen.getByRole('link', { name: 'Start a plan' })).toHaveAttribute('href', '/new');
     expect(screen.getByRole('link', { name: 'Plan a real booking' })).toHaveAttribute('href', '/new?preset=booking');
   });
 

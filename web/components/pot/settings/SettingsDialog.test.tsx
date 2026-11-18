@@ -10,17 +10,25 @@ const me = { name: 'Ana', email: 'ana@example.com' };
 afterEach(() => cleanup());
 
 describe('SettingsDialog', () => {
-  it('lists the six sections and opens on Profile by default', () => {
+  it('lists the two sections and opens on Profile by default', () => {
     render(<SettingsDialog open onOpenChange={vi.fn()} me={me} />);
     const nav = screen.getByRole('navigation', { name: 'Settings sections' });
-    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Profile', 'Payments', 'Wallet', 'Security', 'Privacy', 'Help']);
+    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Profile', 'Privacy']);
     expect(within(nav).getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-current', 'true');
     expect(screen.getByRole('heading', { level: 2, name: 'Profile' })).toBeInTheDocument();
   });
 
   it('opens on the section it is given', () => {
-    render(<SettingsDialog open onOpenChange={vi.fn()} section="help" me={me} />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Splitting costs with Pot' })).toBeInTheDocument();
+    render(<SettingsDialog open onOpenChange={vi.fn()} section="privacy" me={me} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Privacy' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Privacy' })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('puts the log-out-everywhere block under the profile fields', () => {
+    render(<SettingsDialog open onOpenChange={vi.fn()} me={me} />);
+    expect(screen.getByLabelText('Your name')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log out of all devices' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Wallet' })).toHaveAttribute('href', '/wallet');
   });
 
   it('switches sections on click', () => {
