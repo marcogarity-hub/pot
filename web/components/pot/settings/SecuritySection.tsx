@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
 
 /** Signs this account out on every device. Asks once before doing it, since it cannot be undone from here. */
 export function SecuritySection() {
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,8 @@ export function SecuritySection() {
       setError('We could not log you out everywhere. Try again.');
       return;
     }
-    window.location.assign('/');
+    router.replace('/');
+    router.refresh();
   }
 
   return (

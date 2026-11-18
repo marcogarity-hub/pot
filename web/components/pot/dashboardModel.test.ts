@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { PotState } from '@/lib/pot/chain';
 import {
   DASHBOARD_POT_COLUMNS,
-  activityItems,
+  closingSoon,
+  firstName,
+  formatDuration,
+  groupNeeds,
   heldAmount,
+  heldPotCount,
   needsYou,
-  stateCounts,
-  type ActivityEvent,
   type DashboardMember,
   type DashboardPot,
+  type QueueItem,
 } from './dashboardModel';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
@@ -227,102 +230,82 @@ describe('heldAmount', () => {
   });
 });
 
-describe('stateCounts', () => {
-  it('returns zeros for an empty list', () => {
-    expect(stateCounts([])).toEqual({ funding: 0, locked: 0, payout: 0, released: 0, closed: 0 });
-  });
-
-  it('counts each state, with Frozen (expired or objected) as closed', () => {
-    const pots = [
-      pot({ state: PotState.Funding }),
-      pot({ state: PotState.Funding }),
-      pot({ state: PotState.Locked }),
-      pot({ state: PotState.PayoutRequested }),
-      pot({ state: PotState.Released }),
-      pot({ state: PotState.Frozen, receipt_hash: null }),
-      pot({ state: PotState.Frozen, receipt_hash: '0x' + '1'.repeat(64) }),
-    ];
-    expect(stateCounts(pots)).toEqual({ funding: 2, locked: 1, payout: 1, released: 1, closed: 2 });
-  });
-
-  it('does not count a Locked pot past its request window as closed', () => {
-    const p = pot({ state: PotState.Locked, locked_at: iso(NOW - 30 * 86_400_000) });
-    expect(stateCounts([p]).closed).toBe(0);
-    expect(stateCounts([p]).locked).toBe(1);
+describe('heldPotCount', () => {
+  it('counts only the pots that still hold money', () => {
+    const holding = pot({ state: PotState.Locked });
+    const released = pot({ state: PotState.Released });
+    expect(heldPotCount([holding, released])).toBe(1);
+    expect(heldPotCount([])).toBe(0);
   });
 });
 
-describe('activityItems', () => {
-  const titles = { '1': 'Cabin' };
-  const ev = (id: number | string, event_name: string, args: Record<string, unknown> = {}, pot_id = '1'): ActivityEvent =>
-    ({ id, pot_id, event_name, args });
-
-  it('returns nothing for no events', () => {
-    expect(activityItems([], titles, ME)).toEqual([]);
+describe('firstName', () => {
+  it('takes the first word of the display name', () => {
+    expect(firstName('Ana Rivera')).toBe('Ana');
+    expect(firstName('  Ben  ')).toBe('Ben');
   });
 
-  it('orders newest first by numeric id, including ids past Number precision', () => {
-    const items = activityItems([
-      ev(9, 'Locked'),
-      ev('10000000000000000000001', 'Locked'),
-      ev(10, 'Locked'),
-    ], titles, null);
-    expect(items.map(i => i.id)).toEqual(['10000000000000000000001', '10', '9']);
+  it('is null when no usable name is set, and never reads an email', () => {
+    expect(firstName(null)).toBeNull();
+    expect(firstName('   ')).toBeNull();
+  });
+});
+
+describe('formatDuration', () => {
+  it('names the largest sensible unit', () => {
+    expect(formatDuration(30_000)).toBe('less than a minute');
+    expect(formatDuration(5 * 60_000)).toBe('5 min');
+    expect(formatDuration(5 * HOUR)).toBe('5 h');
+    expect(formatDuration(86_400_000)).toBe('1 day');
+    expect(formatDuration(3 * 86_400_000)).toBe('3 days');
+  });
+});
+
+const item = (over: Partial<QueueItem> = {}): QueueItem => ({
+  potId: '1', potTitle: 'Cabin', action: 'pay', label: 'Pay your share', hint: '$2, closes in 3 h', href: '/pots/1', urgency: 70, ...over,
+});
+
+describe('groupNeeds', () => {
+  it('returns nothing for an empty queue', () => {
+    expect(groupNeeds([])).toEqual([]);
   });
 
-  it('skips unknown event names without crashing', () => {
-    const items = activityItems([ev(1, 'Mystery'), ev(2, 'Paid', { member: OTHER, amount: SHARE }), ev(3, '')], titles, ME);
-    expect(items).toHaveLength(1);
-    expect(items[0].text).toBe('A member paid $2');
+  it('groups by action in first-appearance order and picks the soonest deadline', () => {
+    const groups = groupNeeds([
+      item({ potId: '1', action: 'finalize', label: 'Finalize the payout' }),
+      item({ potId: '2', dueAt: NOW + 5 * HOUR }),
+      item({ potId: '3', dueAt: NOW + 2 * HOUR }),
+      item({ potId: '4', action: 'refund', label: 'Claim your refund' }),
+    ]);
+    expect(groups.map(g => g.action)).toEqual(['finalize', 'pay', 'refund']);
+    expect(groups[1].items.map(i => i.potId)).toEqual(['2', '3']);
+    expect(groups[1].soonest.potId).toBe('3');
+    expect(groups[0].soonest.potId).toBe('1');
   });
+});
 
-  it('says You when the viewer is the actor, A member otherwise', () => {
-    const items = activityItems([ev(1, 'Paid', { member: ME, amount: SHARE }), ev(2, 'Paid', { member: OTHER, amount: SHARE })], titles, ME);
-    expect(items.map(i => i.text)).toEqual(['A member paid $2', 'You paid $2']);
-  });
-
-  it('uses a known member email when one is supplied', () => {
-    const items = activityItems([ev(1, 'Objected', { member: OTHER })], titles, ME, 12, { [OTHER]: 'friend@example.com' });
-    expect(items[0].text).toBe('friend@example.com objected to the payout');
-  });
-
-  it('maps each known event to a tone', () => {
-    const cases: Array<[string, ActivityEvent['args'], string]> = [
-      ['PotCreated', { organizer: ME }, 'neutral'],
-      ['Paid', { member: ME, amount: SHARE }, 'money'],
-      ['Locked', {}, 'money'],
-      ['SeatSwapped', { leaver: OTHER, replacement: ME, refunded: '0' }, 'neutral'],
-      ['Refunded', { member: ME, amount: SHARE }, 'money'],
-      ['PayoutRequested', { receiptHash: '0x00', releaseEligibleAt: '1' }, 'warn'],
-      ['Objected', { member: OTHER, objectionsCount: '1' }, 'warn'],
-      ['Released', { organizer: ORG, amount: TOTAL }, 'money'],
-      ['Expired', {}, 'bad'],
-      ['Frozen', {}, 'bad'],
+describe('closingSoon', () => {
+  it('lists funding pots due within seven days, soonest first, with paid counts', () => {
+    const pots = [
+      pot({ pot_id: '1', deadline: iso(NOW + 5 * 86_400_000), members: [member(ME, { has_paid: true }), member(OTHER)] }),
+      pot({ pot_id: '2', deadline: iso(NOW + 1 * 86_400_000) }),
+      pot({ pot_id: '3', deadline: iso(NOW + 9 * 86_400_000) }),
+      pot({ pot_id: '4', state: PotState.Locked, deadline: iso(NOW + 1 * 86_400_000) }),
+      pot({ pot_id: '5', deadline: iso(NOW - 1 * HOUR) }),
     ];
-    const items = activityItems(cases.map(([name, args], i) => ev(i + 1, name, args)), titles, ME, 50);
-    expect(items).toHaveLength(cases.length);
-    expect(items.map(i => i.tone)).toEqual([...cases].reverse().map(c => c[2]));
-    for (const i of items) expect(i.text.length).toBeGreaterThan(0);
+    const out = closingSoon(pots, NOW);
+    expect(out.map(c => c.potId)).toEqual(['2', '1']);
+    expect(out[1]).toMatchObject({ paid: 1, members: 2, title: 'Cabin' });
   });
 
-  it('falls back to a pot number when the title is unknown', () => {
-    const items = activityItems([ev(1, 'Locked', {}, '77')], titles, ME);
-    expect(items[0]).toMatchObject({ potId: '77', potTitle: 'Pot #77', id: '1', tone: 'money' });
+  it('is empty when nothing is closing soon', () => {
+    expect(closingSoon([pot({ deadline: iso(NOW + 30 * 86_400_000) })], NOW)).toEqual([]);
   });
+});
 
-  it('caps the result at limit after skipping unknown names', () => {
-    const events = [ev(1, 'Locked'), ev(2, 'Nope'), ev(3, 'Locked'), ev(4, 'Locked')];
-    expect(activityItems(events, titles, ME, 2)).toHaveLength(2);
-    expect(activityItems(events, titles, ME, 2).map(i => i.id)).toEqual(['4', '3']);
-  });
-
-  it('defaults the limit to 12', () => {
-    const events = Array.from({ length: 20 }, (_, i) => ev(i + 1, 'Locked'));
-    expect(activityItems(events, titles, ME)).toHaveLength(12);
-  });
-
-  it('does not invent a timestamp', () => {
-    const [item] = activityItems([ev(1, 'Locked')], titles, ME);
-    expect(Object.keys(item).sort()).toEqual(['id', 'potId', 'potTitle', 'text', 'tone']);
+describe('needsYou dueAt', () => {
+  it('records the deadline a pay row waits on', () => {
+    const [row] = needsYou([pot({ members: [member(ME)] })], ME, NOW);
+    expect(row.dueAt).toBe(Date.parse(iso(NOW + 3 * HOUR)));
   });
 });

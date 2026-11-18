@@ -3,6 +3,8 @@ import { cn } from 'cn';
 import { formatDollars } from '@/lib/format/money';
 import { Faces, type Face } from './Faces';
 import { TripCover } from './TripCover';
+import { PotState } from '@/lib/pot/chain';
+import { linkButton } from './linkButton';
 import { stateInfo, type StateTone } from './potState';
 
 export type PotSummary = {
@@ -15,6 +17,9 @@ export type PotSummary = {
 const STATE_TEXT: Record<StateTone, string> = {
   accent: 'text-foreground', neutral: 'text-muted-foreground', warning: 'text-warning', success: 'text-success', danger: 'text-destructive',
 };
+
+/** Finished pots (released, or expired or frozen) can be run again by their organizer. */
+const isFinished = (p: PotSummary) => p.state === PotState.Released || p.state === PotState.Frozen;
 
 /** The viewer's trips as cards: cover, name and state, a progress bar, the friends' faces and the money so far. */
 export function PotList({ pots }: { pots: PotSummary[] }) {
@@ -35,8 +40,8 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
         const pct = faces.length > 0 ? Math.round((paid / faces.length) * 100) : 0;
         const info = stateInfo(p);
         return (
-          <li key={p.pot_id}>
-            <Link href={`/pots/${p.pot_id}`} className="block overflow-hidden rounded-group bg-card transition-colors hover:bg-secondary/60">
+          <li key={p.pot_id} className="overflow-hidden rounded-group bg-card transition-colors hover:bg-secondary/60">
+            <Link href={`/pots/${p.pot_id}`} className="block focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ring">
               <TripCover potId={p.pot_id} title={p.title} className="h-[150px]" />
               <div className="space-y-3 p-4">
                 <div className="flex items-baseline justify-between gap-3">
@@ -57,6 +62,11 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
                 </div>
               </div>
             </Link>
+            {p.is_organizer === true && isFinished(p) && (
+              <div className="px-4 pb-4">
+                <Link href={`/new?from=${p.pot_id}`} className={linkButton({ variant: 'ghost', size: 'sm', className: 'min-h-11' })}>Run it again</Link>
+              </div>
+            )}
           </li>
         );
       })}

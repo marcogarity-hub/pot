@@ -5,8 +5,8 @@ import { WalletSection } from './WalletSection';
 import { SecuritySection } from './SecuritySection';
 import { PrivacySection } from './PrivacySection';
 
-const m = vi.hoisted(() => ({ me: null as unknown, retry: vi.fn(), signOut: vi.fn(), refresh: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: m.refresh, push: vi.fn(), replace: vi.fn() }) }));
+const m = vi.hoisted(() => ({ me: null as unknown, retry: vi.fn(), signOut: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: m.refresh, push: vi.fn(), replace: m.replace }) }));
 vi.mock('@/components/pot/useMe', () => ({ useMe: () => ({ me: m.me, loading: m.me === null, retry: m.retry }) }));
 vi.mock('@/lib/supabase/browser', () => ({ createBrowserSupabase: () => ({ auth: { signOut: m.signOut } }) }));
 
@@ -62,13 +62,11 @@ describe('WalletSection', () => {
 describe('SecuritySection', () => {
   it('asks before logging out everywhere, then signs out globally and goes home', async () => {
     m.signOut.mockResolvedValue({ error: null });
-    const assign = vi.fn();
-    vi.stubGlobal('location', { ...window.location, assign });
     render(<SecuritySection />);
     fireEvent.click(screen.getByRole('button', { name: 'Log out of all devices' }));
     expect(m.signOut).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Log out everywhere' }));
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(m.replace).toHaveBeenCalledWith('/'));
     expect(m.signOut).toHaveBeenCalledWith({ scope: 'global' });
   });
 

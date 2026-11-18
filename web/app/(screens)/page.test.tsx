@@ -5,9 +5,15 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { getVerifiedUser } from '@/lib/supabase/verified-user';
 import Home from './page';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/',
+}));
 vi.mock('@/lib/supabase/server', () => ({ createServerSupabase: vi.fn() }));
 vi.mock('@/lib/supabase/verified-user', () => ({ getVerifiedUser: vi.fn() }));
+vi.mock('@/lib/supabase/browser', () => ({ createBrowserSupabase: vi.fn() }));
+vi.mock('@/components/pot/useMe', () => ({ useMe: () => ({ me: null, loading: true, retry: vi.fn() }) }));
+vi.mock('@/components/pot/useHistory', () => ({ useHistory: () => ({ items: [], loading: false, error: false, retry: vi.fn() }) }));
 
 type Supabase = Awaited<ReturnType<typeof createServerSupabase>>;
 
@@ -46,8 +52,6 @@ const openPot = {
   ],
 };
 
-const activityEvent = { id: 1, pot_id: '7', event_name: 'PotCreated', args: { organizer: ORGANIZER } };
-
 let from: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -61,13 +65,6 @@ beforeEach(() => {
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: { wallet_address: ME } }) })),
-        })),
-      };
-    }
-    if (table === 'pot_events') {
-      return {
-        select: vi.fn(() => ({
-          order: vi.fn(() => ({ limit: vi.fn().mockResolvedValue({ data: [activityEvent] }) })),
         })),
       };
     }
@@ -89,21 +86,22 @@ describe('Home (HomeContent)', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it('loads the pots and shows the verified email when the session is verified', async () => {
+  it('loads the pots and renders the dashboard inside the signed-in shell', async () => {
     vi.mocked(getVerifiedUser).mockResolvedValue({ id: 'user-1', email: 'ana@example.com' });
     await renderHome();
-    expect(screen.getByText(/held in \d+ pots?/i)).toBeInTheDocument();
+    // AppShell: the sidebar lists the viewer's pots and the account menu carries the verified email.
+    expect(screen.getByRole('complementary', { name: 'Sidebar' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+    expect(screen.getByText(/held across \d+ pots?/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /needs you/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /your trips/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /start a pot/i })).toHaveAttribute('href', '/new');
-    expect(screen.getAllByText('ana@example.com').length).toBeGreaterThanOrEqual(1);
-    // The pot title shows in the pot list and as the activity row's pot name.
     expect(screen.getAllByText('Cabin weekend').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Pay your share')).toBeInTheDocument();
-    expect(screen.getByText('org@example.com created this pot')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Activity' })).toBeNull();
     expect(from).toHaveBeenCalledWith('pot_status');
     expect(from).toHaveBeenCalledWith('users');
-    expect(from).toHaveBeenCalledWith('pot_events');
+    expect(from).not.toHaveBeenCalledWith('pot_events');
   });
 });
 

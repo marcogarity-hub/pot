@@ -1,0 +1,56 @@
+▲ Next.js 16.4.6 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://10.151.238.37:3100
+- Environments: .env.local
+✓ Ready in 256ms
+✓ Running next.config.ts took 112ms
+- Cache Components enabled
+- Partial Prefetching enabled
+
+ GET / 200 in 1977ms (next.js: 1749ms, proxy.ts: 89ms, application-code: 139ms)
+ GET /sign-in 200 in 231ms (next.js: 189ms, proxy.ts: 3ms, application-code: 39ms)
+ GET /dev-preview/dashboard 200 in 319ms (next.js: 246ms, proxy.ts: 1.6ms, application-code: 71ms)
+ GET /dev-preview/pot-page?v=0 200 in 374ms (next.js: 308ms, proxy.ts: 1.6ms, application-code: 65ms)
+ GET /dev-preview/pot-page?v=1 200 in 28ms (next.js: 8ms, proxy.ts: 1.6ms, application-code: 19ms)
+ GET /dev-preview/pot-page?v=3 200 in 21ms (next.js: 1.4ms, proxy.ts: 1.6ms, application-code: 18ms)
+ GET /dev-preview/create-form 200 in 625ms (next.js: 543ms, proxy.ts: 1.5ms, application-code: 81ms)
+ GET /dev-preview/join-system?v=1 200 in 172ms (next.js: 145ms, proxy.ts: 1.5ms, application-code: 27ms)
+ GET /dev-preview/shell-settings?view=profile 200 in 193ms (next.js: 172ms, proxy.ts: 2ms, application-code: 19ms)
+ GET /dev-preview/shell-settings?view=help 200 in 23ms (next.js: 6ms, proxy.ts: 1.7ms, application-code: 15ms)
+ GET /dev-preview/shell-settings?view=menu 200 in 17ms (next.js: 1.4ms, proxy.ts: 1.4ms, application-code: 14ms)
+ GET /dev-preview/history 200 in 181ms (next.js: 148ms, proxy.ts: 1.2ms, application-code: 32ms)
+ GET /dev-preview/history/drawer 200 in 145ms (next.js: 129ms, proxy.ts: 1.3ms, application-code: 15ms)
+ GET /dev-preview/dashboard 200 in 44ms (next.js: 13ms, proxy.ts: 2ms, application-code: 29ms)
+ GET /dev-preview/dashboard 200 in 187ms (next.js: 135ms, proxy.ts: 4ms, application-code: 49ms)
+⚠ Blocked cross-origin request to Next.js dev resource /_next/hmr from "127.0.0.1".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['127.0.0.1'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /manifest.webmanifest 200 in 278ms (next.js: 264ms, proxy.ts: 5ms, application-code: 9ms)
+ GET /dev-preview/dashboard 200 in 82ms (next.js: 11ms, proxy.ts: 15ms, application-code: 55ms)
+ GET /sign-in 200 in 205ms (next.js: 109ms, proxy.ts: 31ms, application-code: 65ms)
+ GET /manifest.webmanifest 200 in 64ms (next.js: 20ms, proxy.ts: 32ms, application-code: 12ms)
+ GET /dev-preview/history 200 in 61ms (next.js: 22ms, proxy.ts: 2ms, application-code: 36ms)
+ GET /manifest.webmanifest 200 in 28ms (next.js: 11ms, proxy.ts: 9ms, application-code: 9ms)
+ GET /manifest.webmanifest 200 in 32ms (next.js: 14ms, proxy.ts: 9ms, application-code: 8ms)
+ GET /dev-preview/pot-page?v=2 200 in 74ms (next.js: 43ms, proxy.ts: 4ms, application-code: 27ms)
+✓ Compiled in 276ms
+ GET /dev-preview/shell-settings?view=profile 200 in 199ms (next.js: 130ms, proxy.ts: 14ms, application-code: 55ms)
+ GET /manifest.webmanifest 200 in 76ms (next.js: 50ms, proxy.ts: 12ms, application-code: 15ms)
+ GET /manifest.webmanifest 200 in 17ms (next.js: 6ms, proxy.ts: 7ms, application-code: 3ms)
+ GET /dev-preview/dashboard 200 in 95ms (next.js: 35ms, proxy.ts: 4ms, application-code: 57ms)
+ GET /manifest.webmanifest 200 in 24ms (next.js: 10ms, proxy.ts: 7ms, application-code: 7ms)
+ GET /dev-preview/dashboard 200 in 85ms (next.js: 24ms, proxy.ts: 9ms, application-code: 51ms)
+ GET /api/wallet/me 401 in 626ms (next.js: 583ms, proxy.ts: 14ms, application-code: 29ms)
+ GET /api/wallet/me 401 in 627ms (next.js: 605ms, proxy.ts: 15ms, application-code: 7ms)
+ GET /api/wallet/me 401 in 28ms (next.js: 8ms, proxy.ts: 11ms, application-code: 9ms)
+ GET /api/wallet/me 401 in 29ms (next.js: 15ms, proxy.ts: 9ms, application-code: 5ms)
+ GET /api/wallet/me 401 in 46ms (next.js: 18ms, proxy.ts: 12ms, application-code: 16ms)
+ GET /api/wallet/me 401 in 45ms (next.js: 25ms, proxy.ts: 11ms, application-code: 9ms)

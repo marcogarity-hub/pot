@@ -39,7 +39,8 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
 
   return (
     <>
-      <div className="relative">
+      {/* Desktop: the cover runs from the window's left edge, so the sidebar floats over its left end. */}
+      <div className="relative md:-ml-[264px] md:w-[calc(100%+264px)]">
         <TripCover potId={status.pot_id} title={status.title} className="h-[300px] w-full md:h-[360px] lg:h-[420px]" />
         {/* Desktop only: the art fades into the warm page under the title block. */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-40 bg-gradient-to-b from-transparent to-background md:block" />
@@ -50,7 +51,7 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
         </Link>
         <nav aria-label="Breadcrumb"
           style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
-          className="glass-art absolute left-6 top-0 hidden h-11 max-w-[60%] items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-white md:flex lg:left-10">
+          className="glass-art absolute left-6 top-0 hidden h-11 max-w-[60%] items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-white md:flex md:left-[304px]">
           <Link href="/" className="shrink-0 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Pots</Link>
           <ChevronRight aria-hidden className="size-4 shrink-0" strokeWidth={2} />
           <span aria-current="page" className="min-w-0 truncate">{status.title ?? `Pot #${status.pot_id}`}</span>
@@ -67,7 +68,7 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
           </p>
         </header>
 
-        <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
+        <div className="space-y-6 xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start xl:gap-8 xl:space-y-0">
           <div className="min-w-0 space-y-6">
             <ProgressBar
               paidCount={inPot}

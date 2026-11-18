@@ -7,11 +7,10 @@ import { Screen } from '@/components/pot/Screen';
 import { PotMark } from '@/components/pot/PotMark';
 import { TripCover } from '@/components/pot/TripCover';
 import { Faces, type Face } from '@/components/pot/Faces';
+import { AppShell } from '@/components/pot/AppShell';
 import { DashboardView } from '@/components/pot/DashboardView';
-import {
-  DASHBOARD_POT_COLUMNS, activityItems, needsYou,
-  type ActivityEvent, type DashboardPot,
-} from '@/components/pot/dashboardModel';
+import { DASHBOARD_POT_COLUMNS, needsYou, type DashboardPot } from '@/components/pot/dashboardModel';
+import { toShellPots } from '@/components/pot/shellModel';
 
 /** The server render's clock, read outside the component so the render itself stays pure. */
 const requestTime = () => Date.now();
@@ -32,25 +31,22 @@ async function HomeContent() {
     return <Screen width="wide" nav={<Link href="/sign-in" className={linkButton({ variant: "glass" })}>Sign in</Link>}><SignedOut /></Screen>;
   }
 
-  const [{ data: potRows }, { data: me }, { data: eventRows }] = await Promise.all([
+  const [{ data: potRows }, { data: me }] = await Promise.all([
     supabase.from('pot_status').select(DASHBOARD_POT_COLUMNS).order('created_at', { ascending: false }),
     supabase.from('users').select('wallet_address,display_name').eq('auth_user_id', user.id).maybeSingle(),
-    supabase.from('pot_events').select('id,pot_id::text,event_name,args').order('id', { ascending: false }).limit(40),
   ]);
   const pots = (potRows ?? []) as unknown as DashboardPot[];
   const myAddress = (me as { wallet_address: string | null } | null)?.wallet_address ?? null;
   const myName = (me as { display_name: string | null } | null)?.display_name ?? null;
 
-  const titles: Record<string, string> = {};
-  const names: Record<string, string> = {};
-  for (const p of pots) {
-    titles[p.pot_id] = p.title ?? `Pot #${p.pot_id}`;
-    for (const m of p.members) { const shown = m.name ?? m.email; if (shown) names[m.address.toLowerCase()] = shown; }
-  }
-  const queue = needsYou(pots, myAddress, requestTime());
-  const activity = activityItems((eventRows ?? []) as unknown as ActivityEvent[], titles, myAddress, 12, names);
+  const now = requestTime();
+  const queue = needsYou(pots, myAddress, now);
 
-  return <DashboardView email={user.email} name={myName} pots={pots} queue={queue} activity={activity} />;
+  return (
+    <AppShell me={{ name: myName, email: user.email }} pots={toShellPots(pots, queue)}>
+      <DashboardView name={myName} pots={pots} queue={queue} now={now} />
+    </AppShell>
+  );
 }
 
 const GUARANTEES = [

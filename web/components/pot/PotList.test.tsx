@@ -43,3 +43,29 @@ describe('PotList trip cards', () => {
     expect(screen.getByRole('img', { name: '2 of 3 paid' })).toBeInTheDocument();
   });
 });
+
+describe('PotList Run it again', () => {
+  const finished = (state: PotState, over: Partial<PotSummary> = {}) => ({
+    ...base, state, receipt_hash: null, is_organizer: true, ...over,
+  }) as unknown as PotSummary;
+
+  it('offers Run it again to the organizer of a released pot, pointing at the create form with this pot', () => {
+    render(<PotList pots={[finished(PotState.Released, { pot_id: '9' })]} />);
+    expect(screen.getByRole('link', { name: 'Run it again' })).toHaveAttribute('href', '/new?from=9');
+  });
+
+  it('offers it to the organizer of an expired or frozen pot too', () => {
+    render(<PotList pots={[finished(PotState.Frozen, { pot_id: '4' })]} />);
+    expect(screen.getByRole('link', { name: 'Run it again' })).toHaveAttribute('href', '/new?from=4');
+  });
+
+  it('does not offer it for a pot still in progress', () => {
+    render(<PotList pots={[finished(PotState.Locked)]} />);
+    expect(screen.queryByRole('link', { name: 'Run it again' })).toBeNull();
+  });
+
+  it('does not offer it to a member who is not the organizer', () => {
+    render(<PotList pots={[finished(PotState.Released, { is_organizer: false })]} />);
+    expect(screen.queryByRole('link', { name: 'Run it again' })).toBeNull();
+  });
+});

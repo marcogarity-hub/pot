@@ -56,6 +56,8 @@ export type QueueItem = {
   urgency: number;
   /** Who the row is about: the members still to pay, or the organizer who asked for the payout. */
   faces?: Face[];
+  /** The moment this action is waiting on (ms since epoch), so the soonest one can be picked. */
+  dueAt?: number;
 };
 
 const DAY_MS = 86_400_000;
@@ -63,7 +65,8 @@ const MINUTE_MS = 60_000;
 
 const ms = (iso: string | null | undefined): number => (iso ? Date.parse(iso) : NaN);
 
-function formatDuration(remainingMs: number): string {
+/** Plain time left: "5 h", "3 days", "less than a minute". */
+export function formatDuration(remainingMs: number): string {
   const mins = Math.floor(remainingMs / MINUTE_MS);
   if (mins < 1) return 'less than a minute';
   if (mins < 60) return `${mins} min`;
@@ -113,7 +116,7 @@ function nextAction(p: DashboardPot, me: string, now: number): QueueItem | null 
           return {
             ...base, action: 'pay', label: 'Pay your share',
             hint: `${usdc(p.share)}, closes in ${formatDuration(left)}`, urgency: 70 + timeBoost(left),
-            faces: unpaidFaces(),
+            faces: unpaidFaces(), dueAt: deadline,
           };
         }
         return null;
@@ -127,7 +130,10 @@ function nextAction(p: DashboardPot, me: string, now: number): QueueItem | null 
       const hint = left > 0
         ? `${usdc(p.total)} locked, ${formatDuration(left)} left to request`
         : `${usdc(p.total)} locked`;
-      return { ...base, action: 'request-payout', label: 'Request the payout', hint, urgency: 50, faces: organizerFaces() };
+      return {
+        ...base, action: 'request-payout', label: 'Request the payout', hint, urgency: 50, faces: organizerFaces(),
+        dueAt: left > 0 ? windowEnds : undefined,
+      };
     }
     case PotState.PayoutRequested: {
       const eligibleAt = ms(p.release_eligible_at);
@@ -137,7 +143,7 @@ function nextAction(p: DashboardPot, me: string, now: number): QueueItem | null 
           return {
             ...base, action: 'review-payout', label: 'Review the payout request',
             hint: `${formatDuration(left)} left to object`, urgency: 80 + timeBoost(left),
-            faces: organizerFaces(),
+            faces: organizerFaces(), dueAt: eligibleAt,
           };
         }
         return null;
@@ -173,136 +179,71 @@ export function needsYou(pots: DashboardPot[], myAddress: string | null, nowMs: 
   return items.sort((a, b) => b.urgency - a.urgency || a.potId.localeCompare(b.potId));
 }
 
-/** Money inside the contract for these pots, in 18-decimal base units. */
-export function heldAmount(pots: DashboardPot[]): bigint {
-  let sum = BigInt(0);
-  for (const p of pots) {
-    switch (p.state) {
-      case PotState.Funding:
-      case PotState.Frozen: {
-        // Still refundable: a paid share sits in the contract until its owner takes it back.
-        const refundable = p.members.filter(m => m.has_paid && !m.has_refunded).length;
-        sum += BigInt(p.share) * BigInt(refundable);
-        break;
-      }
-      case PotState.Locked:
-      case PotState.PayoutRequested:
-        sum += BigInt(p.total);
-        break;
-      default:
-        break; // Released: nothing left in the contract.
+/** Money inside the contract for one pot, in 18-decimal base units. */
+function heldIn(p: DashboardPot): bigint {
+  switch (p.state) {
+    case PotState.Funding:
+    case PotState.Frozen: {
+      // Still refundable: a paid share sits in the contract until its owner takes it back.
+      const refundable = p.members.filter(m => m.has_paid && !m.has_refunded).length;
+      return BigInt(p.share) * BigInt(refundable);
     }
-  }
-  return sum;
-}
-
-/**
- * Pot counts by plain state. "closed" is Frozen, which the UI shows as Frozen or Expired. A Locked pot past
- * its request window is still labelled Locked in potState.ts, so it is not counted as closed here.
- */
-export function stateCounts(pots: DashboardPot[]): { funding: number; locked: number; payout: number; released: number; closed: number } {
-  const counts = { funding: 0, locked: 0, payout: 0, released: 0, closed: 0 };
-  for (const p of pots) {
-    if (p.state === PotState.Funding) counts.funding++;
-    else if (p.state === PotState.Locked) counts.locked++;
-    else if (p.state === PotState.PayoutRequested) counts.payout++;
-    else if (p.state === PotState.Released) counts.released++;
-    else if (p.state === PotState.Frozen) counts.closed++;
-  }
-  return counts;
-}
-
-/** A row from pot_events. The table has no timestamp column, so none is shown. */
-export type ActivityEvent = { id: number | string; pot_id: string; event_name: string; args: Record<string, unknown> };
-export type ActivityItem = { id: string; potId: string; potTitle: string; text: string; tone: 'neutral' | 'money' | 'warn' | 'bad' };
-
-function idValue(id: number | string): bigint {
-  try {
-    return BigInt(String(id));
-  } catch {
-    return BigInt(-1);
-  }
-}
-
-function usdcOrNull(raw: unknown): string | null {
-  if (raw === null || raw === undefined || raw === '') return null;
-  try {
-    return usdc(String(raw));
-  } catch {
-    return null;
-  }
-}
-
-type Described = { text: string; tone: ActivityItem['tone'] };
-
-/**
- * One plain sentence per known event. Verbs are past tense so they read the same after "You" or "A member".
- * Returns null for event names this module does not know, so the caller skips them.
- */
-function describe(e: ActivityEvent, me: string | null, names: Record<string, string>): Described | null {
-  const args = e.args ?? {};
-  const who = (addr: unknown): string => {
-    const a = typeof addr === 'string' ? addr.toLowerCase() : '';
-    if (me !== null && a === me) return 'You';
-    return a && names[a] ? names[a] : 'A member';
-  };
-  const amount = usdcOrNull(args.amount);
-
-  switch (e.event_name) {
-    case 'PotCreated':
-      return { text: `${who(args.organizer)} created this pot`, tone: 'neutral' };
-    case 'Paid':
-      return { text: `${who(args.member)} paid ${amount ?? 'their share'}`, tone: 'money' };
-    case 'Locked':
-      return { text: 'Everyone paid, so the money is locked', tone: 'money' };
-    case 'SeatSwapped':
-      return { text: `${who(args.leaver)} left and ${who(args.replacement)} took the seat`, tone: 'neutral' };
-    case 'Refunded':
-      return { text: amount ? `${who(args.member)} got a refund of ${amount}` : `${who(args.member)} got a refund`, tone: 'money' };
-    case 'PayoutRequested':
-      return { text: 'The organizer requested the payout', tone: 'warn' };
-    case 'Objected':
-      return { text: `${who(args.member)} objected to the payout`, tone: 'warn' };
-    case 'Released':
-      return { text: `${who(args.organizer)} received ${amount ?? 'the payout'}`, tone: 'money' };
-    case 'Expired':
-      return { text: 'The request window ended, so the pot expired. Members who paid can take their money back', tone: 'bad' };
-    case 'Frozen':
-      return { text: 'Enough members objected, so the payout is frozen', tone: 'bad' };
+    case PotState.Locked:
+    case PotState.PayoutRequested:
+      return BigInt(p.total);
     default:
-      return null;
+      return BigInt(0); // Released: nothing left in the contract.
   }
 }
 
-/**
- * Recent pot activity, newest first by event id, capped at `limit`. Unknown event names are skipped.
- * `names` maps lowercase addresses to the name to show for that member. Without an entry the actor shows as "A member".
- */
-export function activityItems(
-  events: ActivityEvent[],
-  potTitles: Record<string, string>,
-  myAddress: string | null,
-  limit = 12,
-  names: Record<string, string> = {},
-): ActivityItem[] {
-  const me = myAddress ? myAddress.toLowerCase() : null;
-  const ordered = [...events].sort((a, b) => {
-    const av = idValue(a.id);
-    const bv = idValue(b.id);
-    return av > bv ? -1 : av < bv ? 1 : 0;
-  });
-  const out: ActivityItem[] = [];
-  for (const e of ordered) {
-    if (out.length >= limit) break;
-    const described = describe(e, me, names);
-    if (!described) continue;
-    out.push({
-      id: String(e.id),
-      potId: e.pot_id,
-      potTitle: potTitles[e.pot_id] ?? `Pot #${e.pot_id}`,
-      text: described.text,
-      tone: described.tone,
-    });
+/** Money inside the contract across these pots, in 18-decimal base units. */
+export function heldAmount(pots: DashboardPot[]): bigint {
+  return pots.reduce((sum, p) => sum + heldIn(p), BigInt(0));
+}
+
+/** How many of these pots still hold money. */
+export function heldPotCount(pots: DashboardPot[]): number {
+  return pots.filter(p => heldIn(p) > BigInt(0)).length;
+}
+
+/** The first word of the display name, or null when no name is set. Never derived from the email. */
+export function firstName(name: string | null): string | null {
+  const word = name?.trim().split(/\s+/)[0] ?? '';
+  return word || null;
+}
+
+export type NeedGroup = { action: QueueItem['action']; items: QueueItem[]; soonest: QueueItem };
+
+/** Needs-you items grouped by action type, in the order each type first appears (most urgent first). */
+export function groupNeeds(queue: QueueItem[]): NeedGroup[] {
+  const byAction = new Map<QueueItem['action'], QueueItem[]>();
+  for (const item of queue) {
+    const list = byAction.get(item.action);
+    if (list) list.push(item);
+    else byAction.set(item.action, [item]);
   }
-  return out;
+  return [...byAction].map(([action, items]) => ({ action, items, soonest: soonestOf(items) }));
+}
+
+/** The item whose deadline is nearest. Items with no deadline only win when none has one. */
+function soonestOf(items: QueueItem[]): QueueItem {
+  return items.reduce((best, item) =>
+    item.dueAt !== undefined && (best.dueAt === undefined || item.dueAt < best.dueAt) ? item : best);
+}
+
+export type ClosingPot = { potId: string; title: string; paid: number; members: number; deadlineAt: number };
+
+/** Pots still Funding whose deadline falls within `windowMs` of now, soonest first. */
+export function closingSoon(pots: DashboardPot[], now: number, windowMs = 7 * DAY_MS): ClosingPot[] {
+  return pots
+    .filter(p => p.state === PotState.Funding)
+    .map(p => ({
+      potId: p.pot_id,
+      title: p.title ?? `Pot #${p.pot_id}`,
+      paid: p.members.filter(m => m.active && m.has_paid).length,
+      members: p.members.filter(m => m.active).length,
+      deadlineAt: ms(p.deadline),
+    }))
+    .filter(c => c.deadlineAt > now && c.deadlineAt - now <= windowMs)
+    .sort((a, b) => a.deadlineAt - b.deadlineAt || a.potId.localeCompare(b.potId));
 }

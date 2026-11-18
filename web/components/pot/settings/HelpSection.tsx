@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { cn } from 'cn';
 import { HELP_FAQ, HELP_INTRO, HELP_TITLE } from '@/lib/help/content';
+import { MoneyDiagram } from './MoneyDiagram';
 
 /** Help for people new to blockchains: a short explanation, then questions that open with a plus. */
 export function HelpSection() {
@@ -16,6 +17,10 @@ export function HelpSection() {
         {HELP_INTRO.map(paragraph => (
           <p key={paragraph} className="text-[17px] leading-relaxed text-foreground">{paragraph}</p>
         ))}
+      </div>
+      <div>
+        <h3 className="mb-2 text-[17px] font-semibold">Where your money goes</h3>
+        <MoneyDiagram />
       </div>
       <div>
         <h3 className="mb-2 text-[17px] font-semibold">Common questions</h3>

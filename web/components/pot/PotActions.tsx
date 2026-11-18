@@ -175,11 +175,11 @@ const TOOLBAR_BUTTON = 'h-[52px] min-w-0 flex-1 rounded-full px-4 text-[17px] md
 
 /**
  * The floating glass bar at the bottom of the screen. It is safe-area aware. On desktop it shrinks to its
- * buttons and sits centred. Only the bar takes pointer events, so the content above it stays scrollable.
+ * buttons and sits centred in the content area beside the sidebar. Only the bar takes pointer events, so the content above it stays scrollable.
  */
 function Toolbar({ children }: { children: ReactNode }) {
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-safe md:px-6">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-safe md:left-[264px] md:px-6">
       <div role="group" aria-label="Pot actions" className="glass pointer-events-auto mx-auto mb-4 flex max-w-2xl items-center gap-2 rounded-full p-1.5 md:w-max md:max-w-full">
         {children}
       </div>

@@ -1,4 +1,4 @@
-/** Starting points for a new pot. Windows are in seconds and sit inside the contract limits. First drafts: the owner refines them. */
+/** Starting points for a new pot, in the order they are offered: the trip leads, group merch orders follow.  Windows are in seconds and sit inside the contract limits. First drafts: the owner refines them. */
 export type PotTemplate = {
   label: string;
   /** Shown as the Name field's placeholder. The name itself stays empty so the organizer types it. */
@@ -12,12 +12,12 @@ const DAY = 24 * HOUR;
 
 export const TEMPLATES = {
   trip: { label: 'Weekend trip', titlePlaceholder: 'Cabin weekend', objectionWindow: 2 * DAY, requestWindow: 7 * DAY },
-  dinner: { label: 'Group dinner', titlePlaceholder: 'Friday dinner', objectionWindow: HOUR, requestWindow: DAY },
+  merch: { label: 'Group merch order', titlePlaceholder: 'Club hoodies', objectionWindow: DAY, requestWindow: 7 * DAY },
   'group-order': { label: 'Group order', titlePlaceholder: 'Lunch order', objectionWindow: HOUR, requestWindow: DAY },
+  dinner: { label: 'Group dinner', titlePlaceholder: 'Friday dinner', objectionWindow: HOUR, requestWindow: DAY },
+  tickets: { label: 'Event tickets', titlePlaceholder: 'Concert tickets', objectionWindow: DAY, requestWindow: 7 * DAY },
   rent: { label: 'Rent', titlePlaceholder: 'June rent', objectionWindow: 2 * DAY, requestWindow: 7 * DAY },
   gift: { label: 'Group gift', titlePlaceholder: 'Birthday gift', objectionWindow: 2 * DAY, requestWindow: 7 * DAY },
-  merch: { label: 'Group merch order', titlePlaceholder: 'Club hoodies', objectionWindow: DAY, requestWindow: 7 * DAY },
-  tickets: { label: 'Event tickets', titlePlaceholder: 'Concert tickets', objectionWindow: DAY, requestWindow: 7 * DAY },
 } satisfies Record<string, PotTemplate>;
 
 export type TemplateId = keyof typeof TEMPLATES;

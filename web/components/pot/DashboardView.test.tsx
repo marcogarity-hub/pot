@@ -2,26 +2,28 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { PotState } from '@/lib/pot/chain';
 import { DashboardView } from './DashboardView';
-import type { ActivityItem, DashboardPot } from './dashboardModel';
+import type { DashboardPot } from './dashboardModel';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }) }));
 vi.mock('@/lib/supabase/browser', () => ({ createBrowserSupabase: vi.fn() }));
+vi.mock('./useHistory', () => ({ useHistory: () => ({ items: [], loading: false, error: false, retry: vi.fn() }) }));
 
 afterEach(() => cleanup());
 
 const ME = '0x00000000000000000000000000000000000000a1';
 const ORGANIZER = '0x00000000000000000000000000000000000000b2';
+const NOW = Date.now();
 
 const pot = {
   pot_id: '7', title: 'Cabin weekend', state: PotState.Funding, receipt_hash: null,
   total: '200000000000000000000', share: '100000000000000000000',
   organizer_address: ORGANIZER, is_organizer: false,
-  deadline: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+  deadline: new Date(NOW + 3 * 86_400_000).toISOString(),
   threshold: 1, objection_window_seconds: 3600, request_window_seconds: 3600,
   locked_at: null, objections_count: 0, release_eligible_at: null,
   members: [
-    { address: ORGANIZER, email: 'org@example.com', has_paid: true, has_objected: false, has_refunded: false, active: true, is_organizer: true },
-    { address: ME, email: 'ana@example.com', has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: false },
+    { address: ORGANIZER, email: 'org@example.com', name: null, has_paid: true, has_objected: false, has_refunded: false, active: true, is_organizer: true },
+    { address: ME, email: 'ana@example.com', name: null, has_paid: false, has_objected: false, has_refunded: false, active: true, is_organizer: false },
   ],
 } as unknown as DashboardPot;
 
@@ -30,98 +32,67 @@ const queue = [{
   hint: '$100, closes in 3 days', href: '/pots/7', urgency: 70,
 }];
 
-const activity: ActivityItem[] = [
-  { id: '2', potId: '7', potTitle: 'Cabin weekend', text: 'org@example.com paid $100', tone: 'money' },
-  { id: '1', potId: '7', potTitle: 'Cabin weekend', text: 'org@example.com created this pot', tone: 'neutral' },
-];
-
 describe('DashboardView', () => {
-  it('shows the signed-in email in the You section, with the account controls in the header', () => {
-    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
-    expect(document.getElementById('you')).toHaveTextContent('ana@example.com');
-    const nav = screen.getByRole('navigation', { name: 'Account' });
-    expect(nav).not.toHaveTextContent('ana@example.com');
-    expect(within(nav).getByRole('link', { name: 'New pot' })).toHaveAttribute('href', '/new');
-    expect(within(nav).getByRole('link', { name: 'You' })).toHaveAttribute('href', '#you');
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  it('greets by first name when one is set, and says how many trips need the viewer', () => {
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Hey Ana' })).toBeInTheDocument();
+    expect(screen.getByText('1 needs you')).toBeInTheDocument();
   });
 
-  it('greets by name when one is set, otherwise with Hey there', () => {
-    const { unmount } = render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Hey Ana R.' })).toBeInTheDocument();
-    expect(screen.getByText('1 trip needs you')).toBeInTheDocument();
-    unmount();
-    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
+  it('greets with Hey there and no name prompt when no name is set and nothing needs the viewer', () => {
+    render(<DashboardView name={null} pots={[]} queue={[]} now={NOW} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Hey there' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Your trips' })).toBeInTheDocument();
+    expect(screen.getByText('Nothing needs you right now')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Add your name' })).toBeInTheDocument();
   });
 
-  it('offers the tab bar with Trips, Activity and You', () => {
-    render(<DashboardView email="ana@example.com" name={null} pots={[]} queue={[]} activity={[]} />);
-    const tabs = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(tabs).getByRole('link', { name: 'Trips' })).toHaveAttribute('aria-current', 'page');
-    expect(within(tabs).getByRole('link', { name: 'Activity' })).toHaveAttribute('href', '#activity');
-    expect(within(tabs).getByRole('link', { name: 'You' })).toHaveAttribute('href', '#you');
+  it('shows the name prompt only until a name is set', () => {
+    const { unmount } = render(<DashboardView name={null} pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.getByRole('button', { name: 'Add your name' })).toBeInTheDocument();
+    unmount();
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.queryByRole('region', { name: 'Add your name' })).toBeNull();
   });
 
-  it('renders the held summary, the queue, the pots and the activity from the fixture', () => {
-    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
-    expect(screen.getByText('$100 held in 1 pot', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('1 needs you.')).toBeInTheDocument();
+  it('renders the held summary, the needs-you card, the trips, quick start and history', () => {
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.getAllByText('$100').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/held across 1 pot/)).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: /needs you/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Needs you' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /pay your share/i })).toHaveAttribute('href', '/pots/7');
 
-    const potsSection = document.getElementById('your-trips')?.closest('section');
-    expect(potsSection).not.toBeNull();
-    const potLink = within(potsSection!).getByRole('link', { name: /cabin weekend/i });
+    const trips = document.getElementById('your-pots')!;
+    expect(within(trips).getByRole('heading', { name: 'Your trips' })).toBeInTheDocument();
+    const potLink = within(trips).getByRole('link', { name: /cabin weekend/i });
     expect(potLink).toHaveAttribute('href', '/pots/7');
     expect(within(potLink).getByText('1 of 2 paid', { exact: false })).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Activity' })).toBeInTheDocument();
-    expect(document.getElementById('activity')).toHaveTextContent('org@example.com paid $100');
-    expect(screen.getByText('org@example.com paid $100')).toBeInTheDocument();
-    expect(screen.getByText('org@example.com created this pot')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Start something new' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'History' })).toBeInTheDocument();
   });
 
-  it('keeps the start tiles and New pot link pointing at the create flow', () => {
-    render(<DashboardView email="ana@example.com" name={null} pots={[]} queue={[]} activity={[]} />);
-    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
-    expect(within(sidebar).getByRole('link', { name: /new pot/i })).toHaveAttribute('href', '/new');
-    expect(screen.getAllByRole('link', { name: /new pot/i }).every(l => l.getAttribute('href') === '/new')).toBe(true);
-    expect(screen.getByRole('link', { name: /plan a real booking/i })).toHaveAttribute('href', '/new?preset=booking');
-    expect(screen.getByText('Nothing needs you right now.')).toBeInTheDocument();
-    expect(screen.getByText('Payments and payouts in your pots show up here.')).toBeInTheDocument();
+  it('lists the pots closing within a week under Closing soon', () => {
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    const closing = screen.getByRole('heading', { name: 'Closing soon' }).closest('section')!;
+    expect(within(closing).getByRole('link', { name: /cabin weekend/i })).toHaveAttribute('href', '/pots/7');
   });
 
-  it('shows the name in the greeting once one is set, and no prompt', () => {
-    render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
-    expect(screen.getByRole('heading', { name: 'Hey Ana R.' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Account' })).not.toHaveTextContent('ana@example.com');
-    expect(screen.queryByText(/can't tell who you are/i)).toBeNull();
-    expect(screen.getByLabelText('Your name')).toHaveValue('Ana R.');
+  it('has no Activity section and no pot-event feed', () => {
+    render(<DashboardView name="Ana R." pots={[pot]} queue={queue} now={NOW} />);
+    expect(screen.queryByRole('heading', { name: 'Activity' })).toBeNull();
+    expect(screen.queryByText(/created this pot|paid \$/)).toBeNull();
   });
 
-  it('prompts for a name until one is set, linking to the name field', () => {
-    render(<DashboardView email="ana@example.com" name={null} pots={[pot]} queue={queue} activity={activity} />);
-    expect(screen.getByText(/can't tell who you are/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /add your name/i })).toHaveAttribute('href', '#your-name');
-    expect(screen.getByLabelText('Your name')).toHaveValue('');
+  it('keeps the start actions pointing at the create flow', () => {
+    render(<DashboardView name="Ana R." pots={[]} queue={[]} now={NOW} />);
+    expect(screen.getByRole('link', { name: 'Start a pot' })).toHaveAttribute('href', '/new');
+    expect(screen.getByRole('link', { name: 'Plan a real booking' })).toHaveAttribute('href', '/new?preset=booking');
   });
 
-  it('puts the desktop sidebar beside the content: sections, the viewer\'s pots and one New pot', () => {
-    render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
-    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
-    expect(within(sidebar).getByRole('link', { name: 'Activity' })).toHaveAttribute('href', '#activity');
-    expect(within(sidebar).getByRole('link', { name: 'You' })).toHaveAttribute('href', '#you');
-    expect(within(sidebar).getByRole('link', { name: 'Cabin weekend' })).toHaveAttribute('href', '/pots/7');
-    expect(within(sidebar).getByRole('link', { name: /ana r\./i })).toHaveAttribute('href', '#you');
-  });
-
-  it('leaves out features that do not exist yet', () => {
-    render(<DashboardView email="ana@example.com" name="Ana R." pots={[pot]} queue={queue} activity={activity} />);
-    expect(screen.queryByRole('searchbox')).toBeNull();
-    expect(screen.queryByRole('button', { name: /nudge|review request/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /nudge|review request/i })).toBeNull();
+  it('shows the test-money note and the privacy link in the footer', () => {
+    render(<DashboardView name="Ana R." pots={[]} queue={[]} now={NOW} />);
+    expect(screen.getByText('Test money only: USDC on the Arc testnet.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
   });
 });
