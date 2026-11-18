@@ -89,13 +89,13 @@ describe('Home (HomeContent)', () => {
   it('loads the pots and renders the dashboard inside the signed-in shell', async () => {
     vi.mocked(getVerifiedUser).mockResolvedValue({ id: 'user-1', email: 'ana@example.com' });
     await renderHome();
-    // AppShell: the sidebar lists the viewer's pots and the account menu carries the verified email.
+    // AppShell: the sidebar and the tab bar are present around the dashboard.
     expect(screen.getByRole('complementary', { name: 'Sidebar' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
     expect(screen.getByText(/held across \d+ plans?/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /needs you/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /your trips/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /start a pot/i })).toHaveAttribute('href', '/new');
+    expect(screen.getByRole('heading', { name: /your plans/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /start a plan/i })).toHaveAttribute('href', '/new');
     expect(screen.getAllByText('Cabin weekend').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Pay your share')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Activity' })).toBeNull();
