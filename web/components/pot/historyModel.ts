@@ -4,7 +4,8 @@ import { formatDollars } from '@/lib/format/money';
  * Pure logic behind "what I paid for": the signed-in viewer's own money movements, newest first.
  * No network, no React. Rows come from pot_events (RLS-limited to pots the viewer is in) and pot_meta.
  *
- * pot_events has no timestamp column, so `at` is null for every item today. It is set only if a row carries one.
+ * `at` is when Pot recorded the event (pot_events.created_at, within seconds of the chain event). Events recorded
+ * before 2026-11-18 have no time, so `at` is null for them and the UI shows no date.
  * Order is by pot_events.id, which follows chain order.
  */
 
@@ -24,7 +25,7 @@ export type HistoryItem = {
 };
 
 /** A row from pot_events, as selected by useHistory. `args` holds the decoded event arguments. */
-export type HistoryEventRow = { id: number | string; pot_id: string; event_name: string; args: Record<string, unknown> };
+export type HistoryEventRow = { id: number | string; pot_id: string; event_name: string; args: Record<string, unknown>; created_at?: string | null };
 /** A row from pot_meta. Title and receipt text can be missing while API metadata is delayed. */
 export type HistoryPotMeta = { pot_id: string; title: string | null; receipt_text: string | null };
 
@@ -98,7 +99,7 @@ export function buildHistory(
       kind: movement.kind,
       potId: e.pot_id,
       potTitle: pot?.title ?? `Plan #${e.pot_id}`,
-      at: null,
+      at: e.created_at ?? null,
     };
     if (movement.amount !== undefined) item.amount = movement.amount;
     if (movement.kind === 'payout-received' && pot?.receipt_text) item.receiptText = pot.receipt_text;

@@ -25,7 +25,7 @@ async function loadHistory(): Promise<HistoryItem[]> {
 
   const { data: eventData, error: eventError } = await db
     .from('pot_events')
-    .select('id,pot_id::text,event_name,args')
+    .select('id,pot_id::text,event_name,args,created_at')
     .in('event_name', [...HISTORY_EVENT_NAMES])
     .order('id', { ascending: false })
     .limit(EVENT_LIMIT);

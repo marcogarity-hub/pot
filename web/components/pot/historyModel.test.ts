@@ -10,6 +10,16 @@ const meta = [
 ];
 
 describe('buildHistory', () => {
+  it('carries the recorded time through, and leaves it empty for events recorded before timestamps existed', () => {
+    const events: HistoryEventRow[] = [
+      { id: 1, pot_id: '7', event_name: 'Paid', args: { potId: '7', member: ME, amount: U(210) } },
+      { id: 2, pot_id: '7', event_name: 'Refunded', args: { potId: '7', member: ME, amount: U(210) }, created_at: '2026-11-19T15:04:05+00:00' },
+    ];
+    const items = buildHistory(events, meta, ME);
+    expect(items.find(i => i.id === '2')?.at).toBe('2026-11-19T15:04:05+00:00');
+    expect(items.find(i => i.id === '1')?.at).toBeNull();
+  });
+
   it('lists what I paid, what I got back and, as organizer, the payout I received, newest first', () => {
     const events: HistoryEventRow[] = [
       { id: 1, pot_id: '7', event_name: 'Paid', args: { potId: '7', member: ME, amount: U(210) } },
