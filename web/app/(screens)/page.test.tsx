@@ -92,7 +92,7 @@ describe('Home (HomeContent)', () => {
     // AppShell: the sidebar lists the viewer's pots and the account menu carries the verified email.
     expect(screen.getByRole('complementary', { name: 'Sidebar' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
-    expect(screen.getByText(/held across \d+ pots?/i)).toBeInTheDocument();
+    expect(screen.getByText(/held across \d+ plans?/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /needs you/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /your trips/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /start a pot/i })).toHaveAttribute('href', '/new');
