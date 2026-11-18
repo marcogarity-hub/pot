@@ -6,6 +6,7 @@ import { Popover } from '@base-ui/react/popover';
 import { cn } from 'cn';
 import { FaceDot } from './Faces';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
+import { useDemo } from './demo/DemoContext';
 import type { SettingsSection } from './settings/SettingsDialog';
 
 const ITEM = 'flex min-h-11 w-full items-center rounded-full px-3 text-left text-[15px] hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -22,6 +23,7 @@ export function AccountMenu({ name, email, onOpenSettings, defaultOpen = false }
   defaultOpen?: boolean;
 }) {
   const router = useRouter();
+  const demo = useDemo();
   const [open, setOpen] = useState(defaultOpen);
   // Opening the dialog from the menu must not hand focus back to the trigger underneath it.
   const openingSettings = useRef(false);
@@ -35,6 +37,8 @@ export function AccountMenu({ name, email, onOpenSettings, defaultOpen = false }
 
   async function logOut() {
     setOpen(false);
+    // The demo has no session to end: leaving it just goes back to the public home.
+    if (demo) { router.push('/'); return; }
     await createBrowserSupabase().auth.signOut();
     router.refresh();
   }
@@ -56,7 +60,7 @@ export function AccountMenu({ name, email, onOpenSettings, defaultOpen = false }
               <li><button type="button" className={cn(ITEM, 'font-medium')} onClick={() => openSettings('profile')}>Profile</button></li>
               <li><button type="button" className={cn(ITEM, 'font-medium')} onClick={() => openSettings('privacy')}>Privacy</button></li>
               <li className="mt-1 border-t border-border pt-1">
-                <button type="button" className={cn(ITEM, 'font-medium')} onClick={logOut}>Log out</button>
+                <button type="button" className={cn(ITEM, 'font-medium')} onClick={logOut}>{demo ? 'Exit demo' : 'Log out'}</button>
               </li>
             </ul>
           </Popover.Popup>

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import { linkButton } from './linkButton';
 import { TEMPLATES } from '@/lib/templates';
 
@@ -10,7 +10,7 @@ export function QuickStart() {
       <ul className="flex flex-wrap gap-2">
         {Object.entries(TEMPLATES).map(([id, template]) => (
           <li key={id}>
-            <Link href={`/new?template=${id}`} className={linkButton({ variant: 'secondary' })}>{template.label}</Link>
+            <AppLink href={`/new?template=${id}`} className={linkButton({ variant: 'secondary' })}>{template.label}</AppLink>
           </li>
         ))}
       </ul>

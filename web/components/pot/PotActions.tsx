@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { postJson } from './api';
+import { postJson, type ApiResult } from './api';
 import type { Action } from './actions';
 import { finalizePot } from './finalize';
 
@@ -24,12 +24,18 @@ const TOOLBAR_ORDER: Action[] = ['pay', 'requestRelease', 'finalize', 'refund', 
 
 type Done = { action: Action; txHash?: string; at: Date };
 
+/** The demo's stand-in for the server: waits a moment, then reports success with no transaction. Nothing is sent anywhere. */
+const demoSettle = (): Promise<ApiResult<{ transactionHash?: string }>> =>
+  new Promise(resolve => { setTimeout(() => resolve({ ok: true, status: 200, data: {} }), 700); });
+
 /**
  * The pot's actions. The one primary action per state sits in a floating glass toolbar at the bottom of the
  * screen. Forms, notices and the swap picker stay inline where the page puts them.
  */
-export function PotActions({ potId, actions, status, onSettled, onAuthLost, idleText }: {
+export function PotActions({ potId, actions, status, onSettled, onAuthLost, idleText, demo = false }: {
   potId: string; actions: Action[]; status: PotStatusRow; onSettled(): void;
+  /** The public demo: every action "succeeds" after a moment and nothing is sent to the server. */
+  demo?: boolean;
   /** Called on a 401: the session is gone, so the page should re-check who is signed in. */
   onAuthLost?(): void;
   /** Shown in place of the buttons when nothing is available. */
@@ -54,9 +60,11 @@ export function PotActions({ potId, actions, status, onSettled, onAuthLost, idle
     setPending(action);
     setError(null);
     // Finalize shares its in-flight request with the status page's auto tick.
-    const res = action === 'finalize'
-      ? await finalizePot(potId)
-      : await postJson<{ transactionHash?: string }>(`/api/pots/${potId}/${ROUTES[action]}`, body);
+    const res = demo
+      ? await demoSettle()
+      : action === 'finalize'
+        ? await finalizePot(potId)
+        : await postJson<{ transactionHash?: string }>(`/api/pots/${potId}/${ROUTES[action]}`, body);
     pendingRef.current = false;
     setPending(null);
     if (!res.ok) {

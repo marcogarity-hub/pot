@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import { cn } from 'cn';
 import { formatDollars } from '@/lib/format/money';
 import { Faces, type Face } from './Faces';
@@ -41,7 +41,7 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
         const info = stateInfo(p);
         return (
           <li key={p.pot_id} className="overflow-hidden rounded-group bg-card transition-colors hover:bg-secondary/60">
-            <Link href={`/pots/${p.pot_id}`} className="block focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ring">
+            <AppLink href={`/pots/${p.pot_id}`} className="block focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ring">
               <TripCover potId={p.pot_id} title={p.title} className="h-[150px]" />
               <div className="space-y-3 p-4">
                 <div className="flex items-baseline justify-between gap-3">
@@ -61,10 +61,10 @@ export function PotList({ pots }: { pots: PotSummary[] }) {
                   </p>
                 </div>
               </div>
-            </Link>
+            </AppLink>
             {p.is_organizer === true && isFinished(p) && (
               <div className="px-4 pb-4">
-                <Link href={`/new?from=${p.pot_id}`} className={linkButton({ variant: 'ghost', size: 'sm', className: 'min-h-11' })}>Run it again</Link>
+                <AppLink href={`/new?from=${p.pot_id}`} className={linkButton({ variant: 'ghost', size: 'sm', className: 'min-h-11' })}>Run it again</AppLink>
               </div>
             )}
           </li>

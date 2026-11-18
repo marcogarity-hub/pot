@@ -7,6 +7,7 @@ import { cn } from 'cn';
 import { ProfileSection } from './ProfileSection';
 import { SecuritySection } from './SecuritySection';
 import { PrivacySection } from './PrivacySection';
+import { useDemo } from '../demo/DemoContext';
 
 /** Two sections only. Payments, wallet and help are pages; their components live in settings/ for those pages. */
 export const SETTINGS_SECTIONS = [
@@ -43,6 +44,7 @@ export function SettingsDialog({ open, onOpenChange, section = 'profile', me }: 
 
 function SettingsBody({ initial, me }: { initial: SettingsSection; me: { name: string | null; email: string } }) {
   const [current, setCurrent] = useState<SettingsSection>(initial);
+  const demo = useDemo() !== null;
   return (
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <nav aria-label="Settings sections" className="shrink-0 border-b border-border p-3 md:w-[300px] md:border-b-0 md:border-r md:p-0 md:py-4 md:pl-4">
@@ -73,18 +75,18 @@ function SettingsBody({ initial, me }: { initial: SettingsSection; me: { name: s
             <X className="size-5" aria-hidden />
           </Dialog.Close>
         </div>
-        {renderSection(current, me)}
+        {renderSection(current, me, demo)}
       </div>
     </div>
   );
 }
 
-function renderSection(section: SettingsSection, me: { name: string | null; email: string }) {
+function renderSection(section: SettingsSection, me: { name: string | null; email: string }, demo: boolean) {
   switch (section) {
     case 'profile': return (
       <div className="space-y-10">
         <ProfileSection name={me.name} email={me.email} />
-        <SecuritySection />
+        {!demo && <SecuritySection />}
       </div>
     );
     case 'privacy': return <PrivacySection />;

@@ -80,6 +80,7 @@ describe('Home (HomeContent)', () => {
     vi.mocked(getVerifiedUser).mockResolvedValue(null);
     await renderHome();
     expect(screen.getByRole('link', { name: /start a plan/i })).toHaveAttribute('href', '/sign-in?next=/new');
+    expect(screen.getByRole('link', { name: /try the demo/i })).toHaveAttribute('href', '/demo');
     for (const link of screen.getAllByRole('link', { name: /^sign in$/i })) {
       expect(link).toHaveAttribute('href', '/sign-in');
     }

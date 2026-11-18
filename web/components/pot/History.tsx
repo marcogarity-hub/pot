@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import { Dialog } from '@base-ui/react/dialog';
 import { X } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -37,9 +37,9 @@ function HistoryRow({ item, withReceipt }: { item: HistoryItem; withReceipt: boo
     <li className="space-y-1 py-3">
       <p className="text-[17px]">{historySentence(item)}</p>
       <p className="flex flex-wrap gap-x-2 text-[15px] text-muted-foreground">
-        <Link href={`/pots/${item.potId}`} className="rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <AppLink href={`/pots/${item.potId}`} className="rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
           {item.potTitle}
-        </Link>
+        </AppLink>
         {item.at && date && <time dateTime={item.at}>{date}</time>}
       </p>
       {withReceipt && item.receiptText && (

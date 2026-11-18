@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CircleHelp, History, House, Plus, Wallet, type LucideIcon } from 'lucide-react';
 import { cn } from 'cn';
 import { linkButton } from './linkButton';
 import { PotMark } from './PotMark';
 import { AccountMenu } from './AccountMenu';
+import { AppLink, useHref } from './demo/DemoContext';
 import type { SettingsSection } from './settings/SettingsDialog';
 
 /** Rows under New plan, each a page. Add a row (a People page, say) by adding a line here. */
@@ -31,27 +31,28 @@ export function AppSidebar({ me, onOpenSettings, defaultAccountMenuOpen }: {
   defaultAccountMenuOpen?: boolean;
 }) {
   const pathname = usePathname();
+  const toHref = useHref();
   return (
     <aside aria-label="Sidebar" className="glass hidden rounded-group p-4 md:fixed md:inset-y-4 md:left-4 md:z-30 md:flex md:w-[232px] md:flex-col">
-      <Link href="/" className="flex items-center gap-2 px-3 pb-4 pt-1 text-[17px] font-bold tracking-tight">
+      <AppLink href="/" className="flex items-center gap-2 px-3 pb-4 pt-1 text-[17px] font-bold tracking-tight">
         <PotMark />
         Pot
-      </Link>
-      <Link href="/new" className={linkButton({ size: 'lg', className: 'w-full' })}>
+      </AppLink>
+      <AppLink href="/new" className={linkButton({ size: 'lg', className: 'w-full' })}>
         <Plus className="size-5" strokeWidth={2} aria-hidden />
         New plan
-      </Link>
+      </AppLink>
       <nav aria-label="Sections" className="mt-4">
         <ul className="space-y-1">
           {NAV.map(({ label, href, icon: Icon }) => {
-            const current = pathname === href;
+            const current = pathname === toHref(href);
             return (
               <li key={label}>
-                <Link href={href} aria-current={current ? 'page' : undefined}
+                <AppLink href={href} aria-current={current ? 'page' : undefined}
                   className={cn(ROW, current ? 'bg-foreground font-semibold text-card' : 'text-foreground hover:bg-foreground/5')}>
                   <Icon className="size-5" strokeWidth={1.75} aria-hidden />
                   {label}
-                </Link>
+                </AppLink>
               </li>
             );
           })}

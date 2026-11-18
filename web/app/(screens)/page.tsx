@@ -86,6 +86,9 @@ function SignedOut() {
             <Link href="/sign-in" className={linkButton({ size: 'lg', className: 'w-full sm:w-auto' })}>Sign in</Link>
             <Link href="/sign-in?next=/new" className={linkButton({ size: 'lg', variant: 'outline', className: 'w-full sm:w-auto' })}>Start a plan</Link>
           </div>
+          <p className="text-[15px] text-muted-foreground">
+            Just looking? <Link href="/demo" className="font-medium text-foreground underline underline-offset-4">Try the demo</Link>, no sign-in needed.
+          </p>
         </div>
       </section>
       <ul className="divide-y divide-border rounded-group bg-card px-4 md:grid md:grid-cols-3 md:gap-6 md:divide-y-0 md:bg-transparent md:px-0">

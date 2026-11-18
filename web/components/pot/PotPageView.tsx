@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from 'cn';
@@ -44,15 +44,15 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
         <TripCover potId={status.pot_id} title={status.title} className="h-[300px] w-full md:h-[360px] lg:h-[420px]" />
         {/* Desktop only: the art fades into the warm page under the title block. */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-40 bg-gradient-to-b from-transparent to-background md:block" />
-        <Link href="/" aria-label="Back to plans"
+        <AppLink href="/" aria-label="Back to plans"
           style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
           className="glass-art absolute left-4 top-0 flex size-11 items-center justify-center rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden">
           <ChevronLeft aria-hidden className="size-6" strokeWidth={2} />
-        </Link>
+        </AppLink>
         <nav aria-label="Breadcrumb"
           style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
           className="glass-art absolute left-6 top-0 hidden h-11 max-w-[60%] items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-white md:flex md:left-[304px]">
-          <Link href="/" className="shrink-0 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Plans</Link>
+          <AppLink href="/" className="shrink-0 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Plans</AppLink>
           <ChevronRight aria-hidden className="size-4 shrink-0" strokeWidth={2} />
           <span aria-current="page" className="min-w-0 truncate">{status.title ?? `Plan #${status.pot_id}`}</span>
         </nav>
@@ -140,7 +140,7 @@ export function PotPageView({ status, nowMs, myAddress, isOrganizer, actions, no
                 )}
               </dl>
               <p className="px-1 text-[13px] text-muted-foreground">
-                Test money only: USDC on the Arc testnet. <Link href="/privacy" className="underline">Privacy</Link>
+                Test money only: USDC on the Arc testnet. <AppLink href="/privacy" className="underline">Privacy</AppLink>
               </p>
             </section>
           </div>

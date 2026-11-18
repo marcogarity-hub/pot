@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
+import { useDemo } from './demo/DemoContext';
 import {
   HISTORY_EVENT_NAMES, buildHistory,
   type HistoryEventRow, type HistoryItem, type HistoryPotMeta,
@@ -45,25 +46,28 @@ async function loadHistory(): Promise<HistoryItem[]> {
   return buildHistory(events, potMeta, wallet);
 }
 
-/** The viewer's payments, refunds and payouts. `retry` loads again after an error. */
+/** The viewer's payments, refunds and payouts. `retry` loads again after an error. In the demo it is the demo's sample list. */
 export function useHistory(): HistoryState {
+  const demo = useDemo();
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{ items: HistoryItem[]; loading: boolean; error: boolean }>({
     items: [], loading: true, error: false,
   });
 
   useEffect(() => {
+    if (demo) return;
     let cancelled = false;
     loadHistory()
       .then(items => { if (!cancelled) setState({ items, loading: false, error: false }); })
       .catch(() => { if (!cancelled) setState({ items: [], loading: false, error: true }); });
     return () => { cancelled = true; };
-  }, [attempt]);
+  }, [attempt, demo]);
 
   const retry = useCallback(() => {
     setState(s => ({ ...s, loading: true, error: false }));
     setAttempt(n => n + 1);
   }, []);
 
+  if (demo) return { items: demo.history, loading: false, error: false, retry };
   return { ...state, retry };
 }

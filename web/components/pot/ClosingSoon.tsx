@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import { cn } from 'cn';
 import { formatDuration, type ClosingPot } from './dashboardModel';
 
@@ -20,13 +20,13 @@ export function ClosingSoon({ pots, now, className }: { pots: ClosingPot[]; now:
         <ul className="divide-y divide-border rounded-group tint-sky lg:col-span-2 lg:col-start-3 lg:row-start-2">
           {pots.map(p => (
             <li key={p.potId}>
-              <Link href={`/pots/${p.potId}`} className={`flex min-h-[64px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-secondary/60 ${FOCUS}`}>
+              <AppLink href={`/pots/${p.potId}`} className={`flex min-h-[64px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-secondary/60 ${FOCUS}`}>
                 <span className="min-w-0">
                   <span className="block truncate text-[17px] font-semibold">{p.title}</span>
                   <span className="block text-[15px] text-muted-foreground">{p.paid} of {p.members} paid</span>
                 </span>
                 <span className="shrink-0 text-right text-[15px] font-semibold">Closes in {formatDuration(p.deadlineAt - now)}</span>
-              </Link>
+              </AppLink>
             </li>
           ))}
         </ul>

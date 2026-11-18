@@ -467,3 +467,11 @@ Done: members can set an optional display name. Other members see it instead of 
 - UI: `DisplayNameForm` on the dashboard (aside, plus a prompt banner while unset) and on the join preview. `MemberList` shows name, then email (viewer and organizer only), then "Member N". Activity feed and the join preview's "Organized by" prefer the name.
 - Order matters: apply the migration to the database BEFORE deploying this code. The code selects `users.display_name`, which does not exist until the migration runs. The migration alone is safe with the old code (non-organizers just lose other members' emails, and the old list falls back to wallet addresses).
 - Checked: the full migration chain ran on a real Postgres (PGlite) with 16 checks: masking per role, RLS for outsiders, service_role unaffected, column limits, anon blocked from the function. Not yet run on the real Supabase project.
+
+## Public demo (2026-11-18, branch `feat/demo-mode`, not merged)
+Done: `/demo` is a read-only copy of the signed-in app for sharing a link. No sign-in, no database, no API, no chain.
+- Data: `web/lib/demo/data.ts` builds Alex Morgan's account (7 invented plans in every state, 8 history items) relative to the request time, so deadlines are always live. Receipts hash correctly. Other members carry no email, same as the real masked view.
+- Pages: `app/(screens)/demo/{page,history,wallet,help,new,pots/[potId]}`. They are noindex and dynamic where they read the clock (`connection()` then `Date.now()`).
+- Wiring: `components/pot/demo/DemoContext.tsx` holds the demo data. `AppLink` replaces `Link` in the shared screens and rewrites `/`, `/pots/x`, `/history`, `/wallet`, `/help`, `/new` into `/demo/...` only while inside the demo; in the real app it is a plain `Link`. `useHistory` and `useMe` return the sample data instead of calling Supabase and `/api/wallet/me`. `PotActions` takes `demo`: an action "succeeds" after 0.7 s with no request and no transaction. The account menu says "Exit demo" and Profile is read-only.
+- Signed-out home has a "Try the demo" link.
+- Starting a plan is not possible in the demo: `/demo/new` explains and links to sign-in.

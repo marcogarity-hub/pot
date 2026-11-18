@@ -1,11 +1,11 @@
 'use client';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CircleHelp, History, House, Plus, User, type LucideIcon } from 'lucide-react';
 import { cn } from 'cn';
 import { AppSidebar } from './AppSidebar';
+import { AppLink, useHref } from './demo/DemoContext';
 import { SettingsDialog, type SettingsSection } from './settings/SettingsDialog';
 
 const OpenSettingsContext = createContext<(section?: SettingsSection) => void>(() => {});
@@ -60,18 +60,19 @@ const TAB = 'flex h-full min-h-11 w-full flex-col items-center justify-center ga
 /** Phone tab bar: a floating glass pill above the home indicator. The current page is a solid black fill and aria-current. */
 function MobileTabBar({ onYou }: { onYou: () => void }) {
   const pathname = usePathname();
+  const toHref = useHref();
   return (
     <nav aria-label="Main" className="fixed inset-x-0 z-40 px-4 md:hidden" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
       <ul className="glass mx-auto flex max-w-sm list-none items-stretch gap-1 rounded-full p-1.5">
         {TABS.map(({ label, href, icon: Icon }) => {
-          const current = pathname === href;
+          const current = pathname === toHref(href);
           return (
             <li key={label} className="flex-1">
-              <Link href={href} aria-current={current ? 'page' : undefined}
+              <AppLink href={href} aria-current={current ? 'page' : undefined}
                 className={cn(TAB, current ? 'bg-foreground text-card' : 'text-foreground hover:bg-foreground/5')}>
                 <Icon className="size-5" strokeWidth={1.75} aria-hidden />
                 {label}
-              </Link>
+              </AppLink>
             </li>
           );
         })}

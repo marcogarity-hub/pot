@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import { cn } from 'cn';
 import { Faces } from './Faces';
 import { groupNeeds, type NeedGroup, type QueueItem } from './dashboardModel';
@@ -60,7 +60,7 @@ function NeedCard({ group, className }: { group: NeedGroup; className: string })
   const many = count > 1;
   const faces = soonest.faces ?? [];
   return (
-    <Link
+    <AppLink
       href={many ? '#your-pots' : items[0].href}
       className={cn('flex min-h-[64px] flex-col gap-3 rounded-group p-5 transition-[filter] hover:brightness-[0.97]', TINT[action], FOCUS, className)}
     >
@@ -76,7 +76,7 @@ function NeedCard({ group, className }: { group: NeedGroup; className: string })
         {many && <span aria-hidden className="money shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[15px] font-semibold">{count}</span>}
       </span>
       {faces.length > 0 && <Faces faces={faces} size="sm" max={6} />}
-    </Link>
+    </AppLink>
   );
 }
 

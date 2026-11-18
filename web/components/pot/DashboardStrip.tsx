@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/pot/demo/DemoContext';
 import { cn } from 'cn';
 import { formatDollars } from '@/lib/format/money';
 
@@ -15,8 +15,8 @@ export function DashboardStrip({ held, heldPlans }: { held: bigint; heldPlans: n
   const hasHeld = held > BigInt(0);
   return (
     <div className={cn('grid gap-3 sm:grid-cols-2', hasHeld && 'sm:grid-cols-3')}>
-      <Link href="/new" className={cn(SEGMENT, FOCUS)}>Start a plan</Link>
-      <Link href="/new?preset=booking" className={cn(SEGMENT, FOCUS)}>Plan a real booking</Link>
+      <AppLink href="/new" className={cn(SEGMENT, FOCUS)}>Start a plan</AppLink>
+      <AppLink href="/new?preset=booking" className={cn(SEGMENT, FOCUS)}>Plan a real booking</AppLink>
       {hasHeld && (
         <p className="money flex min-h-[64px] items-center rounded-group bg-card px-5 py-3 text-[15px] text-muted-foreground">
           <span><span className="font-semibold text-foreground">{formatDollars(held)}</span> held across {heldPlans} {heldPlans === 1 ? 'plan' : 'plans'}</span>
