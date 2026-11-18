@@ -38,7 +38,7 @@ export function DashboardView({ email, name, pots, queue, activity }: {
 
   return (
     <div className="relative min-h-dvh">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 hidden h-[400px] overflow-hidden md:block [mask-image:linear-gradient(to_bottom,black_35%,transparent)]">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 hidden h-[400px] overflow-hidden md:block [mask-image:linear-gradient(to_bottom,black_18%,transparent_72%)]">
         <TripCover potId="dashboard" className="h-full" />
       </div>
       <SideNav pots={sidePots} name={name} email={email} />
