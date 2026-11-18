@@ -14,7 +14,7 @@ Built for the UBC 2026 hackathon (Consumer track) on **Arc testnet**, with **Qui
 |---|---|
 | **Demo (start here)** | https://pot-pink.vercel.app/demo: no sign-in, sample data |
 | Contract | [`0xf842F699128A2e575d20BcC92F0472C7ad59e5C8`](https://explorer.testnet.arc.io/address/0xf842F699128A2e575d20BcC92F0472C7ad59e5C8) on Arc testnet (chain id 5042002), source verified on Blockscout |
-| Live app | https://pot-pink.vercel.app (the real app on Arc testnet; sign in with an email) |
+| Live app | https://pot-pink.vercel.app (the real app on Arc testnet; needs a sign-in) |
 | Demo video | > TODO before submit: link |
 
 ## What's in the demo
@@ -38,6 +38,21 @@ The demo shows the same screens as the signed-in app, fed with made-up people an
 ![Pot on a phone: the dashboard, paying a share, and reviewing a payout request](docs/screenshots/demo-phone.jpg)
 
 ![A plan page in the demo: Maya's birthday dinner, with the receipt, the objection window and the group](docs/screenshots/demo-plan-review.jpg)
+
+## Design choices
+
+Pot is for people who have never held crypto, so most of the design work went into hiding the plumbing without hiding the guarantees. Each choice below is visible in the demo. (In the app, what you create is called a **plan**.)
+
+- **One next step per plan.** A plan shows the single thing you can do right now, or says what it is waiting for. On Home, **Needs you** collects those steps across all your plans. On a plan page there is one button at the bottom: [**Pay $600**](https://pot-pink.vercel.app/demo/pots/lake-house), [**Request payout**](https://pot-pink.vercel.app/demo/pots/whistler) or [**Object**](https://pot-pink.vercel.app/demo/pots/birthday-dinner).
+- **The money comes first.** Every plan opens with how much is held and who has paid, as a progress bar with everyone's avatar. Home totals what is held across your plans. In the real app the bar moves by itself when someone pays (QuickNode Stream into Supabase Realtime). Color carries meaning: green is progress and paid, coral marks what you do next, and every state is also written as a word (Funding, Locked, Payout requested), never color alone.
+- **The guarantees are on the screen, not in the fine print.** "Where it's at" shows the plan's stages in plain language. During a payout request the page shows the receipt, a countdown and "0 of 2 objections needed to block it" ([see it](https://pot-pink.vercel.app/demo/pots/birthday-dinner)). The receipt text is shown only if its hash matches the one recorded on-chain.
+- **No crypto vocabulary on the main path.** Members sign in with an email code (typed into the page, with the link as a fallback) or Google. There is no wallet to install, no seed phrase and no gas prompt, and amounts are in dollars. A transaction link appears only after you act, for anyone who wants proof.
+- **Test money says it is test money.** Home, plan pages, the create form and Wallet all say so.
+- **Every plan has its own cover.** A drawn scene picked from the plan's title, so plans are easy to tell apart in a list: a [ski trip](https://pot-pink.vercel.app/demo/pots/whistler) gets snow, a [lake house](https://pot-pink.vercel.app/demo/pots/lake-house) a lake, a [birthday dinner](https://pot-pink.vercel.app/demo/pots/birthday-dinner) stage lights. They are drawings, not photos.
+- **Glass only where you tap.** The frosted look is used for floating controls (navigation, the main action button, menus and sheets) and never behind content. It falls back to solid when the device asks for reduced transparency.
+- **Nobody has to hunt for a button at the end.** A plan page that is open finalizes the payout by itself once the objection window closes.
+- **Phone first, installable.** Designed at 390 px wide, with a bottom tab bar on phones and a sidebar on desktop. It installs to a phone's home screen as a web app.
+- **Accessibility.** Built to be keyboard operable, with a visible focus ring whose contrast we computed (numbers in [`docs/handoffs/ui.md`](docs/handoffs/ui.md)). Reduced-motion and reduced-transparency settings are respected.
 
 ## How it works
 
