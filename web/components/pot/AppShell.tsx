@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { House, Plus, User, type LucideIcon } from 'lucide-react';
@@ -8,25 +8,35 @@ import { cn } from 'cn';
 import { AppSidebar, type ShellPot } from './AppSidebar';
 import { SettingsDialog, type SettingsSection } from './settings/SettingsDialog';
 
+const OpenSettingsContext = createContext<(section?: SettingsSection) => void>(() => {});
+
+/** Lets any page inside the frame open the Settings dialog (e.g. an "Add your name" banner). A no-op outside the frame. */
+export function useOpenSettings(): (section?: SettingsSection) => void {
+  return useContext(OpenSettingsContext);
+}
+
 /**
  * The signed-in frame. md and up: a floating glass sidebar on the left and the page in the space beside it.
  * Below md: the page, with a glass tab bar at the bottom (Trips, New, and You, which opens Settings).
  * Settings state lives here, so the sidebar's account menu and the tab bar open the same dialog.
+ * `hideTabBar` drops the phone tab bar on pages that float their own action bar at the bottom (a pot, the create form).
  */
-export function AppShell({ me, pots, activePotId, children }: {
+export function AppShell({ me, pots, activePotId, hideTabBar = false, children }: {
   me: { name: string | null; email: string };
   pots: ShellPot[];
   activePotId?: string;
+  hideTabBar?: boolean;
   children: ReactNode;
 }) {
   const [settings, setSettings] = useState<{ open: boolean; section: SettingsSection }>({ open: false, section: 'profile' });
   const openSettings = (section: SettingsSection) => setSettings({ open: true, section });
 
   return (
-    <div className="min-h-dvh pb-28 md:pb-0">
+    <OpenSettingsContext.Provider value={(section = 'profile') => openSettings(section)}>
+    <div className={cn('min-h-dvh md:pb-0', !hideTabBar && 'pb-28')}>
       <AppSidebar me={me} pots={pots} activePotId={activePotId} onOpenSettings={openSettings} />
       <div className="min-h-dvh md:pl-[264px]">{children}</div>
-      <MobileTabBar onYou={() => openSettings('profile')} />
+      {!hideTabBar && <MobileTabBar onYou={() => openSettings('profile')} />}
       <SettingsDialog
         open={settings.open}
         section={settings.section}
@@ -34,6 +44,7 @@ export function AppShell({ me, pots, activePotId, children }: {
         onOpenChange={open => setSettings(s => ({ ...s, open }))}
       />
     </div>
+    </OpenSettingsContext.Provider>
   );
 }
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { AppShell } from './AppShell';
+import { AppShell, useOpenSettings } from './AppShell';
 
 const m = vi.hoisted(() => ({ pathname: '/' }));
 vi.mock('next/navigation', () => ({
@@ -45,7 +45,7 @@ describe('AppShell', () => {
     render(<AppShell me={me} pots={[]}><p>x</p></AppShell>);
     fireEvent.click(screen.getByRole('button', { name: 'Ana' }));
     fireEvent.click(screen.getByRole('button', { name: 'Help' }));
-    expect(screen.getByRole('heading', { level: 2, name: 'How Pot works' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Splitting costs with Pot' })).toBeInTheDocument();
   });
 
   it('closes the dialog from its close button', () => {
@@ -53,5 +53,20 @@ describe('AppShell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'You' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('drops the phone tab bar when a page floats its own action bar', () => {
+    render(<AppShell me={me} pots={[]} hideTabBar><p>x</p></AppShell>);
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+  });
+
+  it('lets a page inside the frame open Settings on a section', () => {
+    function Banner() {
+      const open = useOpenSettings();
+      return <button type="button" onClick={() => open('profile')}>Add your name</button>;
+    }
+    render(<AppShell me={me} pots={[]}><Banner /></AppShell>);
+    fireEvent.click(screen.getByRole('button', { name: 'Add your name' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Profile' })).toBeInTheDocument();
   });
 });
