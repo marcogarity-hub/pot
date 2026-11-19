@@ -15,7 +15,6 @@ Built for the UBC 2026 hackathon (Consumer track) on **Arc testnet**, with **Qui
 | **Demo (start here)** | https://pot-pink.vercel.app/demo: no sign-in, sample data |
 | Contract | [`0xf842F699128A2e575d20BcC92F0472C7ad59e5C8`](https://explorer.testnet.arc.io/address/0xf842F699128A2e575d20BcC92F0472C7ad59e5C8) on Arc testnet (chain id 5042002), source verified on Blockscout |
 | Live app | https://pot-pink.vercel.app (the real app on Arc testnet; needs a sign-in) |
-| Demo video | > TODO before submit: link |
 
 ## What's in the demo
 
@@ -171,7 +170,11 @@ No `(transaction hash, log index)` pair was stored twice, and the pot's row ende
 
 The route accepts the Stream's body as a bare array of logs or wrapped as `{ "data": [...] }`, and when it rejects a payload it logs only the payload's structure, never its contents. A first live delivery was rejected before this was added, which taught us that our own copy of QuickNode's format had differed from the real one. QuickNode stopped the Stream after repeated rejections, and `node scripts/quicknode-stream.mjs activate` restarts it.
 
-> TODO before submit: add a screenshot or terminal capture of the Stream's delivery log (or the progress bar moving) to the repository.
+**Stream status (2026-11-19).** `node scripts/quicknode-stream.mjs status` reports the Stream active and delivering to the deployed app:
+
+```
+pot-events  id=a7e51fb2-c47b-4e5f-ae70-9cbce90119df  arc-testnet/logs  status=active  sequence=72979746  -> https://pot-pink.vercel.app/api/streams
+```
 
 ## Running it locally
 
